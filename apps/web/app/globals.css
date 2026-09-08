@@ -1,0 +1,20 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, sans-serif;
+  color: #14213d;
+  background: #f7f9fc;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+a {
+  color: #0b6e69;
+}

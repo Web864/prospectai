@@ -1,0 +1,378 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+enum ExtensionSessionStatus {
+  PENDING
+  CONNECTED
+  EXPIRING
+  EXPIRED
+  REVOKED
+  DISCONNECTED
+}
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INCOMPLETE
+}
+enum UsageOperation {
+  RESERVED
+  CONSUMED
+  RELEASED
+  REVERSED
+}
+enum AnalysisJobStatus {
+  QUEUED
+  VALIDATING
+  FETCHING
+  RENDERING
+  EXTRACTING
+  RULE_ANALYSIS
+  AI_PROCESSING
+  OPPORTUNITY_SCORING
+  COMPLETED
+  PARTIAL
+  FAILED
+  CANCELED
+  RETRY_PENDING
+  RETRYING
+}
+enum FindingSeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  WON
+  LOST
+  ARCHIVED
+}
+
+
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  emailVerifiedAt DateTime?
+  passwordHash String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile Profile?
+  memberships Membership[]
+  extensionSessions ExtensionSession[]
+  authSessions AuthSession[]
+  activities Activity[] @relation("ActivityActor")
+  auditLogs AuditLog[] @relation("AuditActor")
+}
+
+model Profile {
+  id String @id @default(cuid())
+  userId String @unique
+  displayName String?
+  roleLabel String?
+  services Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Organization {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  memberships Membership[]
+  extensionSessions ExtensionSession[]
+  subscriptions Subscription[]
+  usageLedger UsageLedger[]
+  websites Website[]
+  analyses WebsiteAnalysis[]
+  leads Lead[]
+  pitches Pitch[]
+  activities Activity[]
+  jobs AnalysisJob[]
+  auditLogs AuditLog[]
+  webhookEvents WebhookEvent[]
+}
+
+model Membership {
+  id String @id @default(cuid())
+  userId String
+  organizationId String
+  role MembershipRole @default(MEMBER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@unique([userId, organizationId])
+  @@index([organizationId, role])
+}
+
+model AuthSession {
+  id String @id @default(cuid())
+  userId String
+  tokenHash String @unique
+  activeOrganizationId String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt])
+}
+
+model ExtensionSession {
+  id String @id @default(cuid())
+  userId String
+  organizationId String
+  tokenHash String @unique
+  refreshTokenHash String @unique
+  authorizationRequestId String @unique
+  codeChallenge String
+  deviceName String?
+  extensionVersion String
+  status ExtensionSessionStatus @default(PENDING)
+  expiresAt DateTime
+  lastActiveAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, status])
+  @@index([userId, status])
+}
+
+model Subscription {
+  id String @id @default(cuid())
+  organizationId String
+  provider String @default("stripe")
+  providerCustomerId String?
+  providerSubscriptionId String? @unique
+  planCode String
+  status SubscriptionStatus
+  currentPeriodEnd DateTime?
+  cancelAtPeriodEnd Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, status])
+}
+
+model UsageLedger {
+  id String @id @default(cuid())
+  organizationId String
+  operation UsageOperation
+  quantity Int
+  feature String
+  idempotencyKey String
+  referenceType String?
+  referenceId String?
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, feature, idempotencyKey])
+  @@index([organizationId, feature, createdAt])
+}
+
+model Website {
+  id String @id @default(cuid())
+  organizationId String
+  canonicalUrl String
+  domain String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  analyses WebsiteAnalysis[]
+  leads Lead[]
+  @@unique([organizationId, domain])
+  @@index([organizationId, updatedAt])
+}
+
+model WebsiteAnalysis {
+  id String @id @default(cuid())
+  organizationId String
+  websiteId String
+  status AnalysisJobStatus
+  websiteScore Int?
+  scoringVersion String?
+  businessSummary String?
+  extractedText String?
+  rawContentExpiresAt DateTime?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  findings Finding[]
+  opportunities Opportunity[]
+  jobs AnalysisJob[]
+  @@index([organizationId, createdAt])
+  @@index([websiteId, completedAt])
+}
+
+model Finding {
+  id String @id @default(cuid())
+  analysisId String
+  code String
+  category String
+  severity FindingSeverity
+  confidence Float
+  commercialRelevance Float
+  title String
+  evidence Json
+  sourceUrl String?
+  createdAt DateTime @default(now())
+  analysis WebsiteAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  opportunities OpportunityFinding[]
+  @@index([analysisId, category])
+}
+
+model Opportunity {
+  id String @id @default(cuid())
+  analysisId String
+  title String
+  summary String
+  serviceCategory String
+  opportunityScore Int
+  confidence Float
+  commercialReason String
+  pitchAngle String?
+  createdAt DateTime @default(now())
+  analysis WebsiteAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  findings OpportunityFinding[]
+  @@index([analysisId, opportunityScore])
+}
+
+model OpportunityFinding {
+  opportunityId String
+  findingId String
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  finding Finding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  @@id([opportunityId, findingId])
+}
+
+model Lead {
+  id String @id @default(cuid())
+  organizationId String
+  websiteId String?
+  status LeadStatus @default(NEW)
+  name String?
+  notes String?
+  archivedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  website Website? @relation(fields: [websiteId], references: [id], onDelete: SetNull)
+  contacts LeadContact[]
+  pitches Pitch[]
+  activities Activity[]
+  @@index([organizationId, status, updatedAt])
+}
+
+model LeadContact {
+  id String @id @default(cuid())
+  leadId String
+  name String?
+  email String?
+  title String?
+  createdAt DateTime @default(now())
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  @@index([leadId])
+}
+
+model Pitch {
+  id String @id @default(cuid())
+  organizationId String
+  leadId String?
+  analysisId String?
+  format String
+  content String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  @@index([organizationId, createdAt])
+}
+
+model Activity {
+  id String @id @default(cuid())
+  organizationId String
+  actorUserId String?
+  leadId String?
+  type String
+  metadata Json?
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor User? @relation("ActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  @@index([organizationId, createdAt])
+}
+
+model AnalysisJob {
+  id String @id @default(cuid())
+  organizationId String
+  analysisId String
+  status AnalysisJobStatus @default(QUEUED)
+  queueJobId String? @unique
+  idempotencyKey String
+  attempt Int @default(0)
+  progress Int @default(0)
+  errorCode String?
+  errorMessage String?
+  workerId String?
+  startedAt DateTime?
+  finishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  analysis WebsiteAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, status, createdAt])
+}
+
+model WebhookEvent {
+  id String @id @default(cuid())
+  organizationId String?
+  provider String
+  providerEventId String @unique
+  type String
+  payload Json
+  processedAt DateTime?
+  failedAt DateTime?
+  failureReason String?
+  createdAt DateTime @default(now())
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  @@index([provider, createdAt])
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+  organizationId String?
+  actorUserId String?
+  action String
+  resourceType String
+  resourceId String?
+  metadata Json?
+  createdAt DateTime @default(now())
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  @@index([organizationId, createdAt])
+  @@index([actorUserId, createdAt])
+}

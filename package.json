@@ -1,0 +1,31 @@
+{
+  "name": "prospectai",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.15.1",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @prospectai/web dev",
+    "dev:worker": "pnpm --filter @prospectai/worker dev",
+    "lint": "pnpm -r --if-present lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm --filter @prospectai/web build && pnpm --filter @prospectai/extension build && pnpm --filter @prospectai/worker build",
+    "prisma:validate": "pnpm --filter @prospectai/database prisma:validate",
+    "prisma:generate": "pnpm --filter @prospectai/database prisma:generate"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.3",
+    "eslint": "9.25.1",
+    "eslint-config-next": "15.3.1",
+    "prettier": "3.5.3",
+    "typescript": "5.8.3",
+    "typescript-eslint": "8.30.1",
+    "vitest": "3.1.2"
+  }
+}
