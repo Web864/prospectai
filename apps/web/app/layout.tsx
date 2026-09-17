@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import './phase4.css';
+import './components.css';
+import './homepage.css';
+import './how-it-works.css';
+import './reference-marketing.css';
 
 export const metadata: Metadata = {
   title: 'ProspectAI',

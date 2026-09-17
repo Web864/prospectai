@@ -13,8 +13,11 @@ export const verifySecret = (value: string, expectedHash: string, pepper: string
 
 export const codeChallengeFor = (verifier: string) =>
   createHash('sha256').update(verifier).digest('base64url');
-export const verifyPkce = (verifier: string, challenge: string) =>
-  timingSafeEqual(Buffer.from(codeChallengeFor(verifier)), Buffer.from(challenge));
+export const verifyPkce = (verifier: string, challenge: string) => {
+  const actual = Buffer.from(codeChallengeFor(verifier));
+  const expected = Buffer.from(challenge);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+};
 
 export interface SessionResolver {
   resolveWebSession(token: string): Promise<ActorContext | null>;

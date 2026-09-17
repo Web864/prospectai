@@ -14,7 +14,7 @@ export async function POST(request: Request) {
           accepted: false,
           url: input.url,
           message:
-            'Analysis creation is not enabled until authentication, entitlement, and queue persistence are connected.',
+            'Analysis creation is not enabled until authentication and entitlement policy are connected.',
         },
       },
       { status: 503, headers: { 'X-Request-Id': id } },

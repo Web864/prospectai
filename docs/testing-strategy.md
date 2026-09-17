@@ -7,7 +7,7 @@ ProspectAI must prove correctness where the PRD has the highest risk: tenant iso
 ## Tooling and Environments
 
 - **Unit and component:** Vitest, React Testing Library, and MSW for network boundaries.
-- **API and worker integration:** Vitest against disposable PostgreSQL and Redis services through Docker Compose/Testcontainers; Prisma migrations run from an empty database.
+- **API and worker integration:** Vitest against a disposable PostgreSQL service through Docker Compose/Testcontainers; Prisma migrations run from an empty database.
 - **Browser end-to-end:** Playwright for the web application. Chrome-extension E2E uses a persistent Chromium context with the unpacked Manifest V3 build; CI supplies a virtual display when required.
 - **Security and contract checks:** Zod schema tests, dependency and secret scanning in CI, and OWASP-oriented negative test suites.
 - **Fixtures:** Versioned HTML pages, redirect chains, robots/noindex cases, JS-rendered fixtures, blocked-host simulations, Stripe event fixtures, and AI provider responses. Fixtures contain synthetic business data only.

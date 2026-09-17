@@ -1,21 +1,19 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { applicationNavigation } from './application-navigation';
+import { MobileNavigation } from './mobile-navigation';
+import { AccountSession } from './account-session';
 
-const navigation = [
-  ['Dashboard', '/app'],
-  ['Leads', '/app/leads'],
-  ['Usage', '/app/usage'],
-  ['Billing', '/app/billing'],
-  ['Settings', '/app/settings'],
-] satisfies ReadonlyArray<readonly [string, string]>;
 export function AppShell({
   title,
   children,
   trail = 'Workspace',
+  activePath,
 }: {
   title: string;
   children: ReactNode;
   trail?: string;
+  activePath?: string;
 }) {
   return (
     <div className="app-shell">
@@ -24,15 +22,34 @@ export function AppShell({
           ProspectAI
         </Link>
         <nav aria-label="Application">
-          {navigation.map(([label, href]) => (
-            <Link key={href} href={href}>
+          {applicationNavigation.map(([label, href]) => (
+            <Link
+              key={href}
+              href={href}
+              aria-current={
+                activePath === href || (href !== '/app' && activePath?.startsWith(`${href}/`))
+                  ? 'page'
+                  : undefined
+              }
+            >
               {label}
             </Link>
           ))}
         </nav>
-        <Link href="/app/settings/extension">Extension</Link>
+        <Link
+          href="/app/settings/extension"
+          aria-current={activePath === '/app/settings/extension' ? 'page' : undefined}
+        >
+          Extension
+        </Link>
       </aside>
       <main>
+        <div className="mobile-app-bar">
+          <MobileNavigation />
+          <Link className="brand" href="/app">
+            ProspectAI
+          </Link>
+        </div>
         <div className="breadcrumb">
           {trail} / {title}
         </div>
@@ -41,9 +58,7 @@ export function AppShell({
             <h1>{title}</h1>
             <p>Prospect opportunity intelligence, grounded in evidence.</p>
           </div>
-          <button className="icon-button" aria-label="Open account menu">
-            AC
-          </button>
+          <AccountSession />
         </header>
         {children}
       </main>

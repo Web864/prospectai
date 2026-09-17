@@ -3,10 +3,11 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 export function Button({
   children,
   className = '',
+  type = 'button',
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button className={`button ${className}`} {...props}>
+    <button className={`button ${className}`} type={type} {...props}>
       {children}
     </button>
   );
@@ -22,7 +23,13 @@ export function Badge({
   return <span className={`badge badge-${tone}`}>{children}</span>;
 }
 
-export function Score({ value, kind }: { value?: number; kind: 'website' | 'opportunity' }) {
+export function Score({
+  value,
+  kind,
+}: {
+  value?: number | undefined;
+  kind: 'website' | 'opportunity';
+}) {
   if (value === undefined)
     return (
       <div className="score score-empty">

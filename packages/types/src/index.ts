@@ -45,3 +45,71 @@ export interface FindingInput {
   title: string;
   evidence: string;
 }
+
+export const leadStatuses = ['new', 'contacted', 'qualified', 'won', 'lost', 'archived'] as const;
+export type LeadStatus = (typeof leadStatuses)[number];
+
+export const subscriptionStatuses = [
+  'trialing',
+  'active',
+  'past_due',
+  'canceled',
+  'unpaid',
+  'incomplete',
+] as const;
+export type SubscriptionStatus = (typeof subscriptionStatuses)[number];
+
+export type PlanCode = 'free' | 'pro' | 'agency';
+
+export interface SessionSummary {
+  userId: string;
+  email: string;
+  displayName: string | null;
+  organizationName: string;
+  role: MembershipRole;
+  expiresAt: string;
+}
+
+export interface DashboardSummary {
+  analyses: number;
+  leads: number;
+  qualifiedOpportunities: number;
+  contactedProspects: number;
+  replies: number;
+  meetings: number;
+  wonClients: number;
+  analysesUsed: number;
+  analysesLimit: number | null;
+  plan: PlanCode;
+  extensionConnected: boolean;
+  recentActivity: Array<{ id: string; label: string; occurredAt: string }>;
+}
+
+export interface LeadSummary {
+  id: string;
+  name: string | null;
+  domain: string | null;
+  status: LeadStatus;
+  opportunityScore: number | null;
+  latestAnalysisId: string | null;
+  updatedAt: string;
+}
+
+export interface AnalysisFinding {
+  id: string;
+  category: string;
+  title: string;
+  evidence: string;
+  interpretation: string | null;
+}
+
+export interface AnalysisOpportunity {
+  id: string;
+  title: string;
+  serviceCategory: string;
+  summary: string;
+  opportunityScore: number;
+  confidence: number;
+  commercialReason: string;
+  pitchAngle: string | null;
+}

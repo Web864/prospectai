@@ -9,7 +9,7 @@ ProspectAI PRD V2 remains the product source of truth. This document records onl
 - pnpm TypeScript workspace with `apps/web`, `apps/extension`, `apps/worker`, shared packages, test space, common lint/format/build commands, environment template, and GitHub Actions quality workflow.
 - Next.js App Router web application with health endpoint and a typed, guarded analysis route foundation.
 - Manifest V3 React/Vite extension with an action popup, service worker, active-tab-only access, local session storage, narrow production API host permission, and explicit extension-page CSP.
-- Dedicated BullMQ worker process separated from the web runtime. It intentionally refuses analysis execution until real persistence, entitlement, and isolated crawler adapters are connected.
+- Dedicated PostgreSQL-backed worker process separated from the web runtime. Job claiming, progress, retries, recovery, and usage settlement are persisted; analysis execution remains unavailable until isolated crawler and result adapters are connected.
 - PostgreSQL Prisma schema with all core Phase 3 entities and tenant ownership via `organizationId`/foreign keys, indexes, and scoped uniqueness constraints.
 - Shared packages for configuration, API errors/parsing, types, validation, authentication/PKCE primitives, analysis state transitions/queue, crawler boundary, deterministic scoring, AI output validation, Stripe billing boundary, UI primitive, and structured redacting logger.
 
@@ -28,7 +28,7 @@ An initial SQL migration is generated from this schema during Phase 3 verificati
 ## Deferred Deliberately
 
 - Production user registration, email verification, password reset, and Auth.js session persistence.
-- Redis-backed rate limiting and database-backed entitlement reservation/finalization.
+- Final plan allowance mapping and API-layer rate limiting. Transactional PostgreSQL usage reservation and finalization are implemented.
 - Network-isolated crawler execution and optional Playwright rendering.
 - AI provider connection, prompt set, and evaluation corpus.
 - Stripe price configuration, webhook route, and subscription synchronization.

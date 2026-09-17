@@ -1,8 +1,26 @@
-import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { AppShell } from '../../components/app-shell';
-import { AnalysisView, DashboardView, LeadsView } from '../../components/product-views';
-import { Badge, Button, Metric, StatePanel } from '../../components/design-system';
+import { DashboardView } from '../../components/product-views';
+import { Badge, Button, StatePanel } from '../../components/design-system';
 import { FormPage, SiteShell, TextField } from '../../components/site-shell';
+import { FaqView } from '../../components/marketing-views';
+import { HowItWorksPage } from '../../components/how-it-works-page';
+import { LeadListView } from '../../components/lead-list-view';
+import { LeadDetailView } from '../../components/lead-detail-view';
+import { AnalysisDetailView } from '../../components/analysis-detail-view';
+import { FaqPage, FeaturesPage, PricingPage } from '../../components/reference-marketing-pages';
+import { AuthForm } from '../../components/auth-form';
+import { OnboardingForm } from '../../components/onboarding-form';
+import { ExtensionConnect } from '../../components/extension-connect';
+import {
+  AnalysesView,
+  BillingView,
+  OpportunitiesView,
+  PitchesView,
+  ResearchView,
+  SettingsView,
+  UsageView,
+} from '../../components/workspace-views';
 
 const featureCopy = [
   {
@@ -11,7 +29,7 @@ const featureCopy = [
   },
   {
     title: 'Commercial interpretation',
-    copy: 'Understand why a website issue may matter to the prospect’s business.',
+    copy: "Understand why a website issue may matter to the prospect's business.",
   },
   {
     title: 'Services worth selling',
@@ -20,10 +38,20 @@ const featureCopy = [
 ];
 const appTitles: Record<string, string> = {
   app: 'Dashboard',
+  'app/dashboard': 'Dashboard',
+  'app/overview': 'Overview',
+  'app/research': 'Research',
+  'app/analyses': 'Analyses',
+  'app/opportunities': 'Opportunities',
+  'app/prospects': 'Prospects',
+  'app/pitches': 'Pitches',
+  'app/pitches/new': 'Generate pitch',
   'app/leads': 'Leads',
   'app/usage': 'Usage',
   'app/billing': 'Billing',
   'app/settings': 'Settings',
+  'app/profile': 'Profile',
+  'app/integrations': 'Integrations',
   'app/settings/extension': 'Extension management',
   'app/reports': 'Reports',
 };
@@ -32,13 +60,11 @@ function Marketing({ page }: { page: string }) {
   const title =
     page === 'features'
       ? 'From website signals to credible sales opportunities'
-      : page === 'how-it-works'
-        ? 'A focused path from prospect to pitch'
-        : page === 'pricing'
-          ? 'Start free, scale when prospecting works'
-          : page === 'faq'
-            ? 'Questions, answered plainly'
-            : 'Talk to the ProspectAI team';
+      : page === 'pricing'
+        ? 'Start free, scale when prospecting works'
+        : page === 'faq'
+          ? 'Questions, answered plainly'
+          : 'Talk to the ProspectAI team';
   return (
     <SiteShell>
       <main className="page">
@@ -49,7 +75,9 @@ function Marketing({ page }: { page: string }) {
             Built for freelancers, agencies, consultants, and small sales teams.
           </p>
         </div>
-        {page === 'pricing' ? (
+        {page === 'faq' ? (
+          <FaqView />
+        ) : page === 'pricing' ? (
           <section className="plan-grid">
             {['Free', 'Pro / Individual', 'Agency'].map((plan, index) => (
               <article className="plan" key={plan}>
@@ -66,14 +94,14 @@ function Marketing({ page }: { page: string }) {
             ))}
           </section>
         ) : page === 'contact' ? (
-          <section className="form-panel">
-            <TextField label="Work email" type="email" />
+          <form className="form-panel" method="post">
+            <TextField label="Work email" name="email" type="email" autoComplete="email" required />
             <label className="field">
               How can we help?
               <textarea rows={5} />
             </label>
-            <Button>Send message</Button>
-          </section>
+            <Button type="submit">Send message</Button>
+          </form>
         ) : (
           <section className="feature-grid">
             {featureCopy.map((item) => (
@@ -89,7 +117,7 @@ function Marketing({ page }: { page: string }) {
   );
 }
 
-function Auth({ page }: { page: string }) {
+function Auth({ page, token }: { page: string; token?: string | undefined }) {
   const title =
     page === 'signup'
       ? 'Create your account'
@@ -102,27 +130,15 @@ function Auth({ page }: { page: string }) {
             : 'Verify your email';
   return (
     <FormPage title={title} description="Secure access to your ProspectAI workspace.">
-      {page === 'verify-email' ? (
-        <StatePanel title="Check your inbox">
-          Use the secure verification link we sent to continue.
-        </StatePanel>
-      ) : (
-        <form className="form-panel">
-          <TextField label="Email" type="email" placeholder="you@company.com" />
-          {!page.includes('forgot') && (
-            <TextField
-              label={page === 'reset-password' ? 'New password' : 'Password'}
-              type="password"
-            />
-          )}
-          <Button type="submit">Continue</Button>
-        </form>
-      )}
+      <AuthForm
+        page={page as 'signup' | 'login' | 'verify-email' | 'forgot-password' | 'reset-password'}
+        token={token}
+      />
     </FormPage>
   );
 }
 
-function Application({ path }: { path: string }) {
+function Application({ path, jobId }: { path: string; jobId?: string | undefined }) {
   const title =
     appTitles[path] ??
     (path.startsWith('app/analysis/')
@@ -131,107 +147,71 @@ function Application({ path }: { path: string }) {
         ? 'Lead detail'
         : 'Workspace');
   let content = <DashboardView />;
-  if (path === 'app/leads') content = <LeadsView />;
-  else if (path.startsWith('app/analysis/')) content = <AnalysisView />;
-  else if (path.startsWith('app/leads/')) content = <AnalysisView />;
-  else if (path === 'app/usage')
+  if (path === 'app/leads' || path === 'app/prospects') content = <LeadListView />;
+  else if (path === 'app/research') content = <ResearchView />;
+  else if (path === 'app/opportunities') content = <OpportunitiesView />;
+  else if (path === 'app/pitches' || path === 'app/pitches/new') content = <PitchesView />;
+  else if (path === 'app/analyses') content = <AnalysesView />;
+  else if (path.startsWith('app/analysis/'))
     content = (
-      <>
-        <section className="metrics">
-          <Metric label="Plan" value="Free" note="Current entitlement" />
-          <Metric label="Used analyses" note="Current billing period" />
-          <Metric label="Remaining" note="Authoritative after API connection" />
-        </section>
-        <section className="settings-section">
-          <h2>Analysis usage</h2>
-          <div className="progress-track">
-            <span style={{ width: '0%' }} />
-          </div>
-          <p className="muted">Usage will appear when your account is connected.</p>
-          <Button>Compare plans</Button>
-        </section>
-      </>
+      <AnalysisDetailView
+        analysisId={decodeURIComponent(path.slice('app/analysis/'.length))}
+        jobId={jobId}
+      />
     );
-  else if (path === 'app/billing')
-    content = (
-      <section className="plan-grid">
-        {['Free', 'Pro / Individual', 'Agency'].map((plan) => (
-          <article className="plan" key={plan}>
-            <h2>{plan}</h2>
-            <p className="muted">Plan entitlements remain server-authoritative.</p>
-            <Button>{plan === 'Free' ? 'Current plan' : 'Upgrade'}</Button>
-          </article>
-        ))}
-      </section>
-    );
-  else if (path === 'app/settings/extension')
-    content = (
-      <section className="settings-section">
-        <div className="status-row">
-          <div>
-            <h2>Chrome Extension</h2>
-            <p className="muted">Connect ProspectAI to analyze the active business website.</p>
-          </div>
-          <Badge tone="warning">Disconnected</Badge>
-        </div>
-        <Button>Connect extension</Button>
-      </section>
-    );
-  else if (path === 'app/settings')
-    content = (
-      <section className="settings-section">
-        <h2>Profile and service preferences</h2>
-        <TextField label="Display name" />
-        <label className="field">
-          Primary role
-          <select>
-            <option>Freelancer</option>
-            <option>Agency</option>
-            <option>Consultant</option>
-            <option>Sales team</option>
-          </select>
-        </label>
-        <Button>Save settings</Button>
-      </section>
-    );
+  else if (path.startsWith('app/leads/'))
+    content = <LeadDetailView leadId={decodeURIComponent(path.slice('app/leads/'.length))} />;
+  else if (path === 'app/usage') content = <UsageView />;
+  else if (path === 'app/billing') content = <BillingView />;
+  else if (path === 'app/settings/extension' || path === 'app/integrations')
+    content = <SettingsView extensionOnly />;
+  else if (path === 'app/settings' || path === 'app/profile') content = <SettingsView />;
   else if (path === 'app/reports')
     content = (
-      <StatePanel title="No reports yet">
-        Completed analyses will appear here as evidence-backed reports.
+      <StatePanel title="No report selected">
+        Open a completed analysis to view its evidence-backed report.
       </StatePanel>
     );
-  return <AppShell title={title}>{content}</AppShell>;
+  return (
+    <AppShell title={title} activePath={`/${path}`}>
+      {content}
+    </AppShell>
+  );
 }
 
-export default async function RoutedPage({ params }: { params: Promise<{ slug: string[] }> }) {
+export default async function RoutedPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const path = (await params).slug.join('/');
+  const query = await searchParams;
+  const value = (name: string) => {
+    const item = query[name];
+    return Array.isArray(item) ? item[0] : item;
+  };
   if (path in appTitles || path.startsWith('app/analysis/') || path.startsWith('app/leads/'))
-    return <Application path={path} />;
+    return <Application path={path} jobId={value('job')} />;
+  if (path === 'extension/connect')
+    return (
+      <FormPage
+        title="Connect your account"
+        description="Authorize ProspectAI from a signed-in workspace."
+      >
+        <ExtensionConnect requestId={value('request')} />
+      </FormPage>
+    );
   if (['signup', 'login', 'verify-email', 'forgot-password', 'reset-password'].includes(path))
-    return <Auth page={path} />;
+    return <Auth page={path} token={value('token')} />;
   if (path === 'onboarding')
     return (
       <FormPage
         title="Shape your opportunities"
-        description="Two quick details help ProspectAI prioritize relevant services."
+        description="Role and services are required. Everything else can be completed later."
       >
-        <label className="field">
-          Your role
-          <select>
-            <option>Freelancer</option>
-            <option>Agency</option>
-            <option>Consultant</option>
-            <option>Sales team</option>
-          </select>
-        </label>
-        <label className="field">
-          Services offered
-          <textarea rows={4} placeholder="Web design, performance, SEO..." />
-        </label>
-        <div className="actions">
-          <Button>Continue</Button>
-          <Link href="/app">Skip for now</Link>
-        </div>
+        <OnboardingForm />
       </FormPage>
     );
   if (['privacy', 'terms'].includes(path))
@@ -249,5 +229,30 @@ export default async function RoutedPage({ params }: { params: Promise<{ slug: s
         </main>
       </SiteShell>
     );
-  return <Marketing page={path} />;
+  if (path === 'features')
+    return (
+      <SiteShell activePath="/features">
+        <FeaturesPage />
+      </SiteShell>
+    );
+  if (path === 'pricing')
+    return (
+      <SiteShell activePath="/pricing">
+        <PricingPage />
+      </SiteShell>
+    );
+  if (path === 'faq')
+    return (
+      <SiteShell activePath="/faq">
+        <FaqPage />
+      </SiteShell>
+    );
+  if (path === 'how-it-works')
+    return (
+      <SiteShell activePath="/how-it-works">
+        <HowItWorksPage />
+      </SiteShell>
+    );
+  if (['contact', 'resources'].includes(path)) return <Marketing page={path} />;
+  notFound();
 }

@@ -189,7 +189,7 @@ Canonical states:
 
 Planned queue:
 
-- Redis + BullMQ locally and in production-compatible deployments.
+- PostgreSQL `AnalysisJob` rows locally and in production-compatible deployments.
 
 Dependencies:
 

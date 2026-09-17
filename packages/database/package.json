@@ -13,8 +13,10 @@
     "prisma": "6.14.0"
   },
   "scripts": {
-    "prisma:generate": "prisma generate",
-    "prisma:validate": "prisma validate",
+    "prisma:generate": "node --env-file-if-exists=../../.env ./node_modules/prisma/build/index.js generate",
+    "prisma:validate": "node --env-file-if-exists=../../.env ./node_modules/prisma/build/index.js validate",
+    "prisma:migrate:status": "node --env-file-if-exists=../../.env ./node_modules/prisma/build/index.js migrate status",
+    "prisma:migrate:dev": "node --env-file-if-exists=../../.env ./node_modules/prisma/build/index.js migrate dev",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --max-warnings=0",
     "test": "vitest run --passWithNoTests"

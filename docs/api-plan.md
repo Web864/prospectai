@@ -53,9 +53,9 @@ All paths in the table are relative to `/api/v1`, except webhook delivery, which
 
 `POST /analyses` accepts `{ url, forceRefresh?: boolean }`. The URL must be canonicalized, limited to `https`/`http`, reject credentials and non-public targets, and be subject to DNS, redirect, size, and time limits. On success it returns `202` with `{ jobId, analysisId, status: "queued", usageReservationId }`.
 
-`GET /analysis-jobs/:id` returns the canonical state: `queued`, `running`, `succeeded`, `failed`, `blocked`, `cancelled`, or `timed_out`. A completed analysis contains structured signals, evidence links/excerpts, score, opportunity summary, confidence, and crawl metadata. It must distinguish a blocked/unreachable source from a successful zero-opportunity result.
+`GET /analysis-jobs/:id` returns the canonical queued, processing-stage, retry, partial, completed, failed, or cancelled state plus persisted progress and attempt metadata. A completed analysis contains structured signals, evidence links/excerpts, score, opportunity summary, confidence, and crawl metadata. It must distinguish a blocked/unreachable source from a successful zero-opportunity result.
 
-The worker alone may transition jobs. Valid transitions are enforced transactionally: `queued -> running -> succeeded|failed|blocked|timed_out`; `queued|running -> cancelled` only when cancellation is still actionable. On terminal failure, the usage reservation is released or adjusted according to the billing policy.
+The worker alone may transition processing jobs. PostgreSQL leases fence transitions by worker identity and attempt. Terminal completion consumes the usage reservation; exhausted failure releases it according to billing policy.
 
 ## Rate Limits and Abuse Controls
 
@@ -69,7 +69,7 @@ The worker alone may transition jobs. Valid transitions are enforced transaction
 | Public report                                      | 30 / minute with bot protection when abuse occurs | IP and share token                     |
 | Billing webhook                                    | Provider-origin validation; event-id dedupe       | Stripe event id                        |
 
-Redis implements distributed limits, job coordination, and idempotency locks. Limits remain configurable without a code deploy and return `429` with `Retry-After`.
+PostgreSQL transactions implement job coordination, usage concurrency control, and idempotency. API-layer limits return `429` with `Retry-After` without requiring another stateful service.
 
 ## Webhook Processing
 

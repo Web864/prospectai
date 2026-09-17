@@ -8,7 +8,9 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
+    "dev": "pnpm --parallel --stream --filter @prospectai/web --filter @prospectai/extension --filter @prospectai/worker dev",
     "dev:web": "pnpm --filter @prospectai/web dev",
+    "dev:extension": "pnpm --filter @prospectai/extension dev",
     "dev:worker": "pnpm --filter @prospectai/worker dev",
     "lint": "pnpm -r --if-present lint",
     "format": "prettier --write .",
@@ -17,7 +19,9 @@
     "test": "pnpm -r --if-present test",
     "build": "pnpm --filter @prospectai/web build && pnpm --filter @prospectai/extension build && pnpm --filter @prospectai/worker build",
     "prisma:validate": "pnpm --filter @prospectai/database prisma:validate",
-    "prisma:generate": "pnpm --filter @prospectai/database prisma:generate"
+    "prisma:generate": "pnpm --filter @prospectai/database prisma:generate",
+    "prisma:migrate:status": "pnpm --filter @prospectai/database prisma:migrate:status",
+    "prisma:migrate:dev": "pnpm --filter @prospectai/database prisma:migrate:dev"
   },
   "devDependencies": {
     "@types/node": "22.15.3",

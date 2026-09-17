@@ -1,3 +1,5 @@
+import type { AnalysisJobStatus } from '@prospectai/types';
+
 export const extensionStates = [
   'first_launch',
   'logged_out',
@@ -44,7 +46,7 @@ export const stateCopy: Record<
     title: 'Connect your account',
     detail: 'Authorize this extension from your ProspectAI workspace.',
   },
-  connecting: { title: 'Connecting', detail: 'Finishing secure account connection…' },
+  connecting: { title: 'Connecting', detail: 'Finishing secure account connectionâ€¦' },
   connected: { title: 'Connected', detail: 'ProspectAI is ready on supported business websites.' },
   supported_website: {
     title: 'Website supported',
@@ -138,4 +140,17 @@ export function stateFromTab(url?: string): ExtensionState {
   return url?.startsWith('http://') || url?.startsWith('https://')
     ? 'ready'
     : 'unsupported_website';
+}
+export function stateFromJobStatus(status: AnalysisJobStatus): ExtensionState {
+  if (status === 'retry_pending') return 'queued';
+  if (status === 'retrying') return 'validating';
+  if (status === 'cancelled') return 'failed';
+  return status;
+}
+
+export function stateFromApiStatus(status: number): ExtensionState {
+  if (status === 401) return 'session_expired';
+  if (status === 403) return 'session_revoked';
+  if (status === 429) return 'usage_limit_reached';
+  return 'backend_unavailable';
 }
