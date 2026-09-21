@@ -1,3 +1,18 @@
+# Value-First Revision Status
+
+The original greenfield matrix below is historical. The approved onboarding revision supersedes its connect-first rows.
+
+| Requirement                                       | Status  | Evidence                                                                                                     |
+| ------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| Extension opens without authentication            | PASS    | Guest session initialization and guest-ready popup.                                                          |
+| Configurable server-authoritative guest allowance | PASS    | Central config, hashed GuestSession, PostgreSQL usage reservation.                                           |
+| Privacy disclosure and explicit click             | PASS    | Popup disclosure; no background/content script path.                                                         |
+| Progressive registration after value              | PASS    | Guest result/save CTA and limit conversion states.                                                           |
+| Minimum permissions                               | PASS    | `activeTab`, `storage`, narrow API host only.                                                                |
+| Seamless guest conversion contract                | PASS    | PKCE exchange, transactional/idempotent conversion, and current-result restoration without reconnect.        |
+| Production crawler/result delivery                | PARTIAL | Queue/API boundaries exist; worker crawler remains intentionally unavailable pending backend implementation. |
+| Browser/OAuth E2E                                 | PARTIAL | Automated unit/build checks exist; unpacked Chrome and real provider verification remain manual/external.    |
+
 # Requirements Matrix
 
 ProspectAI PRD V2 has been fully reviewed and is being used as the product source of truth.

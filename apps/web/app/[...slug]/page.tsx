@@ -117,7 +117,15 @@ function Marketing({ page }: { page: string }) {
   );
 }
 
-function Auth({ page, token }: { page: string; token?: string | undefined }) {
+function Auth({
+  page,
+  token,
+  returnTo,
+}: {
+  page: string;
+  token?: string | undefined;
+  returnTo?: string | undefined;
+}) {
   const title =
     page === 'signup'
       ? 'Create your account'
@@ -133,6 +141,7 @@ function Auth({ page, token }: { page: string; token?: string | undefined }) {
       <AuthForm
         page={page as 'signup' | 'login' | 'verify-email' | 'forgot-password' | 'reset-password'}
         token={token}
+        returnTo={returnTo}
       />
     </FormPage>
   );
@@ -204,7 +213,7 @@ export default async function RoutedPage({
       </FormPage>
     );
   if (['signup', 'login', 'verify-email', 'forgot-password', 'reset-password'].includes(path))
-    return <Auth page={path} token={value('token')} />;
+    return <Auth page={path} token={value('token')} returnTo={value('returnTo')} />;
   if (path === 'onboarding')
     return (
       <FormPage

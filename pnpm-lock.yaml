@@ -65,6 +65,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@prospectai/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@prospectai/analysis':
         specifier: workspace:*
         version: link:../../packages/analysis
@@ -74,9 +77,15 @@ importers:
       '@prospectai/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@prospectai/billing':
+        specifier: workspace:*
+        version: link:../../packages/billing
       '@prospectai/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@prospectai/crawler':
+        specifier: workspace:*
+        version: link:../../packages/crawler
       '@prospectai/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -120,12 +129,24 @@ importers:
 
   apps/worker:
     dependencies:
+      '@prospectai/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@prospectai/analysis':
         specifier: workspace:*
         version: link:../../packages/analysis
       '@prospectai/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@prospectai/crawler':
+        specifier: workspace:*
+        version: link:../../packages/crawler
+      '@prospectai/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@prospectai/scoring':
+        specifier: workspace:*
+        version: link:../../packages/scoring
       '@prospectai/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -151,6 +172,9 @@ importers:
       '@prisma/client':
         specifier: 6.14.0
         version: 6.14.0(prisma@6.14.0(typescript@5.8.3))(typescript@5.8.3)
+      '@prospectai/crawler':
+        specifier: workspace:*
+        version: link:../crawler
       '@prospectai/database':
         specifier: workspace:*
         version: link:../database
@@ -199,6 +223,9 @@ importers:
       '@prospectai/shared':
         specifier: workspace:*
         version: link:../shared
+      cheerio:
+        specifier: 1.1.2
+        version: 1.1.2
 
   packages/database:
     dependencies:
@@ -2321,6 +2348,13 @@ packages:
       {
         integrity: sha512-9v9kG0LvzrlcungtnJtpGNxY+fzECQKhK4EGJX2vByejiMX84MFNQw4UxPJl3bFbTMw+Dfs37XaIkCwTZfLh4g==,
       }
+
+  cheerio@1.1.2:
+    resolution:
+      {
+        integrity: sha512-IkxPpb5rS/d1IiLbHMgfPuS0FgiWTtFIm/Nj+2woXDLTZ7fOT2eqzgYbdMlLweqlHbsZjxEChoVK+7iph7jyQg==,
+      }
+    engines: { node: '>=20.18.1' }
 
   cheerio@1.2.0:
     resolution:
@@ -6133,6 +6167,20 @@ snapshots:
       domelementtype: 2.3.0
       domhandler: 5.0.3
       domutils: 3.2.2
+
+  cheerio@1.1.2:
+    dependencies:
+      cheerio-select: 2.1.0
+      dom-serializer: 2.0.0
+      domhandler: 5.0.3
+      domutils: 3.2.2
+      encoding-sniffer: 0.2.1
+      htmlparser2: 10.1.0
+      parse5: 7.3.0
+      parse5-htmlparser2-tree-adapter: 7.1.0
+      parse5-parser-stream: 7.1.2
+      undici: 7.29.1
+      whatwg-mimetype: 4.0.0
 
   cheerio@1.2.0:
     dependencies:

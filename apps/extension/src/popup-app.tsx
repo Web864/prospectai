@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  actionResponseSchema,
   analysisAcceptedResponseSchema,
   analysisDetailResponseSchema,
   analysisJobProgressResponseSchema,
   extensionAuthorizationCreatedSchema,
+  guestAnalysisAcceptedResponseSchema,
+  guestAnalysisResultResponseSchema,
+  guestSessionResponseSchema,
   usageResponseSchema,
 } from '@prospectai/validation';
 import { apiRequest } from './api-client';
 import { APP_URL } from './config';
-import { createPkcePair } from './pkce';
+import { createOpaqueToken, createPkcePair } from './pkce';
+import { guestEntryState, guestRemainingLabel } from './guest-flow';
 import brandIconUrl from './icons/icon-128.png';
 import {
   stateCopy,
@@ -20,73 +23,132 @@ import {
 } from './state-model';
 import './popup.css';
 
-type ConnectIconName = 'arrow' | 'chart' | 'copy' | 'link' | 'shield' | 'spark';
+const maxPollAttempts = 120;
+type GuestSession = typeof guestSessionResponseSchema._output.data;
+type GuestResult = typeof guestAnalysisResultResponseSchema._output.data;
+type RegisteredResult = typeof analysisDetailResponseSchema._output.data;
 
-function ConnectIcon({ name }: { name: ConnectIconName }) {
-  const paths: Record<ConnectIconName, ReactNode> = {
-    arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
-    chart: <path d="M5 19V9m7 10V5m7 14v-7" />,
-    copy: (
-      <>
-        <rect x="8" y="8" width="11" height="11" rx="2" />
-        <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
-      </>
-    ),
-    link: <path d="m10 13.5 4-4m-6.5 8H6a4 4 0 0 1 0-8h3m7.5-3H18a4 4 0 0 1 0 8h-3" />,
-    shield: <path d="M12 3 5 6v5c0 4.5 2.8 7.6 7 9 4.2-1.4 7-4.5 7-9V6l-7-3Zm-3 9 2 2 4-4" />,
-    spark: <path d="m13 2-7 11h5l-1 9 8-12h-5V2Z" />,
-  };
-
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      {paths[name]}
-    </svg>
-  );
+async function errorCode(response: Response) {
+  try {
+    const body = (await response.json()) as { error?: { code?: string } };
+    return body.error?.code;
+  } catch {
+    return undefined;
+  }
 }
 
-const maxPollAttempts = 120;
+function hostname(url?: string) {
+  try {
+    return url ? new URL(url).hostname : '';
+  } catch {
+    return '';
+  }
+}
 
-const connectStates: ExtensionState[] = [
-  'first_launch',
-  'logged_out',
-  'authentication_required',
-  'session_expired',
-  'session_revoked',
-];
 export function PopupApp() {
   const [url, setUrl] = useState<string>();
-  const [state, setState] = useState<ExtensionState>('first_launch');
-  const [copyFeedback, setCopyFeedback] = useState('Copy authorization URL');
-  const [connectError, setConnectError] = useState('');
-  const [result, setResult] = useState<typeof analysisDetailResponseSchema._output.data>();
+  const [state, setState] = useState<ExtensionState>('first_use_guest');
+  const [guest, setGuest] = useState<GuestSession>();
+  const [guestResult, setGuestResult] = useState<GuestResult>();
+  const [registeredResult, setRegisteredResult] = useState<RegisteredResult>();
   const [usage, setUsage] = useState<typeof usageResponseSchema._output.data>();
+  const [progress, setProgress] = useState(0);
   const pollingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const refreshGuest = async () => {
+    const response = await apiRequest('/guest-sessions');
+    if (!response.ok) throw new Error('Guest session unavailable.');
+    const parsed = guestSessionResponseSchema.safeParse(await response.json());
+    if (!parsed.success) throw new Error('Guest session response invalid.');
+    setGuest(parsed.data.data);
+    await chrome.storage.local.set({ guestSessionId: parsed.data.data.sessionId });
+    return parsed.data.data;
+  };
+
   useEffect(() => {
-    Promise.all([
+    let active = true;
+    void Promise.all([
       chrome.tabs.query({ active: true, lastFocusedWindow: true }),
-      chrome.storage.local.get(['sessionState', 'accessToken']),
+      chrome.storage.local.get([
+        'accessToken',
+        'guestToken',
+        'privacyAcknowledged',
+        'lastConvertedAnalysisId',
+      ]),
     ])
-      .then(([tabs, session]) => {
-        const current = tabs[0]?.url;
-        setUrl(current);
-        setState(
-          session.accessToken
-            ? stateFromTab(current)
-            : session.sessionState === 'disconnected'
-              ? 'authentication_required'
-              : 'first_launch',
-        );
+      .then(async ([tabs, stored]) => {
+        if (!active) return;
+        const currentUrl = tabs[0]?.url;
+        setUrl(currentUrl);
+        const pageState = stateFromTab(currentUrl);
+        if (pageState === 'unsupported_page' || pageState === 'permission_error') {
+          setState(pageState);
+          return;
+        }
+        if (typeof stored.accessToken === 'string') {
+          if (typeof stored.lastConvertedAnalysisId === 'string') {
+            const response = await apiRequest(
+              `/analyses/${encodeURIComponent(stored.lastConvertedAnalysisId)}`,
+            );
+            if (response.ok) {
+              const parsed = analysisDetailResponseSchema.safeParse(await response.json());
+              if (parsed.success) {
+                setRegisteredResult(parsed.data.data);
+                setState('registered_result');
+                await chrome.storage.local.remove('lastConvertedAnalysisId');
+                return;
+              }
+            }
+          }
+          setState('registered_ready');
+          return;
+        }
+        if (typeof stored.guestToken !== 'string') {
+          await chrome.storage.local.set({ guestToken: createOpaqueToken() });
+        }
+        const response = await apiRequest('/guest-sessions', { method: 'POST' });
+        if (!response.ok) {
+          setState(stateFromApiStatus(response.status, await errorCode(response)));
+          return;
+        }
+        const parsed = guestSessionResponseSchema.safeParse(await response.json());
+        if (!parsed.success) return setState('backend_unavailable');
+        setGuest(parsed.data.data);
+        await chrome.storage.local.set({ guestSessionId: parsed.data.data.sessionId });
+        setState(guestEntryState(parsed.data.data, stored.privacyAcknowledged === true));
       })
-      .catch(() => setState('permission_error'));
-  }, []);
-  useEffect(
-    () => () => {
+      .catch(() => setState(navigator.onLine ? 'backend_unavailable' : 'offline'));
+    const storageListener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if (changes.accessToken?.newValue) {
+        setState('auth_success');
+        setTimeout(() => setState('registered_ready'), 700);
+      }
+      const restoredAnalysisId = changes.lastConvertedAnalysisId?.newValue;
+      if (typeof restoredAnalysisId === 'string') {
+        void apiRequest(`/analyses/${encodeURIComponent(restoredAnalysisId)}`)
+          .then(async (response) => {
+            if (!response.ok) return;
+            const parsed = analysisDetailResponseSchema.safeParse(await response.json());
+            if (!parsed.success) return;
+            setGuest(undefined);
+            setGuestResult(undefined);
+            setRegisteredResult(parsed.data.data);
+            setState('registered_result');
+            await chrome.storage.local.remove('lastConvertedAnalysisId');
+          })
+          .catch(() => undefined);
+      }
+    };
+    chrome.storage.onChanged.addListener(storageListener);
+    return () => {
+      active = false;
+      chrome.storage.onChanged.removeListener(storageListener);
       if (pollingTimer.current) clearTimeout(pollingTimer.current);
-    },
-    [],
-  );
+    };
+  }, []);
+
   useEffect(() => {
-    if (usage || !['ready', 'completed', 'partial'].includes(state)) return;
+    if (usage || !['registered_ready', 'registered_result'].includes(state)) return;
     void apiRequest('/usage')
       .then(async (response) => {
         if (!response.ok) return;
@@ -96,53 +158,97 @@ export function PopupApp() {
       .catch(() => undefined);
   }, [state, usage]);
 
-  const pollAnalysisJob = async (jobId: string, attempt = 0): Promise<void> => {
+  const pollJob = async (
+    jobId: string,
+    mode: 'guest' | 'registered',
+    attempt = 0,
+  ): Promise<void> => {
     if (attempt >= maxPollAttempts) return setState('backend_unavailable');
     try {
       const response = await apiRequest(`/analysis-jobs/${encodeURIComponent(jobId)}`);
-      if (!response.ok) return setState(stateFromApiStatus(response.status));
+      if (!response.ok)
+        return setState(stateFromApiStatus(response.status, await errorCode(response)));
       const parsed = analysisJobProgressResponseSchema.safeParse(await response.json());
       if (!parsed.success) return setState('backend_unavailable');
-      const nextState = stateFromJobStatus(parsed.data.data.status);
+      setProgress(parsed.data.data.progress);
+      const nextState = stateFromJobStatus(parsed.data.data.status, mode);
       setState(nextState);
-      if (nextState === 'completed' || nextState === 'partial') {
-        const detailResponse = await apiRequest(
-          `/analyses/${encodeURIComponent(parsed.data.data.analysisId)}`,
-        );
+      if (['guest_result', 'registered_result', 'partial_result'].includes(nextState)) {
+        const path =
+          mode === 'guest'
+            ? `/guest-analyses/${encodeURIComponent(parsed.data.data.analysisId)}`
+            : `/analyses/${encodeURIComponent(parsed.data.data.analysisId)}`;
+        const detailResponse = await apiRequest(path);
         if (detailResponse.ok) {
-          const detail = analysisDetailResponseSchema.safeParse(await detailResponse.json());
-          if (detail.success) setResult(detail.data.data);
+          const body = await detailResponse.json();
+          if (mode === 'guest') {
+            const detail = guestAnalysisResultResponseSchema.safeParse(body);
+            if (detail.success) setGuestResult(detail.data.data);
+            await refreshGuest();
+          } else {
+            const detail = analysisDetailResponseSchema.safeParse(body);
+            if (detail.success) setRegisteredResult(detail.data.data);
+          }
         }
+        return;
       }
-      if (!['completed', 'partial', 'failed'].includes(nextState)) {
-        pollingTimer.current = setTimeout(() => void pollAnalysisJob(jobId, attempt + 1), 1_500);
+      if (nextState === 'analysis_failed') {
+        if (mode === 'guest') await refreshGuest().catch(() => undefined);
+        return;
       }
+      pollingTimer.current = setTimeout(() => void pollJob(jobId, mode, attempt + 1), 1_500);
     } catch {
       setState(navigator.onLine ? 'backend_unavailable' : 'offline');
     }
   };
 
-  const analyze = async () => {
+  const analyzeGuest = async () => {
+    if (!url || !guest) return;
+    if (guest.quotaReached) return setState('guest_limit_reached');
+    setState('guest_disclosure');
+    await chrome.storage.local.set({ privacyAcknowledged: true });
+    setState('guest_analyzing');
+    setProgress(5);
+    try {
+      const response = await apiRequest('/guest-analyses', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({ url }),
+      });
+      if (!response.ok)
+        return setState(stateFromApiStatus(response.status, await errorCode(response)));
+      const parsed = guestAnalysisAcceptedResponseSchema.safeParse(await response.json());
+      if (!parsed.success) return setState('backend_unavailable');
+      setGuest(parsed.data.data.entitlement);
+      await chrome.storage.local.set({ currentGuestAnalysisId: parsed.data.data.analysisId });
+      await pollJob(parsed.data.data.jobId, 'guest');
+    } catch {
+      setState(navigator.onLine ? 'backend_unavailable' : 'offline');
+    }
+  };
+
+  const analyzeRegistered = async () => {
     if (!url) return;
-    setState('queued');
+    setState('registered_analyzing');
+    setProgress(5);
     try {
       const response = await apiRequest('/analyses', {
         method: 'POST',
         headers: { 'Idempotency-Key': crypto.randomUUID() },
         body: JSON.stringify({ url }),
       });
-      if (response.status === 429) return setState('usage_limit_reached');
-      if (!response.ok) return setState(stateFromApiStatus(response.status));
+      if (!response.ok)
+        return setState(stateFromApiStatus(response.status, await errorCode(response)));
       const parsed = analysisAcceptedResponseSchema.safeParse(await response.json());
       if (!parsed.success) return setState('backend_unavailable');
-      await pollAnalysisJob(parsed.data.data.jobId);
+      await pollJob(parsed.data.data.jobId, 'registered');
     } catch {
       setState(navigator.onLine ? 'backend_unavailable' : 'offline');
     }
   };
-  const beginConnection = async () => {
-    setConnectError('');
-    setState('connecting');
+
+  const beginAuthentication = async (provider: 'google' | 'account') => {
+    setState('auth_start');
     try {
       const { verifier, challenge } = await createPkcePair();
       const response = await apiRequest('/extension/authorization-requests', {
@@ -151,268 +257,243 @@ export function PopupApp() {
           extensionVersion: chrome.runtime.getManifest().version,
           codeChallenge: challenge,
           deviceName: navigator.platform || 'Chrome extension',
+          preferredProvider: provider,
+          redirectUri: chrome.identity.getRedirectURL('prospectai'),
         }),
       });
       if (!response.ok) throw new Error('Authorization request failed.');
       const parsed = extensionAuthorizationCreatedSchema.safeParse(await response.json());
-      if (!parsed.success) throw new Error('Authorization response was invalid.');
+      if (!parsed.success) throw new Error('Authorization response invalid.');
       await chrome.storage.local.set({
         pkceVerifier: verifier,
         authorizationRequestId: parsed.data.data.id,
       });
-      await chrome.tabs.create({ url: parsed.data.data.authorizationUrl });
-      setState('authentication_required');
-    } catch {
-      setConnectError('Secure account pairing is currently unavailable. Try again shortly.');
-      setState('authentication_required');
-    }
-  };
-
-  const disconnect = async () => {
-    try {
-      await apiRequest('/extension/session', { method: 'DELETE' });
-    } finally {
-      await chrome.storage.local.remove([
-        'accessToken',
-        'refreshToken',
-        'pkceVerifier',
-        'authorizationRequestId',
-      ]);
-      await chrome.storage.local.set({ sessionState: 'disconnected' });
-      setState('authentication_required');
-      setResult(undefined);
-    }
-  };
-
-  const resultAction = async (kind: 'lead' | 'pitch') => {
-    if (!result) return;
-    const opportunity = result.opportunities[0];
-    if (kind === 'pitch' && !opportunity) return setState('failed');
-    try {
-      const response = await apiRequest(kind === 'lead' ? '/leads' : '/pitches', {
-        method: 'POST',
-        body: JSON.stringify(
-          kind === 'lead'
-            ? { analysisId: result.id }
-            : { analysisId: result.id, opportunityId: opportunity?.id },
-        ),
+      setState('auth_pending');
+      const callbackUrl = await chrome.identity.launchWebAuthFlow({
+        url: parsed.data.data.authorizationUrl,
+        interactive: true,
       });
-      if (!response.ok) return setState(stateFromApiStatus(response.status));
-      const parsed = actionResponseSchema.safeParse(await response.json());
-      if (!parsed.success) return setState('backend_unavailable');
-      setState(kind === 'lead' ? 'lead_saved' : 'pitch_generated');
+      if (!callbackUrl) throw new Error('Authentication was canceled.');
+      const callback = new URL(callbackUrl);
+      if (callback.searchParams.get('state') !== parsed.data.data.id)
+        throw new Error('Authorization state did not match.');
+      const code = callback.searchParams.get('code');
+      if (!code) throw new Error('Authorization code was missing.');
+      const result = (await chrome.runtime.sendMessage({
+        type: 'complete-pairing',
+        code,
+      })) as { connected?: boolean };
+      if (!result.connected) throw new Error('Extension pairing failed.');
+      setState('auth_success');
     } catch {
-      setState(navigator.onLine ? 'backend_unavailable' : 'offline');
+      setState('auth_failed');
     }
   };
+
   const copy = stateCopy[state];
-  const isProgress = copy.progress !== undefined && copy.progress < 100;
-  const isResult = state === 'completed' || state === 'partial';
-  const connectUrl = `${APP_URL}/extension/connect`;
-
-  if (connectStates.includes(state)) {
-    const copyConnectUrl = async () => {
-      try {
-        await navigator.clipboard.writeText(connectUrl);
-        setCopyFeedback('Authorization URL copied');
-      } catch {
-        setCopyFeedback('Unable to copy URL');
-      }
-    };
-
-    return (
-      <main className="connect-page">
-        <header className="connect-header">
-          <div className="connect-brand">
-            <img src={brandIconUrl} alt="" />
-            <strong>
-              Prospect<span>AI</span>
-            </strong>
-          </div>
-          <div className="extension-ready" role="status">
-            <span /> Extension ready
-          </div>
-        </header>
-
-        <div className="connect-content">
-          <section className="connect-card" aria-labelledby="connect-title">
-            <div className="connect-badge">
-              <ConnectIcon name="link" />
-              Connect your workspace
-            </div>
-            <h1 id="connect-title">Connect your account</h1>
-            <p className="connect-description">
-              Authorize this extension from your ProspectAI workspace to securely access your
-              account.
-            </p>
-
-            <div className="authorization-field">
-              <span className="authorization-label">Authorization URL</span>
-              <div className="authorization-value">
-                <span className="field-icon">
-                  <ConnectIcon name="link" />
-                </span>
-                <code title={connectUrl}>{connectUrl}</code>
-                <button
-                  type="button"
-                  onClick={() => void copyConnectUrl()}
-                  aria-label={copyFeedback}
-                >
-                  <ConnectIcon name="copy" />
-                </button>
-              </div>
-            </div>
-
-            <button
-              className="connect-button"
-              type="button"
-              onClick={() => void beginConnection()}
-              disabled={state === 'connecting'}
-            >
-              {state === 'connecting' ? 'Preparing secure connection...' : 'Connect account'}
-              <ConnectIcon name="arrow" />
-            </button>
-            {connectError && (
-              <p className="connect-error" role="alert">
-                {connectError}
-              </p>
-            )}
-
-            <p className="security-note">
-              <ConnectIcon name="shield" />
-              Secure and read-only access. You can revoke access at any time.
-            </p>
-            <span className="copy-feedback" aria-live="polite">
-              {copyFeedback === 'Copy authorization URL' ? '' : copyFeedback}
-            </span>
-          </section>
-
-          <section className="connect-features" aria-label="Extension benefits">
-            <article>
-              <span className="feature-icon feature-icon--teal">
-                <ConnectIcon name="shield" />
-              </span>
-              <div>
-                <h2>Secure access</h2>
-                <p>Your data stays private and safe.</p>
-              </div>
-            </article>
-            <article>
-              <span className="feature-icon feature-icon--blue">
-                <ConnectIcon name="chart" />
-              </span>
-              <div>
-                <h2>Opportunity intelligence</h2>
-                <p>Unlock insights where you work.</p>
-              </div>
-            </article>
-            <article>
-              <span className="feature-icon feature-icon--green">
-                <ConnectIcon name="spark" />
-              </span>
-              <div>
-                <h2>Fast setup</h2>
-                <p>Connect in seconds.</p>
-              </div>
-            </article>
-          </section>
-        </div>
-
-        <footer className="connect-footer">ProspectAI | Opportunity Intelligence</footer>
-      </main>
-    );
-  }
+  const domain = hostname(url);
+  const isGuestEntry = state === 'first_use_guest' || state === 'guest_ready';
+  const isGuestResult = state === 'guest_result' || (state === 'partial_result' && !!guest);
+  const isRegisteredResult =
+    state === 'registered_result' || (state === 'partial_result' && !guest);
 
   return (
-    <main className="popup">
-      <header className="popup-header">
-        <h1>ProspectAI</h1>
-        <span className="eyebrow">OPPORTUNITY INTELLIGENCE</span>
-      </header>
-      <section
-        className={
-          ['failed', 'backend_unavailable', 'permission_error'].includes(state) ? 'error' : ''
-        }
-        aria-live="polite"
-      >
-        <h2>{copy.title}</h2>
-        <p className="detail">{copy.detail}</p>
-        {url && <p className="domain">{url}</p>}
-        {usage && (
-          <p className="detail">
-            Usage: {usage.used}
-            {usage.limit === null ? '' : ` of ${usage.limit}`} analyses this period
-          </p>
-        )}{' '}
-        {copy.progress !== undefined && (
-          <div className="progress" aria-label={`${copy.progress}% complete`}>
-            <span style={{ width: `${copy.progress}%` }} />
-          </div>
-        )}
-        {isResult && result && (
-          <div className="score-row">
-            <div className="mini-score">
-              <small>Opportunity</small>
-              <strong>{result.opportunityScore ?? '--'}</strong>
-              <small>Server score</small>
-            </div>
-            <div className="mini-score">
-              <small>Website</small>
-              <strong>{result.websiteScore ?? '--'}</strong>
-              <small>Server score</small>
-            </div>
-          </div>
-        )}
-        {isResult && !result && (
-          <p className="detail">
-            The analysis finished, but detailed results are not available yet.
-          </p>
-        )}{' '}
-        <div className="popup-actions">
-          {state === 'ready' && (
-            <button onClick={() => void analyze()}>Analyze current site</button>
-          )}
-          {isProgress && <button disabled>Analysis in progress</button>}
-          {isResult && result && (
-            <>
-              <button
-                disabled={result.opportunities.length === 0}
-                onClick={() => void resultAction('pitch')}
-              >
-                Generate pitch
-              </button>
-              <button onClick={() => void resultAction('lead')}>Save lead</button>
-              <a href={`${APP_URL}/app/analysis/${encodeURIComponent(result.id)}`} target="_blank">
-                Open full report
-              </a>
-            </>
-          )}
-          {state === 'ready' && (
-            <button className="secondary" onClick={() => void disconnect()}>
-              Disconnect
-            </button>
-          )}
-          {[
-            'first_launch',
-            'logged_out',
-            'authentication_required',
-            'session_expired',
-            'session_revoked',
-          ].includes(state) && (
-            <a href={`${APP_URL}/extension/connect`} target="_blank">
-              Connect account
-            </a>
-          )}
-          {['failed', 'backend_unavailable', 'offline'].includes(state) && (
-            <button onClick={() => void analyze()}>Try again</button>
-          )}
-          {['usage_limit_reached', 'upgrade_required'].includes(state) && (
-            <a href={`${APP_URL}/app/billing`} target="_blank">
-              View plans
-            </a>
-          )}
+    <main className="value-page">
+      <header className="value-header">
+        <div className="value-brand">
+          <img src={brandIconUrl} alt="" />
+          <strong>
+            Prospect<span>AI</span>
+          </strong>
         </div>
+        <span className="mode-pill">{guest ? 'Guest mode' : 'ProspectAI'}</span>
+      </header>
+
+      <section className="value-card" aria-live="polite">
+        <p className="value-kicker">
+          {domain ? `Current prospect: ${domain}` : 'Opportunity intelligence'}
+        </p>
+        <h1>{copy.title}</h1>
+        <p className="value-detail">{copy.detail}</p>
+
+        {guest && (
+          <div className="trial-meter" role="status">
+            <span>Guest mode</span>
+            <strong>{guestRemainingLabel(guest)}</strong>
+          </div>
+        )}
+
+        {isGuestEntry && (
+          <>
+            <div className="privacy-note">
+              ProspectAI analyzes the page you choose to provide prospect intelligence. It does not
+              monitor your browsing or analyze pages in the background.
+            </div>
+            <button className="primary-action" type="button" onClick={() => void analyzeGuest()}>
+              {state === 'first_use_guest' ? 'Start Free Analysis' : 'Analyze This Prospect'}
+              <span aria-hidden="true">→</span>
+            </button>
+            <button
+              className="text-action"
+              type="button"
+              onClick={() => void beginAuthentication('account')}
+            >
+              Sign in
+            </button>
+          </>
+        )}
+
+        {['guest_analyzing', 'registered_analyzing'].includes(state) && (
+          <div className="analysis-progress">
+            <div className="progress" aria-label={`${progress}% complete`}>
+              <span style={{ width: `${Math.max(progress, 5)}%` }} />
+            </div>
+            <small>Keep this popup open while ProspectAI prepares the result.</small>
+          </div>
+        )}
+
+        {isGuestResult && guestResult && (
+          <div className="guest-result">
+            <div className="result-heading">
+              <div>
+                <small>Prospect</small>
+                <strong>{guestResult.companyName}</strong>
+              </div>
+              <div className="opportunity-score">
+                <small>Opportunity</small>
+                <strong>{guestResult.opportunityScore ?? '--'}</strong>
+              </div>
+            </div>
+            {guestResult.reasoning && <p>{guestResult.reasoning}</p>}
+            {guestResult.keySignals.length > 0 && (
+              <div>
+                <h2>Key signals</h2>
+                <ul>
+                  {guestResult.keySignals.map((signal) => (
+                    <li key={signal}>{signal}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {guestResult.recommendedNextAction && (
+              <div className="next-action">
+                <small>Recommended next action</small>
+                <strong>{guestResult.recommendedNextAction}</strong>
+              </div>
+            )}
+            {guest && guest.trialRemaining > 0 ? (
+              <button
+                className="primary-action"
+                type="button"
+                onClick={() => {
+                  setGuestResult(undefined);
+                  setState('guest_ready');
+                }}
+              >
+                Analyze Another Prospect <span aria-hidden="true">→</span>
+              </button>
+            ) : (
+              <p className="limit-message">You have completed your free ProspectAI analyses.</p>
+            )}
+            <button
+              className="secondary-action"
+              type="button"
+              onClick={() => void beginAuthentication('google')}
+            >
+              Save This Prospect - Create Free Account
+            </button>
+          </div>
+        )}
+
+        {state === 'guest_limit_reached' && (
+          <div className="conversion-panel">
+            <ul>
+              <li>Save prospects and access analysis history</li>
+              <li>Unlock fuller AI research and personalized pitches</li>
+              <li>Sync across devices and receive monthly credits</li>
+            </ul>
+            <button
+              className="primary-action"
+              type="button"
+              onClick={() => void beginAuthentication('google')}
+            >
+              Continue with Google <span aria-hidden="true">→</span>
+            </button>
+            <button
+              className="text-action"
+              type="button"
+              onClick={() => void beginAuthentication('account')}
+            >
+              Sign in
+            </button>
+          </div>
+        )}
+
+        {state === 'registered_ready' && (
+          <>
+            {usage && (
+              <p className="registered-usage">
+                {usage.remaining ?? 'Unlimited'} analyses remaining this period
+              </p>
+            )}
+            <button
+              className="primary-action"
+              type="button"
+              onClick={() => void analyzeRegistered()}
+            >
+              Analyze This Prospect <span aria-hidden="true">→</span>
+            </button>
+          </>
+        )}
+
+        {isRegisteredResult && registeredResult && (
+          <div className="guest-result">
+            <div className="result-heading">
+              <div>
+                <small>Prospect</small>
+                <strong>{registeredResult.companyName ?? registeredResult.domain}</strong>
+              </div>
+              <div className="opportunity-score">
+                <small>Opportunity</small>
+                <strong>{registeredResult.opportunityScore ?? '--'}</strong>
+              </div>
+            </div>
+            <a
+              className="primary-link"
+              href={`${APP_URL}/app/analysis/${encodeURIComponent(registeredResult.id)}`}
+              target="_blank"
+            >
+              Open full report →
+            </a>
+          </div>
+        )}
+
+        {['auth_start', 'auth_pending', 'auth_success'].includes(state) && (
+          <div className="auth-status" role="status">
+            <span className="status-spinner" />
+            {copy.detail}
+          </div>
+        )}
+        {state === 'auth_failed' && (
+          <button
+            className="primary-action"
+            type="button"
+            onClick={() => void beginAuthentication('google')}
+          >
+            Try authentication again
+          </button>
+        )}
+        {['offline', 'backend_unavailable', 'rate_limited', 'analysis_failed'].includes(state) && (
+          <button className="secondary-action" type="button" onClick={() => location.reload()}>
+            Try again
+          </button>
+        )}
       </section>
+
+      <footer className="value-footer">
+        <span>Analysis starts only when you choose.</span>
+        <span>ProspectAI | Opportunity Intelligence</span>
+      </footer>
     </main>
   );
 }

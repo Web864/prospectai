@@ -15,10 +15,29 @@ export function ExtensionConnect({ requestId }: { requestId?: string | undefined
   if (!requestId)
     return (
       <StatePanel title="Start from the extension">
-        Open ProspectAI from the Chrome toolbar and choose Connect account to create a secure,
-        expiring authorization request.
+        Start with a free prospect analysis in the Chrome extension. When you choose to save your
+        result or continue after the guest trial, ProspectAI opens a secure, expiring sign-in
+        request.
       </StatePanel>
     );
+  if (state.status === 'error' && state.kind === 'unauthorized') {
+    const returnTo = '/extension/connect?request=' + encodeURIComponent(requestId);
+    return (
+      <StatePanel
+        title="Sign in to continue"
+        action={
+          <div className="actions">
+            <Link className="button" href={'/login?returnTo=' + encodeURIComponent(returnTo)}>
+              Sign in
+            </Link>
+            <Link href={'/signup?returnTo=' + encodeURIComponent(returnTo)}>Create account</Link>
+          </div>
+        }
+      >
+        Your guest result stays available while you securely connect this ProspectAI workspace.
+      </StatePanel>
+    );
+  }
   async function authorize() {
     if (busy) return;
     setBusy(true);
@@ -29,6 +48,7 @@ export function ExtensionConnect({ requestId }: { requestId?: string | undefined
         { method: 'POST' },
       );
       setMessage(response.data.message);
+      if (response.data.next) window.location.assign(response.data.next);
     } catch (error) {
       setMessage(
         error instanceof ApiClientError ? error.message : 'The extension could not be authorized.',

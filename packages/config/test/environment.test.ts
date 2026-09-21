@@ -8,7 +8,7 @@ import {
 
 describe('process-scoped environment validation', () => {
   it('allows the base server runtime to boot without feature integrations', () => {
-    expect(loadServerEnvironment({})).toEqual({ NODE_ENV: 'development' });
+    expect(loadServerEnvironment({})).toEqual({ NODE_ENV: 'development', TRUST_PROXY: false });
   });
 
   it('requires PostgreSQL only for database operations', () => {

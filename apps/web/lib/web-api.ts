@@ -23,7 +23,8 @@ function failureKind(status: number, code?: string): ApiFailureKind {
   if (status === 401) return 'unauthorized';
   if (status === 403) return 'forbidden';
   if (status === 404) return 'not_found';
-  if (status === 429 && code === 'USAGE_LIMIT_REACHED') return 'quota_exceeded';
+  if (status === 429 && (code === 'USAGE_LIMIT_REACHED' || code === 'GUEST_TRIAL_EXHAUSTED'))
+    return 'quota_exceeded';
   if (status === 429) return 'rate_limited';
   if (status >= 500) return 'backend_unavailable';
   return 'request_failed';

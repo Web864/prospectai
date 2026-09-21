@@ -97,7 +97,7 @@ After analysis submission, the extension polls `GET /api/v1/analysis-jobs/:jobId
 
 The backend is implemented as Next.js route handlers. `GET /api/health/live` is the liveness check. Job progress is served with `Cache-Control: private, no-store`.
 
-The crawler and result-persistence pipeline remains explicitly unavailable until its real adapters are configured. The worker records such failures and bounded retries in PostgreSQL rather than reporting mock success.
+The worker runs the HTTP-first crawler, deterministic evidence engine, Website Score, service recommendation, and Opportunity Score pipeline. When no AI provider is configured, it persists a truthful partial analysis with deterministic results instead of reporting fake AI success.
 
 ## Environment scopes
 
@@ -112,6 +112,16 @@ All processes load root `.env`. Configuration is validated only when its capabil
 - `VITE_*`: browser-visible extension URLs
 
 Never put secrets in `NEXT_PUBLIC_*` or `VITE_*` values.
+
+## Maintenance
+
+Run the safe, idempotent cleanup task manually or from any scheduler:
+
+```powershell
+pnpm --filter @prospectai/worker maintenance
+```
+
+It expires guest sessions and extension handoffs and purges expired raw extracted text. It does not delete organizations, registered analyses, or leads. No paid scheduler is required for development.
 
 ## Verification
 

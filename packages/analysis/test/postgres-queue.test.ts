@@ -101,4 +101,151 @@ describe('PostgreSQL analysis queue policy', () => {
       }),
     );
   });
+  it('atomically locks guest allowance before creating analysis work', async () => {
+    const calls: string[] = [];
+    const transaction = {
+      $executeRaw: vi.fn(async () => calls.push('advisory-lock')),
+      analysisJob: {
+        findUnique: vi.fn(async () => {
+          calls.push('idempotency');
+          return null;
+        }),
+        create: vi.fn(async () => ({ id: 'job-1', analysisId: 'analysis-1' })),
+      },
+      usageLedger: {
+        groupBy: vi.fn(async () => {
+          calls.push('usage');
+          return [];
+        }),
+        create: vi.fn(async () => ({ id: 'reservation-1' })),
+      },
+      website: { upsert: vi.fn(async () => ({ id: 'website-1' })) },
+      websiteAnalysis: { create: vi.fn(async () => ({ id: 'analysis-1' })) },
+    };
+    const database = {
+      $transaction: vi.fn(async (work: (value: typeof transaction) => unknown) =>
+        work(transaction),
+      ),
+    };
+    const queue = new PostgresAnalysisJobQueue(database as never);
+
+    await queue.reserveGuestAnalysisAndEnqueue({
+      organizationId: 'guest-organization',
+      guestSessionId: 'guest-session',
+      canonicalUrl: 'https://example.com/',
+      domain: 'example.com',
+      idempotencyKey: 'guest-request-1',
+      allowance: 3,
+      periodStart: new Date(0),
+    });
+
+    expect(calls.slice(0, 3)).toEqual(['advisory-lock', 'idempotency', 'usage']);
+    expect(transaction.analysisJob.create).toHaveBeenCalledTimes(1);
+    expect(transaction.usageLedger.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a concurrent fourth guest reservation without creating work', async () => {
+    const transaction = {
+      $executeRaw: vi.fn(async () => undefined),
+      analysisJob: { findUnique: vi.fn(async () => null), create: vi.fn() },
+      usageLedger: {
+        groupBy: vi.fn(async () => [{ operation: 'RESERVED', _sum: { quantity: 3 } }]),
+        create: vi.fn(),
+      },
+      website: { upsert: vi.fn() },
+      websiteAnalysis: { create: vi.fn() },
+    };
+    const database = {
+      $transaction: vi.fn(async (work: (value: typeof transaction) => unknown) =>
+        work(transaction),
+      ),
+    };
+    const queue = new PostgresAnalysisJobQueue(database as never);
+
+    await expect(
+      queue.reserveGuestAnalysisAndEnqueue({
+        organizationId: 'guest-organization',
+        guestSessionId: 'guest-session',
+        canonicalUrl: 'https://example.com/',
+        domain: 'example.com',
+        idempotencyKey: 'guest-request-4',
+        allowance: 3,
+        periodStart: new Date(0),
+      }),
+    ).rejects.toMatchObject({ code: 'GUEST_TRIAL_EXHAUSTED', status: 429 });
+    expect(transaction.website.upsert).not.toHaveBeenCalled();
+    expect(transaction.analysisJob.create).not.toHaveBeenCalled();
+  });
+
+  it('returns an existing guest job without reserving usage twice', async () => {
+    const existing = { id: 'existing-job', analysisId: 'existing-analysis' };
+    const transaction = {
+      $executeRaw: vi.fn(async () => undefined),
+      analysisJob: { findUnique: vi.fn(async () => existing), create: vi.fn() },
+      usageLedger: { groupBy: vi.fn(), create: vi.fn() },
+      website: { upsert: vi.fn() },
+      websiteAnalysis: { create: vi.fn() },
+    };
+    const database = {
+      $transaction: vi.fn(async (work: (value: typeof transaction) => unknown) =>
+        work(transaction),
+      ),
+    };
+    const queue = new PostgresAnalysisJobQueue(database as never);
+
+    await expect(
+      queue.reserveGuestAnalysisAndEnqueue({
+        organizationId: 'guest-organization',
+        guestSessionId: 'guest-session',
+        canonicalUrl: 'https://example.com/',
+        domain: 'example.com',
+        idempotencyKey: 'duplicate-request',
+        allowance: 3,
+        periodStart: new Date(0),
+      }),
+    ).resolves.toEqual(existing);
+    expect(transaction.usageLedger.groupBy).not.toHaveBeenCalled();
+    expect(transaction.usageLedger.create).not.toHaveBeenCalled();
+    expect(transaction.website.upsert).not.toHaveBeenCalled();
+  });
+
+  it('releases a guest credit after the final failed attempt', async () => {
+    const job = {
+      id: 'job-1',
+      organizationId: 'guest-organization',
+      analysisId: 'analysis-1',
+      idempotencyKey: 'guest-request',
+      attempt: 3,
+      maxAttempts: 3,
+      nextAttemptAt: new Date(0),
+      usageFeature: 'guest_analysis',
+      usageQuantity: 1,
+    };
+    const transaction = {
+      analysisJob: {
+        findFirst: vi.fn(async () => job),
+        updateMany: vi.fn(async () => ({ count: 1 })),
+      },
+      websiteAnalysis: { updateMany: vi.fn(async () => ({ count: 1 })) },
+      usageLedger: { upsert: vi.fn(async () => ({ id: 'release' })) },
+    };
+    const database = {
+      $transaction: vi.fn(async (work: (value: typeof transaction) => unknown) =>
+        work(transaction),
+      ),
+    };
+    const queue = new PostgresAnalysisJobQueue(database as never);
+
+    await expect(
+      queue.fail(
+        { id: 'job-1', lockedBy: 'worker-1', attempt: 3 },
+        { code: 'ANALYSIS_FAILED', message: 'No useful result.' },
+      ),
+    ).resolves.toEqual({ retry: false, status: 'failed' });
+    expect(transaction.usageLedger.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ operation: 'RELEASED', quantity: 1 }),
+      }),
+    );
+  });
 });

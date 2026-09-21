@@ -1,5 +1,5 @@
 -- AnalysisJob is the durable V1 queue. Worker ownership is a recoverable PostgreSQL lease.
--- Legacy BullMQ metadata columns remain nullable so this migration cannot discard deployed data.
+-- Legacy queue metadata columns remain nullable so this migration cannot discard deployed data.
 ALTER TABLE "public"."AnalysisJob"
 ADD COLUMN "maxAttempts" INTEGER NOT NULL DEFAULT 3,
   ADD COLUMN "usageFeature" TEXT NOT NULL DEFAULT 'analysis',

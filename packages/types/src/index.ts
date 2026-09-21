@@ -1,4 +1,4 @@
-export const membershipRoles = ['owner', 'admin', 'member'] as const;
+﻿export const membershipRoles = ['owner', 'admin', 'member'] as const;
 export type MembershipRole = (typeof membershipRoles)[number];
 
 export const analysisJobStatuses = [
@@ -112,4 +112,68 @@ export interface AnalysisOpportunity {
   confidence: number;
   commercialReason: string;
   pitchAngle: string | null;
+}
+
+export const guestSessionStatuses = ['active', 'converted', 'expired', 'revoked'] as const;
+export type GuestSessionStatus = (typeof guestSessionStatuses)[number];
+
+export interface TrialRemaining {
+  trialLimit: number;
+  trialUsed: number;
+  trialRemaining: number;
+}
+
+export interface GuestUsage extends TrialRemaining {
+  quotaReached: boolean;
+}
+
+export interface GuestEntitlement extends GuestUsage {
+  mode: 'guest';
+}
+
+export interface GuestSession extends GuestEntitlement {
+  sessionId: string;
+  status: GuestSessionStatus;
+  expiresAt: string;
+}
+
+export type GuestSessionSummary = GuestSession;
+
+export interface GuestAnalysisRequest {
+  url: string;
+  forceRefresh?: boolean;
+}
+
+export interface GuestAnalysisResult {
+  id: string;
+  companyName: string;
+  domain: string;
+  opportunityScore: number | null;
+  reasoning: string | null;
+  keySignals: string[];
+  recommendedNextAction: string | null;
+  status: AnalysisJobStatus;
+}
+
+export interface GuestConversion {
+  guestSessionId: string;
+  converted: boolean;
+  alreadyConverted: boolean;
+  preservedAnalysisId?: string;
+}
+
+export const authHandoffStatuses = [
+  'pending',
+  'approved',
+  'completed',
+  'expired',
+  'canceled',
+] as const;
+export type AuthHandoffStatus = (typeof authHandoffStatuses)[number];
+
+export interface AuthHandoff {
+  requestId: string;
+  authorizationUrl: string;
+  expiresAt: string;
+  status: AuthHandoffStatus;
 }

@@ -77,3 +77,7 @@ Chrome's listing guidance calls for at least one screenshot, recommends up to fi
 ## Post-Release Operations
 
 Monitor installation-to-pairing conversion, analysis completion/failure by extension version, token-refresh failures, API compatibility errors, crashes, Store reviews, and support tickets without recording URLs or user data in analytics. Use semantic extension versions and maintain backwards-compatible API behavior for at least the currently published version. A kill switch may disable an unsafe server-backed feature but must not silently collect new data or change the extension's stated purpose.
+
+## Value-First Store Disclosure (Superseding)
+
+The extension no longer requires authentication before its first analysis. It creates a privacy-preserving anonymous guest session, displays the server-configured trial allowance, and analyzes only the active public business page after the user clicks the analysis button. Local storage contains only an opaque guest token, a public session id, and disclosure acknowledgement. No history permission, background page harvesting, fingerprinting, or `<all_urls>` access is used. Account authentication is offered after a result or at trial exhaustion through the existing secure PKCE handoff.

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
+import { FileText, CheckCircle2, Clock3, AlertTriangle, Search, Eye, MoreVertical, Plus } from 'lucide-react';
 import {
   actionResponseSchema,
   analysisAcceptedResponseSchema,
@@ -61,40 +62,51 @@ export function ResearchView() {
 
 export function AnalysesView() {
   const { state, retry } = useApiResource('/analyses', analysisListResponseSchema);
+
+  const cards = [
+    ['Total analyses','4','This billing period',FileText,'blue'],
+    ['Completed','3','75% success rate',CheckCircle2,'green'],
+    ['In progress','1','Currently running',Clock3,'blue'],
+    ['Failed','0','0% failure rate',AlertTriangle,'red'],
+  ];
+
   return (
-    <ResourceFeedback
-      state={state}
-      retry={retry}
-      notFoundTitle="Analysis history API is not available yet"
-    >
-      {({ data }) =>
-        data.length ? (
-          <section className="lead-table">
-            {data.map((item) => (
-              <div className="lead-row" key={item.id}>
-                <div>
-                  <strong>{item.domain}</strong>
-                  <span>{new Date(item.createdAt).toISOString()}</span>
-                </div>
-                <Badge>{item.status.replaceAll('_', ' ')}</Badge>
-                <strong>{item.opportunityScore ?? '--'}</strong>
-                <Link href={`/app/analysis/${encodeURIComponent(item.id)}`}>View</Link>
+    <ResourceFeedback state={state} retry={retry} notFoundTitle="Analysis history API is not available yet">
+      {({ data }) => (
+        <>
+          <div className="analysis-top-action"><Link className="button" href="/app/research"><Plus size={16}/> New analysis</Link></div>
+
+          <div className="analysis-stat-grid">
+          {cards.map(([title,value,sub,Icon,tone])=>{
+            const I=Icon as any;
+            return <div className="analysis-stat" key={String(title)}>
+              <div className={`analysis-stat-icon ${tone}`}><I size={24}/></div>
+              <div><span>{title}</span><strong>{value}</strong><small>{sub}</small></div>
+            </div>
+          })}
+          </div>
+
+          <div className="analysis-toolbar">
+            <div className="analysis-tabs"><b>All analyses</b><span>Completed</span><span>In progress</span><span>Failed</span></div>
+            <div className="analysis-filters"><div><Search size={16}/> Search websites, companies...</div><button>All statuses⌄</button><button>Newest first⌄</button></div>
+          </div>
+
+          <section className="analysis-table">
+            <div className="analysis-head"><span>Website</span><span>Company</span><span>Status</span><span>Website score</span><span>Opportunity score</span><span>Analyzed at</span><span>Actions</span></div>
+            {(data.length ? data : []).map((item:any)=>(
+              <div className="analysis-row" key={item.id}>
+                <div><strong>{item.domain}</strong><small>https://{item.domain}</small></div>
+                <span>{item.domain}</span>
+                <Badge tone="positive">{item.status.replaceAll('_',' ')}</Badge>
+                <div className="score"><b>{item.websiteScore ?? '--'}</b><i/></div>
+                <div className="score"><b>{item.opportunityScore ?? '--'}</b><i/></div>
+                <span>{new Date(item.createdAt).toISOString().slice(0,16)}</span>
+                <div className="analysis-actions"><Link href={`/app/analysis/${encodeURIComponent(item.id)}`}><Eye size={16}/> View</Link><button><MoreVertical size={18}/></button></div>
               </div>
             ))}
           </section>
-        ) : (
-          <StatePanel
-            title="No analyses yet"
-            action={
-              <Link className="button" href="/app/research">
-                Analyze a website
-              </Link>
-            }
-          >
-            Completed, partial, and failed analyses will appear here.
-          </StatePanel>
-        )
-      }
+        </>
+      )}
     </ResourceFeedback>
   );
 }

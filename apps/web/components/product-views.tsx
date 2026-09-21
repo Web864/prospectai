@@ -1,8 +1,10 @@
-'use client';
+﻿'use client';
 
+import { Activity, PlugZap } from 'lucide-react';
 import Link from 'next/link';
 import { dashboardResponseSchema } from '@prospectai/validation';
-import { Badge, Metric, StatePanel } from './design-system';
+import { Badge, StatePanel } from './design-system';
+import DashboardStats from './dashboard/DashboardStats';
 import { ResourceFeedback } from './resource-feedback';
 import { useApiResource } from '../lib/use-api-resource';
 
@@ -15,30 +17,23 @@ export function DashboardView() {
       notFoundTitle="Dashboard data is not available yet"
     >
       {({ data }) => (
-        <>
-          <section className="metrics">
-            <Metric label="Analyses" value={data.analyses} note="This billing period" />
-            <Metric label="Leads" value={data.leads} note="Saved prospects" />
-            <Metric
-              label="Qualified opportunities"
-              value={data.qualifiedOpportunities}
-              note="Based on your services"
-            />
-            <Metric
-              label="Usage"
-              value={data.analysesUsed}
-              note={data.analysesLimit === null ? 'No fixed limit' : `of ${data.analysesLimit}`}
-            />
-          </section>
-          <section className="metrics secondary-metrics">
-            <Metric label="Contacted" value={data.contactedProspects} note="Prospects" />
-            <Metric label="Replies" value={data.replies} note="Recorded replies" />
-            <Metric label="Meetings" value={data.meetings} note="Booked" />
-            <Metric label="Won clients" value={data.wonClients} note="Converted" />
-          </section>
-          <section className="split">
+        <div className="dashboard-view">
+          <DashboardStats
+            analyses={data.analyses}
+            leads={data.leads}
+            qualifiedOpportunities={data.qualifiedOpportunities}
+            analysesUsed={data.analysesUsed}
+            analysesLimit={data.analysesLimit}
+            contactedProspects={data.contactedProspects}
+            replies={data.replies}
+            meetings={data.meetings}
+            wonClients={data.wonClients}
+          />
+          <section className="split dashboard-panels">
             <StatePanel
               title={data.extensionConnected ? 'Extension connected' : 'Connect Chrome Extension'}
+              tone={data.extensionConnected ? 'success' : 'default'}
+              icon={<PlugZap size={22} />}
               action={
                 !data.extensionConnected ? (
                   <Link className="button" href="/extension/connect">
@@ -52,7 +47,7 @@ export function DashboardView() {
                 : 'Connect the extension to start evidence-backed website research.'}
             </StatePanel>
             {data.recentActivity.length === 0 ? (
-              <StatePanel title="No recent activity">
+              <StatePanel title="No recent activity" icon={<Activity size={22} />}>
                 Analyses, leads, pitches, and status changes will appear here.
               </StatePanel>
             ) : (
@@ -72,7 +67,7 @@ export function DashboardView() {
               </section>
             )}
           </section>
-        </>
+        </div>
       )}
     </ResourceFeedback>
   );

@@ -12,6 +12,34 @@ export const extensionAuthorizationRequestSchema = z.object({
     .max(32),
   codeChallenge: z.string().min(43).max(128),
   deviceName: z.string().trim().min(1).max(100).optional(),
+  preferredProvider: z.enum(['google', 'account']).optional(),
+  redirectUri: z
+    .string()
+    .url()
+    .refine((value) => {
+      const url = new URL(value);
+      return url.protocol === 'https:' && url.hostname.endsWith('.chromiumapp.org');
+    }, 'A Chrome identity redirect URI is required.'),
+});
+
+export const extensionAuthorizationExchangeSchema = z.object({
+  code: z.string().min(43).max(256),
+  codeVerifier: z.string().min(43).max(128),
+});
+
+export const extensionRefreshSchema = z.object({
+  refreshToken: z.string().min(43).max(256),
+});
+
+export const aiBusinessAnalysisSchema = z.object({
+  companyName: z.string().min(1).max(200),
+  summary: z.string().min(1).max(1_500),
+  confidence: z.number().min(0).max(1),
+});
+
+export const aiPitchSchema = z.object({
+  subject: z.string().max(200).optional(),
+  content: z.string().min(1).max(4_000),
 });
 
 export const aiOpportunitySchema = z.object({
@@ -66,6 +94,56 @@ export const analysisJobProgressResponseSchema = z.object({
     errorMessage: z.string().nullable(),
     updatedAt: z.string().datetime(),
   }),
+});
+
+export const leadCreateSchema = z.object({
+  analysisId: z.string().cuid().optional(),
+  name: z.string().trim().min(1).max(200).optional(),
+  notes: z.string().trim().max(10_000).optional(),
+  contacts: z
+    .array(
+      z.object({
+        name: z.string().trim().max(200).optional(),
+        email: z.string().trim().email().max(320).optional(),
+        title: z.string().trim().max(200).optional(),
+      }),
+    )
+    .max(20)
+    .default([]),
+});
+
+export const leadUpdateSchema = z.object({
+  status: z.enum(['new', 'contacted', 'qualified', 'won', 'lost', 'archived']).optional(),
+  name: z.string().trim().min(1).max(200).nullable().optional(),
+  notes: z.string().trim().max(10_000).nullable().optional(),
+});
+
+export const pitchCreateSchema = z.object({
+  analysisId: z.string().cuid(),
+  leadId: z.string().cuid().optional(),
+  opportunityId: z.string().cuid(),
+  format: z.enum(['cold_email', 'dm', 'linkedin', 'proposal', 'follow_up']).default('cold_email'),
+});
+
+export const pitchUpdateSchema = z.object({
+  content: z.string().trim().min(1).max(4_000),
+});
+
+export const settingsUpdateSchema = z.object({
+  displayName: z.string().trim().min(1).max(200).nullable().optional(),
+  role: z.string().trim().max(100).nullable().optional(),
+  services: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
+  industries: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
+  locations: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
+  icp: z.string().trim().max(1_000).nullable().optional(),
+  agencyWebsite: z.string().trim().url().max(2_048).nullable().optional(),
+  outreachPreferences: z.string().trim().max(1_000).nullable().optional(),
+});
+
+export const checkoutRequestSchema = z.object({
+  plan: z.enum(['pro', 'agency']),
+  successUrl: z.string().url(),
+  cancelUrl: z.string().url(),
 });
 
 export const leadStatusSchema = z.enum([
@@ -302,5 +380,74 @@ export const extensionTokenResponseSchema = z.object({
     accessToken: z.string().min(1),
     refreshToken: z.string().min(1),
     expiresAt: z.string().datetime(),
+  }),
+});
+
+export const guestSessionStatusSchema = z.enum(['active', 'converted', 'expired', 'revoked']);
+export const guestEntitlementSchema = z.object({
+  mode: z.literal('guest'),
+  trialLimit: z.number().int().nonnegative(),
+  trialUsed: z.number().int().nonnegative(),
+  trialRemaining: z.number().int().nonnegative(),
+  quotaReached: z.boolean(),
+});
+export const guestSessionResponseSchema = z.object({
+  data: guestEntitlementSchema.extend({
+    sessionId: z.string().min(1),
+    status: guestSessionStatusSchema,
+    expiresAt: z.string().datetime(),
+  }),
+});
+export const guestAnalysisAcceptedResponseSchema = z.object({
+  data: z.object({
+    jobId: z.string().min(1),
+    analysisId: z.string().min(1),
+    status: z.literal('queued'),
+    entitlement: guestSessionResponseSchema.shape.data,
+  }),
+});
+export const guestAnalysisResultResponseSchema = z.object({
+  data: z.object({
+    id: z.string().min(1),
+    companyName: z.string().min(1),
+    domain: z.string().min(1),
+    opportunityScore: z.number().int().min(0).max(100).nullable(),
+    reasoning: z.string().nullable(),
+    keySignals: z.array(z.string()).max(8),
+    recommendedNextAction: z.string().nullable(),
+    status: analysisJobStatusSchema,
+  }),
+});
+export const guestConversionRequestSchema = z.object({
+  guestSessionId: z.string().min(1),
+});
+
+export const guestAnalysisRequestSchema = analysisRequestSchema;
+export const trialRemainingSchema = z.object({
+  trialLimit: z.number().int().nonnegative(),
+  trialUsed: z.number().int().nonnegative(),
+  trialRemaining: z.number().int().nonnegative(),
+});
+export const guestUsageSchema = trialRemainingSchema.extend({ quotaReached: z.boolean() });
+export const guestConversionResponseSchema = z.object({
+  data: z.object({
+    converted: z.boolean(),
+    alreadyConverted: z.boolean(),
+    preservedAnalysisId: z.string().optional(),
+  }),
+});
+export const authHandoffStatusSchema = z.enum([
+  'pending',
+  'approved',
+  'completed',
+  'expired',
+  'canceled',
+]);
+export const authHandoffResponseSchema = z.object({
+  data: z.object({
+    requestId: z.string().min(1),
+    authorizationUrl: z.string().url(),
+    expiresAt: z.string().datetime(),
+    status: authHandoffStatusSchema,
   }),
 });

@@ -12,9 +12,12 @@
   },
   "dependencies": {
     "@prospectai/analysis": "workspace:*",
+    "@prospectai/ai": "workspace:*",
     "@prospectai/api": "workspace:*",
     "@prospectai/auth": "workspace:*",
+    "@prospectai/billing": "workspace:*",
     "@prospectai/config": "workspace:*",
+    "@prospectai/crawler": "workspace:*",
     "@prospectai/database": "workspace:*",
     "@prospectai/shared": "workspace:*",
     "@prospectai/types": "workspace:*",

@@ -1,16 +1,22 @@
-import { extensionTokenResponseSchema } from '@prospectai/validation';
+import {
+  extensionTokenResponseSchema,
+  guestConversionResponseSchema,
+} from '@prospectai/validation';
 import { apiRequest } from './api-client';
 
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason !== 'install') return;
-  void chrome.storage.local.get('sessionState').then(({ sessionState }) => {
-    if (sessionState === undefined)
-      return chrome.storage.local.set({ sessionState: 'disconnected' });
-  });
+  void chrome.storage.local.remove(['sessionState']);
 });
 
 async function completePairing(code: string) {
-  const stored = await chrome.storage.local.get(['pkceVerifier', 'authorizationRequestId']);
+  const stored = await chrome.storage.local.get([
+    'pkceVerifier',
+    'authorizationRequestId',
+    'guestToken',
+    'guestSessionId',
+    'currentGuestAnalysisId',
+  ]);
   if (typeof stored.pkceVerifier !== 'string' || typeof stored.authorizationRequestId !== 'string')
     throw new Error('No pending authorization request.');
   const response = await apiRequest(
@@ -30,6 +36,30 @@ async function completePairing(code: string) {
     sessionState: 'connected',
   });
   await chrome.storage.local.remove(['pkceVerifier', 'authorizationRequestId']);
+
+  if (typeof stored.guestToken === 'string' && typeof stored.guestSessionId === 'string') {
+    const conversion = await apiRequest('/guest-sessions/convert', {
+      method: 'POST',
+      headers: { 'X-Guest-Token': stored.guestToken },
+      body: JSON.stringify({ guestSessionId: stored.guestSessionId }),
+    });
+    if (conversion.ok) {
+      const parsedConversion = guestConversionResponseSchema.safeParse(await conversion.json());
+      if (!parsedConversion.success) throw new Error('Guest conversion response was invalid.');
+      const preservedAnalysisId =
+        typeof stored.currentGuestAnalysisId === 'string'
+          ? stored.currentGuestAnalysisId
+          : parsedConversion.data.data.preservedAnalysisId;
+      if (preservedAnalysisId)
+        await chrome.storage.local.set({ lastConvertedAnalysisId: preservedAnalysisId });
+      await chrome.storage.local.remove([
+        'guestToken',
+        'guestSessionId',
+        'privacyAcknowledged',
+        'currentGuestAnalysisId',
+      ]);
+    }
+  }
 }
 
 chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
@@ -42,11 +72,15 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     return;
   if (message.type === 'get-session') {
     chrome.storage.local
-      .get(['sessionState', 'accessToken'])
-      .then(({ sessionState, accessToken }) =>
-        sendResponse({ sessionState, connected: typeof accessToken === 'string' }),
+      .get(['sessionState', 'accessToken', 'guestSessionId'])
+      .then(({ sessionState, accessToken, guestSessionId }) =>
+        sendResponse({
+          sessionState,
+          connected: typeof accessToken === 'string',
+          guest: typeof accessToken !== 'string' && typeof guestSessionId === 'string',
+        }),
       )
-      .catch(() => sendResponse({ sessionState: 'error', connected: false }));
+      .catch(() => sendResponse({ sessionState: 'error', connected: false, guest: false }));
     return true;
   }
   if (

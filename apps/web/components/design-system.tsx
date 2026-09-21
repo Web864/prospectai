@@ -1,3 +1,4 @@
+import { Activity, BarChart3, CheckCircle2, Target, Users, type LucideIcon } from 'lucide-react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 export function Button({
@@ -59,10 +60,16 @@ export function Score({
               ? 'Low opportunity'
               : 'Weak opportunity';
   return (
-    <div className="score">
+    <div className={`score score-${kind}`}>
       <span>{kind === 'website' ? 'Website score' : 'Opportunity score'}</span>
-      <strong>{value}</strong>
+      <div className="score-value">
+        <strong>{value}</strong>
+        <small>/ 100</small>
+      </div>
       <small>{label}</small>
+      <span className="score-track" aria-hidden="true">
+        <span style={{ width: `${value}%` }} />
+      </span>
     </div>
   );
 }
@@ -71,18 +78,35 @@ export function StatePanel({
   title,
   children,
   action,
+  tone = 'default',
+  icon,
 }: {
   title: string;
   children: ReactNode;
   action?: ReactNode;
+  tone?: 'default' | 'success';
+  icon?: ReactNode;
 }) {
   return (
-    <section className="state-panel">
-      <h2>{title}</h2>
-      <p>{children}</p>
-      {action}
+    <section className={`state-panel state-panel-${tone}`}>
+      <span className="state-panel-icon" aria-hidden="true">
+        {icon ?? <CheckCircle2 size={22} />}
+      </span>
+      <div>
+        <h2>{title}</h2>
+        <p>{children}</p>
+        {action}
+      </div>
     </section>
   );
+}
+
+function metricIcon(label: string): LucideIcon {
+  const normalized = label.toLowerCase();
+  if (normalized.includes('lead') || normalized.includes('client')) return Users;
+  if (normalized.includes('opportunit') || normalized.includes('meeting')) return Target;
+  if (normalized.includes('usage') || normalized.includes('remaining')) return BarChart3;
+  return Activity;
 }
 
 export function Metric({
@@ -94,9 +118,15 @@ export function Metric({
   value?: string | number;
   note: string;
 }) {
+  const Icon = metricIcon(label);
   return (
     <article className="metric">
-      <span>{label}</span>
+      <div className="metric-heading">
+        <span>{label}</span>
+        <span className="metric-icon" aria-hidden="true">
+          <Icon size={18} />
+        </span>
+      </div>
       <strong>{value ?? '--'}</strong>
       <small>{note}</small>
     </article>

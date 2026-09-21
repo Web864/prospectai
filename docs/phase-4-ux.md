@@ -27,15 +27,25 @@ The extension owns a typed state map for first launch, authentication, connectio
 
 ## Accessibility and Responsive Behavior
 
-Pages use landmarks, named navigation, labeled form controls, live feedback regions, keyboard-visible focus, readable contrast, and text-backed statuses. Tabs support arrow, Home, and End keys. Overlays support Escape, contained Tab navigation, and focus restoration. The SaaS shell uses drawer navigation on tablet/mobile; metric, workflow, lead, and analysis layouts collapse progressively. The extension stays at a stable 350px width with wrapped URLs and fixed control sizing.
+Pages use landmarks, named navigation, labeled form controls, live feedback regions, keyboard-visible focus, readable contrast, and text-backed statuses. Tabs support arrow, Home, and End keys. Overlays support Escape, contained Tab navigation, and focus restoration. The SaaS shell uses drawer navigation on tablet/mobile; metric, workflow, lead, and analysis layouts collapse progressively. The extension uses a 460px default width with a 420px minimum, wrapped URLs, fixed control sizing, bounded vertical scrolling, and no horizontal overflow.
 
 ## Verification
 
-- `pnpm lint`: PASS across all 16 applicable workspace projects.
-- `pnpm typecheck`: PASS across all 16 applicable workspace projects.
-- `pnpm format:check`: PASS after formatting one new test file.
-- `pnpm test`: PASS. Web: 4 files/17 tests; extension: 1 file/5 tests; analysis: 2 tests; scoring: 1 test; crawler: 5 tests.
-- `pnpm --filter @prospectai/web build`: PASS; Next.js compiled and generated all routes.
-- `pnpm --filter @prospectai/extension build`: PASS; Manifest V3 output and all icon assets emitted.
-- `pnpm --filter @prospectai/worker build`: PASS; TypeScript production compilation completed.
-- Browser screenshot automation was not retried because the required browser Node REPL remains unavailable in this environment. Manual visual verification is required.
+- pnpm lint: PASS across all applicable workspace projects.
+- pnpm typecheck: PASS across all applicable workspace projects.
+- pnpm format:check: PASS.
+- pnpm test: PASS; 67 tests across database, configuration, auth, analysis, crawler, scoring, web, and extension suites.
+- pnpm --filter @prospectai/web build: PASS.
+- pnpm --filter @prospectai/extension build: PASS.
+- pnpm --filter @prospectai/worker build: PASS.
+- Browser automation is unavailable in this environment. Unpacked-Chrome visual, permission, and live provider handoff verification remains manual.
+
+## Value-First Onboarding Revision
+
+The connect-account-first popup is superseded. Implemented states cover first-use guest, guest ready/disclosure/analyzing/result/limit, auth start/pending/success/failure, registered ready/analyzing/result, unsupported page, offline/backend/rate errors, failed/partial analysis, unsupported version, and expired/revoked sessions.
+
+Guest results deliberately remain compact: company/domain, basic Opportunity Score, reasoning, key signals, next action, and remaining allowance. Save, history, and pitch actions progressively start registration. The popup remains 460px by default with a 420px minimum, bounded vertical scrolling, no horizontal overflow, keyboard-visible focus, semantic buttons, text-backed state, and reduced-motion support.
+
+### Conversion Continuity
+
+The popup stores the current guest analysis id only while it is needed for conversion. The service worker completes PKCE, performs authenticated guest conversion, clears guest credentials, and publishes the converted analysis id. An open or reopened popup then reads the registered analysis endpoint and restores the result. Canceled or expired handoffs return to a retryable state without discarding the guest result.

@@ -90,6 +90,29 @@ export interface ReserveUsageAndEnqueueInput {
   maxAttempts?: number;
 }
 
+export interface ReserveAnalysisInput {
+  organizationId: string;
+  canonicalUrl: string;
+  domain: string;
+  idempotencyKey: string;
+  allowance: number;
+  periodStart: Date;
+  feature?: string;
+  maxAttempts?: number;
+}
+
+export interface ReserveGuestAnalysisInput {
+  organizationId: string;
+  guestSessionId: string;
+  canonicalUrl: string;
+  domain: string;
+  idempotencyKey: string;
+  allowance: number;
+  periodStart: Date;
+  feature?: string;
+  maxAttempts?: number;
+}
+
 export interface JobLease {
   id: string;
   lockedBy: string;
@@ -240,6 +263,177 @@ export class PostgresAnalysisJobQueue {
     );
   }
 
+  async reserveAnalysisAndEnqueue(input: ReserveAnalysisInput) {
+    const feature = input.feature ?? 'analysis';
+    return this.database.$transaction(
+      async (transaction) => {
+        const lockKey = `${input.organizationId}:${feature}`;
+        await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+        const existing = await transaction.analysisJob.findUnique({
+          where: {
+            organizationId_idempotencyKey: {
+              organizationId: input.organizationId,
+              idempotencyKey: input.idempotencyKey,
+            },
+          },
+        });
+        if (existing) return existing;
+        const grouped = await transaction.usageLedger.groupBy({
+          by: ['operation'],
+          where: {
+            organizationId: input.organizationId,
+            feature,
+            createdAt: { gte: input.periodStart },
+          },
+          _sum: { quantity: true },
+        });
+        const reserved = calculateReservedUsage(
+          grouped.map((entry) => ({
+            operation: entry.operation,
+            quantity: entry._sum.quantity ?? 0,
+          })),
+        );
+        if (reserved >= input.allowance)
+          throw new AppError('USAGE_LIMIT_REACHED', 'Analysis usage limit reached.', 429);
+        const website = await transaction.website.upsert({
+          where: {
+            organizationId_domain: {
+              organizationId: input.organizationId,
+              domain: input.domain,
+            },
+          },
+          create: {
+            organizationId: input.organizationId,
+            canonicalUrl: input.canonicalUrl,
+            domain: input.domain,
+          },
+          update: { canonicalUrl: input.canonicalUrl },
+        });
+        const analysis = await transaction.websiteAnalysis.create({
+          data: {
+            organizationId: input.organizationId,
+            websiteId: website.id,
+            status: 'QUEUED',
+          },
+        });
+        const job = await transaction.analysisJob.create({
+          data: {
+            organizationId: input.organizationId,
+            analysisId: analysis.id,
+            idempotencyKey: input.idempotencyKey,
+            usageFeature: feature,
+            usageQuantity: 1,
+            ...(input.maxAttempts === undefined ? {} : { maxAttempts: input.maxAttempts }),
+          },
+        });
+        await transaction.usageLedger.create({
+          data: {
+            organizationId: input.organizationId,
+            feature,
+            idempotencyKey: `${input.idempotencyKey}:reserved`,
+            operation: 'RESERVED',
+            quantity: 1,
+            referenceType: 'AnalysisJob',
+            referenceId: job.id,
+          },
+        });
+        return job;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  }
+
+  async reserveGuestAnalysisAndEnqueue(input: ReserveGuestAnalysisInput) {
+    const feature = input.feature ?? 'guest_analysis';
+    if (input.allowance < 0 || (input.maxAttempts !== undefined && input.maxAttempts < 1))
+      throw new AppError('VALIDATION_ERROR', 'Guest allowance is invalid.', 400);
+
+    return this.database.$transaction(
+      async (transaction) => {
+        const lockKey = `${input.organizationId}:${feature}`;
+        await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+
+        const existing = await transaction.analysisJob.findUnique({
+          where: {
+            organizationId_idempotencyKey: {
+              organizationId: input.organizationId,
+              idempotencyKey: input.idempotencyKey,
+            },
+          },
+        });
+        if (existing) return existing;
+
+        const grouped = await transaction.usageLedger.groupBy({
+          by: ['operation'],
+          where: {
+            organizationId: input.organizationId,
+            feature,
+            createdAt: { gte: input.periodStart },
+          },
+          _sum: { quantity: true },
+        });
+        const reserved = calculateReservedUsage(
+          grouped.map((entry) => ({
+            operation: entry.operation,
+            quantity: entry._sum.quantity ?? 0,
+          })),
+        );
+        if (reserved >= input.allowance)
+          throw new AppError(
+            'GUEST_TRIAL_EXHAUSTED',
+            'The guest analysis allowance has been used.',
+            429,
+          );
+
+        const website = await transaction.website.upsert({
+          where: {
+            organizationId_domain: {
+              organizationId: input.organizationId,
+              domain: input.domain,
+            },
+          },
+          create: {
+            organizationId: input.organizationId,
+            canonicalUrl: input.canonicalUrl,
+            domain: input.domain,
+          },
+          update: { canonicalUrl: input.canonicalUrl },
+        });
+        const analysis = await transaction.websiteAnalysis.create({
+          data: {
+            organizationId: input.organizationId,
+            guestSessionId: input.guestSessionId,
+            websiteId: website.id,
+            status: 'QUEUED',
+          },
+        });
+        const job = await transaction.analysisJob.create({
+          data: {
+            organizationId: input.organizationId,
+            guestSessionId: input.guestSessionId,
+            analysisId: analysis.id,
+            idempotencyKey: input.idempotencyKey,
+            usageFeature: feature,
+            usageQuantity: 1,
+            ...(input.maxAttempts === undefined ? {} : { maxAttempts: input.maxAttempts }),
+          },
+        });
+        await transaction.usageLedger.create({
+          data: {
+            organizationId: input.organizationId,
+            feature,
+            idempotencyKey: `${input.idempotencyKey}:reserved`,
+            operation: 'RESERVED',
+            quantity: 1,
+            referenceType: 'AnalysisJob',
+            referenceId: job.id,
+          },
+        });
+        return job;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  }
   async claimNext(workerId: string): Promise<ClaimedAnalysisJob | null> {
     const rows = await this.database.$queryRaw<ClaimedRow[]>`
       WITH candidate AS (
@@ -429,6 +623,42 @@ export class PostgresAnalysisJobQueue {
           jobId: job.id,
         });
       return { retry, status: statusFromDatabase[status] };
+    });
+  }
+
+  async cancel(organizationId: string, jobId: string) {
+    return this.database.$transaction(async (transaction) => {
+      const job = await transaction.analysisJob.findFirst({
+        where: {
+          id: jobId,
+          organizationId,
+          status: { in: ['QUEUED', 'RETRY_PENDING'] },
+        },
+      });
+      if (!job) throw new AppError('CONFLICT', 'Only queued analysis jobs can be canceled.', 409);
+      await transaction.analysisJob.update({
+        where: { id: job.id },
+        data: {
+          status: 'CANCELED',
+          progress: 100,
+          finishedAt: new Date(),
+          lockedAt: null,
+          lockedBy: null,
+        },
+      });
+      await transaction.websiteAnalysis.update({
+        where: { id: job.analysisId },
+        data: { status: 'CANCELED' },
+      });
+      await recordUsageOperation(transaction, {
+        organizationId,
+        feature: job.usageFeature,
+        idempotencyKey: job.idempotencyKey,
+        operation: 'RELEASED',
+        quantity: job.usageQuantity,
+        jobId: job.id,
+      });
+      return { status: 'cancelled' as const };
     });
   }
 

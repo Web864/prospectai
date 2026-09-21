@@ -1,8 +1,35 @@
+﻿import {
+  BarChart3,
+  CreditCard,
+  FileSearch,
+  LayoutDashboard,
+  Lightbulb,
+  MessageSquareText,
+  Puzzle,
+  Search,
+  Settings,
+  Target,
+  Users,
+} from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { applicationNavigation } from './application-navigation';
 import { MobileNavigation } from './mobile-navigation';
 import { AccountSession } from './account-session';
+
+function NavigationIcon({ href }: { href: string }) {
+  const props = { size: 18, strokeWidth: 1.9, 'aria-hidden': true } as const;
+  if (href === '/app') return <LayoutDashboard {...props} />;
+  if (href === '/app/research') return <Search {...props} />;
+  if (href === '/app/analyses') return <FileSearch {...props} />;
+  if (href === '/app/opportunities') return <Target {...props} />;
+  if (href === '/app/leads') return <Users {...props} />;
+  if (href === '/app/pitches') return <MessageSquareText {...props} />;
+  if (href === '/app/usage') return <BarChart3 {...props} />;
+  if (href === '/app/billing') return <CreditCard {...props} />;
+  return <Settings {...props} />;
+}
 
 export function AppShell({
   title,
@@ -17,10 +44,14 @@ export function AppShell({
 }) {
   return (
     <div className="app-shell">
-      <aside>
-        <Link className="brand" href="/">
-          ProspectAI
+      <aside className="workspace-sidebar">
+        <Link className="brand workspace-brand" href="/" aria-label="ProspectAI home">
+          <Image src="/brand-mark.png" alt="" width={34} height={34} priority />
+          <span>
+            Prospect<span className="brand-accent">AI</span>
+          </span>
         </Link>
+        <div className="workspace-label">Workspace</div>
         <nav aria-label="Application">
           {applicationNavigation.map(([label, href]) => (
             <Link
@@ -32,35 +63,56 @@ export function AppShell({
                   : undefined
               }
             >
-              {label}
+              <NavigationIcon href={href} />
+              <span>{label}</span>
             </Link>
           ))}
         </nav>
+        <div className="sidebar-spacer" />
         <Link
+          className="extension-nav"
           href="/app/settings/extension"
           aria-current={activePath === '/app/settings/extension' ? 'page' : undefined}
         >
-          Extension
+          <Puzzle size={18} strokeWidth={1.9} aria-hidden="true" />
+          <span>
+            <strong>Extension</strong>
+            <small>Chrome companion</small>
+          </span>
         </Link>
+        <div className="sidebar-note">
+          <Lightbulb size={17} aria-hidden="true" />
+          <span>Evidence first. Opportunity focused.</span>
+        </div>
       </aside>
-      <main>
+      <main className="workspace-main">
         <div className="mobile-app-bar">
           <MobileNavigation />
-          <Link className="brand" href="/app">
-            ProspectAI
+          <Link className="brand workspace-brand" href="/app">
+            <Image src="/brand-mark.png" alt="" width={30} height={30} />
+            <span>
+              Prospect<span className="brand-accent">AI</span>
+            </span>
           </Link>
-        </div>
-        <div className="breadcrumb">
-          {trail} / {title}
-        </div>
-        <header className="app-header">
-          <div>
-            <h1>{title}</h1>
-            <p>Prospect opportunity intelligence, grounded in evidence.</p>
-          </div>
           <AccountSession />
-        </header>
-        {children}
+        </div>
+        <div className="workspace-content">
+          <div className="breadcrumb">
+            <span>{trail}</span>
+            <span aria-hidden="true">/</span>
+            <strong>{title}</strong>
+          </div>
+          <header className="app-header">
+            <div>
+              <h1>{title}</h1>
+              <p>Prospect opportunity intelligence, grounded in evidence.</p>
+            </div>
+            <div className="desktop-account">
+              <AccountSession />
+            </div>
+          </header>
+          {children}
+        </div>
       </main>
     </div>
   );

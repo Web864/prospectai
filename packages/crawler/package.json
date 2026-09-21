@@ -7,7 +7,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@prospectai/shared": "workspace:*"
+    "@prospectai/shared": "workspace:*",
+    "cheerio": "1.1.2"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -26,7 +26,15 @@ const endpoints: Record<AuthPage, string> = {
   'reset-password': '/auth/reset-password',
 };
 
-export function AuthForm({ page, token }: { page: AuthPage; token?: string | undefined }) {
+export function AuthForm({
+  page,
+  token,
+  returnTo,
+}: {
+  page: AuthPage;
+  token?: string | undefined;
+  returnTo?: string | undefined;
+}) {
   const [state, setState] = useState<SubmitState>({ status: 'idle' });
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -57,7 +65,10 @@ export function AuthForm({ page, token }: { page: AuthPage; token?: string | und
         body: JSON.stringify(input.data),
       });
       setState({ status: 'success', message: response.data.message });
-      if (response.data.next?.startsWith('/')) window.location.assign(response.data.next);
+      const destination = returnTo?.startsWith('/extension/connect?request=')
+        ? returnTo
+        : response.data.next;
+      if (destination?.startsWith('/')) window.location.assign(destination);
     } catch (error) {
       const message =
         error instanceof ApiClientError

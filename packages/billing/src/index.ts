@@ -4,8 +4,10 @@ import { AppError } from '@prospectai/shared';
 export interface BillingProvider {
   createCheckout(input: {
     organizationId: string;
+    idempotencyKey: string;
     customerId?: string;
     priceId: string;
+    planCode: 'pro' | 'agency';
     successUrl: string;
     cancelUrl: string;
   }): Promise<{ url: string }>;
@@ -20,14 +22,21 @@ export function createStripeBillingProvider(
   const stripe = new Stripe(secretKey);
   return {
     async createCheckout(input) {
-      const session = await stripe.checkout.sessions.create({
-        mode: 'subscription',
-        ...(input.customerId ? { customer: input.customerId } : {}),
-        client_reference_id: input.organizationId,
-        line_items: [{ price: input.priceId, quantity: 1 }],
-        success_url: input.successUrl,
-        cancel_url: input.cancelUrl,
-      });
+      const session = await stripe.checkout.sessions.create(
+        {
+          mode: 'subscription',
+          ...(input.customerId ? { customer: input.customerId } : {}),
+          client_reference_id: input.organizationId,
+          metadata: { organizationId: input.organizationId, planCode: input.planCode },
+          subscription_data: {
+            metadata: { organizationId: input.organizationId, planCode: input.planCode },
+          },
+          line_items: [{ price: input.priceId, quantity: 1 }],
+          success_url: input.successUrl,
+          cancel_url: input.cancelUrl,
+        },
+        { idempotencyKey: input.idempotencyKey },
+      );
       if (!session.url)
         throw new AppError('EXTERNAL_SERVICE_ERROR', 'Stripe did not return a checkout URL.', 502);
       return { url: session.url };

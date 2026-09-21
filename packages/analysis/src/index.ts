@@ -1,3 +1,5 @@
+export { analyzePageEvidence, evidenceEngineVersion } from './evidence';
+export type { DeterministicFinding, EvidenceSeverity } from './evidence';
 export { assertJobTransition } from './transitions';
 export {
   PostgresAnalysisJobQueue,
@@ -10,4 +12,6 @@ export type {
   ClaimedAnalysisJob,
   JobLease,
   ReserveUsageAndEnqueueInput,
+  ReserveAnalysisInput,
+  ReserveGuestAnalysisInput,
 } from './postgres-queue';

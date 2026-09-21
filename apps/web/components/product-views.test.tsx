@@ -35,6 +35,9 @@ describe('product API states', () => {
     render(<DashboardView />);
     expect(screen.getByRole('status', { name: 'Loading workspace data' })).toBeTruthy();
     expect(await screen.findByText('No recent activity')).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Workspace metrics' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: '0% used' })).toBeTruthy();
+    expect(screen.getByText('Qualified opportunities')).toBeTruthy();
     expect(screen.getByText('Connect Chrome Extension')).toBeTruthy();
   });
 

@@ -10,7 +10,7 @@ describe('How It Works page', () => {
 
     const steps = screen
       .getByRole('list', { name: 'Prospect-to-pitch workflow' })
-      .querySelectorAll('li');
+      .querySelectorAll('[role="listitem"]');
     expect(Array.from(steps, (step) => step.querySelector('h3')?.textContent)).toEqual([
       'Visit Website',
       'Analyze',

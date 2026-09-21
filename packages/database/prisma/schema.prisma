@@ -22,6 +22,26 @@ enum ExtensionSessionStatus {
   DISCONNECTED
 }
 
+enum GuestSessionStatus {
+  ACTIVE
+  CONVERTED
+  EXPIRED
+  REVOKED
+}
+
+enum AuthActionKind {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum ExtensionAuthorizationStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  EXPIRED
+  CANCELED
+}
+
 enum SubscriptionStatus {
   TRIALING
   ACTIVE
@@ -73,49 +93,81 @@ enum LeadStatus {
 }
 
 model User {
-  id                String             @id @default(cuid())
-  email             String             @unique
-  emailVerifiedAt   DateTime?
-  passwordHash      String?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  profile           Profile?
-  memberships       Membership[]
-  extensionSessions ExtensionSession[]
-  authSessions      AuthSession[]
-  activities        Activity[]         @relation("ActivityActor")
-  auditLogs         AuditLog[]         @relation("AuditActor")
+  id                    String                          @id @default(cuid())
+  email                 String                          @unique
+  emailVerifiedAt       DateTime?
+  passwordHash          String?
+  createdAt             DateTime                        @default(now())
+  updatedAt             DateTime                        @updatedAt
+  profile               Profile?
+  memberships           Membership[]
+  extensionSessions     ExtensionSession[]
+  authSessions          AuthSession[]
+  activities            Activity[]                      @relation("ActivityActor")
+  auditLogs             AuditLog[]                      @relation("AuditActor")
+  convertedGuests       GuestSession[]                  @relation("ConvertedGuest")
+  authActionTokens      AuthActionToken[]
+  authorizationRequests ExtensionAuthorizationRequest[]
 }
 
 model Profile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  displayName String?
-  roleLabel   String?
-  services    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  displayName          String?
+  roleLabel            String?
+  services             Json?
+  targetIndustries     Json?
+  locations            Json?
+  idealCustomerProfile String?
+  agencyWebsite        String?
+  outreachPreferences  String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Organization {
-  id                String             @id @default(cuid())
-  name              String
-  slug              String             @unique
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  memberships       Membership[]
-  extensionSessions ExtensionSession[]
-  subscriptions     Subscription[]
-  usageLedger       UsageLedger[]
-  websites          Website[]
-  analyses          WebsiteAnalysis[]
-  leads             Lead[]
-  pitches           Pitch[]
-  activities        Activity[]
-  jobs              AnalysisJob[]
-  auditLogs         AuditLog[]
-  webhookEvents     WebhookEvent[]
+  id                    String                          @id @default(cuid())
+  name                  String
+  slug                  String                          @unique
+  createdAt             DateTime                        @default(now())
+  updatedAt             DateTime                        @updatedAt
+  memberships           Membership[]
+  extensionSessions     ExtensionSession[]
+  subscriptions         Subscription[]
+  usageLedger           UsageLedger[]
+  websites              Website[]
+  analyses              WebsiteAnalysis[]
+  leads                 Lead[]
+  pitches               Pitch[]
+  activities            Activity[]
+  jobs                  AnalysisJob[]
+  auditLogs             AuditLog[]
+  webhookEvents         WebhookEvent[]
+  guestSession          GuestSession?
+  authorizationRequests ExtensionAuthorizationRequest[]
+}
+
+model GuestSession {
+  id                    String                          @id @default(cuid())
+  guestPublicId         String                          @unique
+  tokenHash             String                          @unique
+  organizationId        String                          @unique
+  trialLimit            Int
+  status                GuestSessionStatus              @default(ACTIVE)
+  expiresAt             DateTime
+  convertedUserId       String?
+  convertedAt           DateTime?
+  createdAt             DateTime                        @default(now())
+  updatedAt             DateTime                        @updatedAt
+  organization          Organization                    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  convertedUser         User?                           @relation("ConvertedGuest", fields: [convertedUserId], references: [id], onDelete: SetNull)
+  analyses              WebsiteAnalysis[]
+  jobs                  AnalysisJob[]
+  authorizationRequests ExtensionAuthorizationRequest[]
+
+  @@index([status, expiresAt])
+  @@index([convertedUserId, convertedAt])
 }
 
 model Membership {
@@ -145,27 +197,81 @@ model AuthSession {
   @@index([userId, expiresAt])
 }
 
+model AuthActionToken {
+  id        String         @id @default(cuid())
+  userId    String
+  kind      AuthActionKind
+  tokenHash String         @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime       @default(now())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind, expiresAt])
+}
+
+model ExtensionAuthorizationRequest {
+  id                    String                       @id @default(cuid())
+  publicId              String                       @unique
+  guestSessionId        String?
+  userId                String?
+  organizationId        String?
+  codeChallenge         String
+  redirectUri           String
+  authorizationCodeHash String?                      @unique
+  deviceName            String?
+  extensionVersion      String
+  status                ExtensionAuthorizationStatus @default(PENDING)
+  expiresAt             DateTime
+  approvedAt            DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
+  guestSession          GuestSession?                @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+  user                  User?                        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organization          Organization?                @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  extensionSession      ExtensionSession?
+
+  @@index([status, expiresAt])
+  @@index([guestSessionId, createdAt])
+}
+
 model ExtensionSession {
-  id                     String                 @id @default(cuid())
+  id                     String                        @id @default(cuid())
   userId                 String
   organizationId         String
-  tokenHash              String                 @unique
-  refreshTokenHash       String                 @unique
-  authorizationRequestId String                 @unique
+  tokenHash              String                        @unique
+  refreshTokenHash       String                        @unique
+  authorizationRequestId String                        @unique
   codeChallenge          String
   deviceName             String?
   extensionVersion       String
-  status                 ExtensionSessionStatus @default(PENDING)
+  status                 ExtensionSessionStatus        @default(PENDING)
   expiresAt              DateTime
   lastActiveAt           DateTime?
   revokedAt              DateTime?
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
-  user                   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @updatedAt
+  user                   User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization           Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  authorizationRequest   ExtensionAuthorizationRequest @relation(fields: [authorizationRequestId], references: [publicId], onDelete: Cascade)
 
   @@index([organizationId, status])
   @@index([userId, status])
+}
+
+model RateLimitBucket {
+  id          String   @id @default(cuid())
+  keyHash     String
+  action      String
+  windowStart DateTime
+  count       Int      @default(0)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([keyHash, action, windowStart])
+  @@index([expiresAt])
 }
 
 model Subscription {
@@ -217,25 +323,35 @@ model Website {
 }
 
 model WebsiteAnalysis {
-  id                  String            @id @default(cuid())
-  organizationId      String
-  websiteId           String
-  status              AnalysisJobStatus
-  websiteScore        Int?
-  scoringVersion      String?
-  businessSummary     String?
-  extractedText       String?
-  rawContentExpiresAt DateTime?
-  completedAt         DateTime?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  organization        Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  website             Website           @relation(fields: [websiteId], references: [id], onDelete: Cascade)
-  findings            Finding[]
-  opportunities       Opportunity[]
-  jobs                AnalysisJob[]
+  id                        String            @id @default(cuid())
+  organizationId            String
+  guestSessionId            String?
+  websiteId                 String
+  status                    AnalysisJobStatus
+  websiteScore              Int?
+  componentScores           Json?
+  scoringVersion            String?
+  opportunityScore          Int?
+  opportunityScoringVersion String?
+  confidence                Float?
+  businessSummary           String?
+  aiStatus                  String?
+  extractedText             String?
+  rawContentExpiresAt       DateTime?
+  completedAt               DateTime?
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+  organization              Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  guestSession              GuestSession?     @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+  website                   Website           @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  findings                  Finding[]
+  opportunities             Opportunity[]
+  pitches                   Pitch[]
+  jobs                      AnalysisJob[]
 
   @@index([organizationId, createdAt])
+  @@index([organizationId, opportunityScore])
+  @@index([guestSessionId, createdAt])
   @@index([websiteId, completedAt])
 }
 
@@ -248,8 +364,11 @@ model Finding {
   confidence          Float
   commercialRelevance Float
   title               String
+  description         String?
   evidence            Json
+  source              String?
   sourceUrl           String?
+  deterministicScore  Float?
   createdAt           DateTime             @default(now())
   analysis            WebsiteAnalysis      @relation(fields: [analysisId], references: [id], onDelete: Cascade)
   opportunities       OpportunityFinding[]
@@ -263,8 +382,11 @@ model Opportunity {
   title            String
   summary          String
   serviceCategory  String
+  strength         String?
   opportunityScore Int
+  scoringVersion   String?
   confidence       Float
+  evidence         Json?
   commercialReason String
   pitchAngle       String?
   createdAt        DateTime             @default(now())
@@ -315,16 +437,17 @@ model LeadContact {
 }
 
 model Pitch {
-  id             String       @id @default(cuid())
+  id             String           @id @default(cuid())
   organizationId String
   leadId         String?
   analysisId     String?
   format         String
   content        String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead           Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  analysis       WebsiteAnalysis? @relation(fields: [analysisId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, createdAt])
 }
@@ -348,13 +471,14 @@ model AnalysisJob {
   id               String            @id @default(cuid())
   organizationId   String
   analysisId       String
+  guestSessionId   String?
   status           AnalysisJobStatus @default(QUEUED)
   // Deprecated compatibility columns retained for a non-destructive migration. Never used by V1.
   legacyQueueJobId String?           @unique @map("queueJobId")
   idempotencyKey   String
   attempt          Int               @default(0)
   maxAttempts      Int               @default(3)
-progress         Int               @default(0)
+  progress         Int               @default(0)
   usageFeature     String            @default("analysis")
   usageQuantity    Int               @default(1)
   nextAttemptAt    DateTime          @default(now())
@@ -369,9 +493,11 @@ progress         Int               @default(0)
   updatedAt        DateTime          @updatedAt
   organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   analysis         WebsiteAnalysis   @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  guestSession     GuestSession?     @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
 
   @@unique([organizationId, idempotencyKey])
   @@index([organizationId, status, createdAt])
+  @@index([guestSessionId, status, createdAt])
   @@index([status, nextAttemptAt, createdAt])
   @@index([status, lockedAt])
 }

@@ -5,6 +5,8 @@ import './components.css';
 import './homepage.css';
 import './how-it-works.css';
 import './reference-marketing.css';
+import './workspace.css';
+import './dashboard.css';
 
 export const metadata: Metadata = {
   title: 'ProspectAI',

@@ -119,12 +119,12 @@ export function HowItWorksPage() {
 
 export function WorkflowTimeline() {
   return (
-    <ol className="how-timeline" aria-label="Prospect-to-pitch workflow">
+    <div className="how-timeline" role="list" aria-label="Prospect-to-pitch workflow">
       {prospectWorkflow.map(([title, copy], index) => {
         const Icon = stepIcons[index] ?? Sparkles;
         return <WorkflowStepCard copy={copy} icon={Icon} index={index} key={title} title={title} />;
       })}
-    </ol>
+    </div>
   );
 }
 
@@ -140,7 +140,7 @@ function WorkflowStepCard({
   title: string;
 }) {
   return (
-    <li className="how-step" style={{ '--step-index': index } as CSSProperties}>
+    <div className="how-step" role="listitem" style={{ '--step-index': index } as CSSProperties}>
       <span className="how-step-number" aria-hidden="true">
         {index + 1}
       </span>
@@ -151,7 +151,7 @@ function WorkflowStepCard({
         <h3>{title}</h3>
         <p>{copy}</p>
       </article>
-    </li>
+    </div>
   );
 }
 

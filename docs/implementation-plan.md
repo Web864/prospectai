@@ -413,3 +413,20 @@ Phase 2 is complete when:
 - testing strategy exists
 - Chrome Web Store plan exists
 - V1 scope and risks are protected
+
+## Superseding Extension Onboarding Decision
+
+Connect-account-first is superseded. The extension first establishes an anonymous `GuestSession`, displays backend entitlement state, and allows the configured trial count before registration. Guest work uses the existing PostgreSQL queue and usage ledger. Registration remains the secure PKCE handoff, followed by idempotent guest conversion so no manual reconnect is required.
+
+Supported pages are public HTTP(S) company websites selected by the user. Browser, internal, local, private, and LinkedIn pages are disabled pending separate policy approval. `activeTab` and `storage` remain sufficient; `<all_urls>` is not introduced.
+
+## Phase 4 Correction and Phase 5 Reconciliation
+
+1. Establish/resume the anonymous guest principal and render backend-authoritative allowance.
+2. Submit explicit guest analyses through the existing PostgreSQL queue and usage ledger.
+3. Return limited guest results while progressively gating Save Lead, full pitch/history, and continued use.
+4. Start PKCE only when the user chooses a registered capability or exhausts the guest allowance.
+5. Convert guest analyses transactionally, preserve the current analysis id, clear guest credentials, and restore the registered result without reconnect.
+6. Keep registered authentication, polling, leads, pitch, settings, usage, and billing frontend contracts unchanged outside this entry-flow correction.
+
+The previous connect-account-first implementation sequence is superseded.

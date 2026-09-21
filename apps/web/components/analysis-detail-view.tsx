@@ -1,5 +1,6 @@
 'use client';
 
+import { AlertTriangle, Bookmark, FileSearch, Globe2, RefreshCw, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   actionResponseSchema,
@@ -190,6 +191,9 @@ function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._
       {data.findings.map((finding) => (
         <article className="finding" key={finding.id}>
           <div className="finding-heading">
+            <span className="finding-icon" aria-hidden="true">
+              <FileSearch size={17} />
+            </span>
             <Badge>{finding.category}</Badge>
             <h3>{finding.title}</h3>
           </div>
@@ -216,7 +220,10 @@ function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._
       {data.opportunities.map((opportunity) => (
         <section className="detail-section" key={opportunity.id}>
           <Badge>{Math.round(opportunity.confidence * 100)}% confidence</Badge>
-          <h3>{opportunity.title}</h3>
+          <h3 className="opportunity-title">
+            <Sparkles size={17} aria-hidden="true" />
+            {opportunity.title}
+          </h3>
           <dl className="data-list">
             <div>
               <dt>Recommended service</dt>
@@ -266,24 +273,47 @@ function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._
 
   return (
     <>
+      <div className="actions detail-toolbar">
+        <Button className="button-secondary" disabled={busy} onClick={() => void reanalyze()}>
+          <RefreshCw size={16} aria-hidden="true" />
+          {busy ? 'Working...' : 'Re-analyze'}
+        </Button>
+        <Button
+          disabled={busy || data.opportunities.length === 0}
+          onClick={() => void action('/leads', { analysisId: data.id })}
+        >
+          <Bookmark size={16} aria-hidden="true" />
+          Save as lead
+        </Button>
+      </div>
       {data.status === 'partial' && (
         <div className="partial-banner" role="status">
-          <Badge tone="warning">Partial analysis</Badge>
+          <span className="partial-icon" aria-hidden="true">
+            <AlertTriangle size={20} />
+          </span>
           <div>
-            <strong>Some analysis stages did not complete</strong>
-            <p>Only evidence returned by the API is shown.</p>
+            <strong>Partial analysis</strong>
+            <p>
+              <span>Some analysis stages did not complete</span>. Only evidence returned by the API
+              is shown.
+            </p>
           </div>
         </div>
       )}
       <section className="analysis-hero">
-        <div>
-          <Badge tone={data.status === 'completed' ? 'positive' : 'warning'}>{data.status}</Badge>
-          <h2>{data.companyName ?? data.domain}</h2>
-          <p>
-            {data.domain}
-            {data.analyzedAt ? ` | ${new Date(data.analyzedAt).toISOString()}` : ''}
-          </p>
-          <p>{data.businessSummary ?? 'Business summary unavailable.'}</p>
+        <div className="analysis-company">
+          <span className="analysis-site-icon" aria-hidden="true">
+            <Globe2 size={26} />
+          </span>
+          <div>
+            <Badge tone={data.status === 'completed' ? 'positive' : 'warning'}>{data.status}</Badge>
+            <h2>{data.companyName ?? data.domain}</h2>
+            <p>
+              {data.domain}
+              {data.analyzedAt ? ` | ${new Date(data.analyzedAt).toISOString()}` : ''}
+            </p>
+            <p>{data.businessSummary ?? 'Business summary unavailable.'}</p>
+          </div>
         </div>
         <div className="scores">
           <Score kind="website" value={data.websiteScore ?? undefined} />
@@ -293,21 +323,15 @@ function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._
             <strong>
               {data.confidence === null ? '--' : `${Math.round(data.confidence * 100)}%`}
             </strong>
+            <small>
+              {data.confidence !== null && data.confidence >= 0.75 ? 'High' : 'Measured'}
+            </small>
+            <span className="confidence-track" aria-hidden="true">
+              <span style={{ width: `${Math.round((data.confidence ?? 0) * 100)}%` }} />
+            </span>
           </div>
         </div>
       </section>
-      <div className="actions detail-toolbar">
-        <Button disabled={busy} onClick={() => void reanalyze()}>
-          {busy ? 'Working...' : 'Re-analyze'}
-        </Button>
-        <Button
-          className="button-secondary"
-          disabled={busy || data.opportunities.length === 0}
-          onClick={() => void action('/leads', { analysisId: data.id })}
-        >
-          Save lead
-        </Button>
-      </div>
       <Tabs
         label="Analysis detail sections"
         items={[

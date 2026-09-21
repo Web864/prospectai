@@ -30,7 +30,7 @@ Local developer checks must run without external credentials. A `.env.test` file
 
 | Product area               | Acceptance scenarios                                                                                                                                                                                                                               |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Authentication and tenancy | Unverified account cannot use protected features; each role is enforced; switching organizations never grants cross-tenant data; session rotation/logout/MFA actions behave correctly.                                                             |
+| Authentication and tenancy | Password and verified-Google accounts receive revocable sessions; tenant membership and owner roles are enforced; cross-tenant identifiers never grant access; logout and password reset revoke applicable sessions.                               |
 | Chrome extension           | First-use pairing opens an authenticated consent page; PKCE grant exchanges once only; expired or revoked sessions fail safely; popup handles signed-out, loading, blocked, and completed states.                                                  |
 | Crawler                    | Canonical public URL succeeds; invalid schemes, credential URLs, localhost, RFC1918/link-local/loopback targets, redirect bypasses, over-limit responses, robots restrictions, and JS-only pages produce the right terminal state and explanation. |
 | Jobs and usage             | Duplicate idempotency calls produce one analysis; quota reservation is atomic under concurrency; cancellation and retry never double-charge; terminal failure follows the documented release/adjustment rule.                                      |
@@ -60,3 +60,11 @@ Before release, validate a fresh-account journey in staging, package and load th
 2. Build unit/integration coverage alongside schema, auth, ledger, and job code rather than after it.
 3. Add crawler, AI, billing, and extension contract tests as those adapters are introduced.
 4. Automate core E2E paths before beta; make the release verification suite mandatory before public launch.
+
+## Value-First Guest Test Matrix
+
+Required coverage includes fresh install to guest ready, analyses one/two/three with authoritative remaining values, fourth-use rejection, duplicate idempotency, concurrent reservation, failure release, extension reopen/restart, minimal local storage, explicit-click-only analysis, unsupported pages, auth cancellation/expiry/replay, conversion during active analysis, duplicate callback, preserved result, and same-user web/extension identity. Production release still requires an unpacked-Chrome E2E run because unit tests cannot prove browser permission and OAuth-window behavior.
+
+### Reconciliation Coverage
+
+Automated coverage now verifies fresh guest entry; balances of 3, 2, 1, and 0; fourth-use exhaustion; duplicate request idempotency; serialized concurrent exhaustion; terminal failure credit release; extension reopen/browser-storage recovery; invalid and expired guest sessions; canceled, invalid, expired, and replayed handoffs; automatic guest conversion; current-result preservation; and no manual reconnect. Unpacked-Chrome provider completion remains a manual release check.

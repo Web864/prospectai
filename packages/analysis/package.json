@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@prisma/client": "6.14.0",
+    "@prospectai/crawler": "workspace:*",
     "@prospectai/database": "workspace:*",
     "@prospectai/shared": "workspace:*",
     "@prospectai/types": "workspace:*"

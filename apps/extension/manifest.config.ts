@@ -8,7 +8,7 @@ export function createManifest(hostPermission: string): ManifestV3Export {
     description: 'Analyze the active business website with ProspectAI.',
     action: { default_popup: 'src/popup.html' },
     background: { service_worker: 'src/service-worker.ts', type: 'module' },
-    permissions: ['activeTab', 'storage'],
+    permissions: ['activeTab', 'storage', 'identity'],
     host_permissions: [hostPermission],
     content_security_policy: {
       extension_pages: "script-src 'self'; object-src 'self'; base-uri 'self'",

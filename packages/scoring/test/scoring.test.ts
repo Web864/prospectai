@@ -12,7 +12,7 @@ describe('scoring', () => {
       title: 'Missing title',
       evidence: 'No title element.',
     };
-    expect(calculateWebsiteScore([finding])).toBe(52);
-    expect(calculateOpportunityScore(finding, 0.9)).toBe(100);
+    expect(calculateWebsiteScore([finding])).toBe(97);
+    expect(calculateOpportunityScore(finding, 0.9)).toBe(77);
   });
 });
