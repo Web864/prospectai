@@ -288,7 +288,7 @@ textarea:focus-visible {
   gap: 4px;
   padding: 12px;
   border-left: 4px solid var(--brand);
-  background: #f1faf8;
+  /* background: #f1faf8; */
 }
 .score strong {
   font-size: 34px;
