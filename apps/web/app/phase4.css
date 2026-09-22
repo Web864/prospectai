@@ -169,7 +169,7 @@ textarea:focus-visible {
 }
 .app-shell aside {
   padding: 24px 16px;
-  background: #182235;
+  background: white;
   color: #fff;
   display: flex;
   flex-direction: column;

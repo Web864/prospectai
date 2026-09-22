@@ -1,14 +1,13 @@
 ﻿import {
   BarChart3,
   CreditCard,
-  FileSearch,
-  LayoutDashboard,
+  FileText,
+  Home,
   Lightbulb,
-  MessageSquareText,
-  Puzzle,
+  PieChart,
   Search,
   Settings,
-  Target,
+  ShieldCheck,
   Users,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -20,13 +19,13 @@ import { AccountSession } from './account-session';
 
 function NavigationIcon({ href }: { href: string }) {
   const props = { size: 18, strokeWidth: 1.9, 'aria-hidden': true } as const;
-  if (href === '/app') return <LayoutDashboard {...props} />;
+  if (href === '/app') return <Home {...props} />;
   if (href === '/app/research') return <Search {...props} />;
-  if (href === '/app/analyses') return <FileSearch {...props} />;
-  if (href === '/app/opportunities') return <Target {...props} />;
+  if (href === '/app/analyses') return <BarChart3 {...props} />;
+  if (href === '/app/opportunities') return <ShieldCheck {...props} />;
   if (href === '/app/leads') return <Users {...props} />;
-  if (href === '/app/pitches') return <MessageSquareText {...props} />;
-  if (href === '/app/usage') return <BarChart3 {...props} />;
+  if (href === '/app/pitches') return <FileText {...props} />;
+  if (href === '/app/usage') return <PieChart {...props} />;
   if (href === '/app/billing') return <CreditCard {...props} />;
   return <Settings {...props} />;
 }
@@ -42,8 +41,14 @@ export function AppShell({
   trail?: string;
   activePath?: string;
 }) {
+  const isExtensionPage = title === 'Extension management';
+
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell${title === 'Settings' ? ' settings-shell' : ''}${
+        isExtensionPage ? ' extension-management-shell' : ''
+      }`}
+    >
       <aside className="workspace-sidebar">
         <Link className="brand workspace-brand" href="/" aria-label="ProspectAI home">
           <Image src="/brand-mark.png" alt="" width={34} height={34} priority />
@@ -74,12 +79,14 @@ export function AppShell({
           href="/app/settings/extension"
           aria-current={activePath === '/app/settings/extension' ? 'page' : undefined}
         >
-          <Puzzle size={18} strokeWidth={1.9} aria-hidden="true" />
+          <ShieldCheck size={18} strokeWidth={1.9} aria-hidden="true" />
           <span>
             <strong>Extension</strong>
-            <small>Chrome companion</small>
           </span>
         </Link>
+        {activePath === '/app/settings/extension' && (
+          <span className="extension-nav-status">Connected</span>
+        )}
         <div className="sidebar-note">
           <Lightbulb size={17} aria-hidden="true" />
           <span>Evidence first. Opportunity focused.</span>
@@ -105,7 +112,11 @@ export function AppShell({
           <header className="app-header">
             <div>
               <h1>{title}</h1>
-              <p>Prospect opportunity intelligence, grounded in evidence.</p>
+              <p>
+                {isExtensionPage
+                  ? 'Connect and manage the ProspectAI browser extension.'
+                  : 'Prospect opportunity intelligence, grounded in evidence.'}
+              </p>
             </div>
             <div className="desktop-account">
               <AccountSession />

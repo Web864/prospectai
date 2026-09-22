@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
-import { FileText, CheckCircle2, Clock3, AlertTriangle, Search, Eye, MoreVertical, Plus, CalendarDays, Crown, Zap, BarChart3, Package, PieChart, type LucideIcon } from 'lucide-react';
+import { FileText, CheckCircle2, Clock3, AlertTriangle, Search, Eye, MoreVertical, Plus, CalendarDays, Crown, Zap, BarChart3, Package, PieChart, Download, Settings, RotateCcw, ExternalLink, HelpCircle, UserRound, CreditCard, SlidersHorizontal, Link2, Bell, Shield, BriefcaseBusiness, Tag, FileText as FieldFileText, Save, Database, type LucideIcon } from 'lucide-react';
 import {
   actionResponseSchema,
   analysisAcceptedResponseSchema,
@@ -87,7 +87,7 @@ export function AnalysesView() {
 
           <div className="analysis-toolbar">
             <div className="analysis-tabs"><b>All analyses</b><span>Completed</span><span>In progress</span><span>Failed</span></div>
-            <div className="analysis-filters"><div><Search size={16}/> Search websites, companies...</div><button>All statuses⌄</button><button>Newest first⌄</button></div>
+            <div className="analysis-filters"><div><Search size={16}/> Search websites, companies...</div><button>All statuses</button><button>Newest first</button></div>
           </div>
 
           <section className="analysis-table">
@@ -133,10 +133,10 @@ export function OpportunitiesView() {
 
           <div className="opportunity-toolbar">
             <input placeholder="Search opportunities..." />
-            <button>All categories⌄</button>
-            <button>All scores⌄</button>
-            <button>All analyses⌄</button>
-            <button>Score (high to low)⌄</button>
+            <button>All categories</button>
+            <button>All scores</button>
+            <button>All analyses</button>
+            <button>Score (high to low)</button>
           </div>
 
           <div className="opportunity-list">
@@ -171,10 +171,10 @@ export function OpportunitiesView() {
 
                 <div className="opportunity-actions">
                   <Link href={`/app/analysis/${encodeURIComponent(item.analysisId || item.id)}`}>
-                    View evidence →
+                    View evidence 
                   </Link>
                   <button>⋮</button>
-                  <span>›</span>
+                  {/* <span>›</span> */}
                 </div>
               </article>
             ))}
@@ -274,7 +274,9 @@ export function UsageView() {
 
           <section className="recent-usage-card">
             <div className="section-heading">
-              <div><h2>Recent usage</h2><p>Your most recent analyses and usage activity.</p></div>
+              <div><h2>Recent usage</h2>
+              {/* <p>Your most recent analyses and usage activity.</p> */}
+              </div>
               <button className="button button-secondary">View all →</button>
             </div>
             <div className="usage-table">
@@ -299,6 +301,29 @@ export function UsageView() {
   );
 }
 
+function BillingHeroArt() {
+  return (
+    <svg className="billing-hero-svg" viewBox="0 0 300 170" aria-hidden="true">
+      <path d="M0 92C46 30 95 28 137 43c38 14 72 19 111 2 20-9 36-24 52-45v170H0Z" fill="rgba(218,249,241,.72)" />
+      <path d="M42 134h184" stroke="#8ddfd0" strokeWidth="2" strokeLinecap="round" />
+      <rect x="57" y="92" width="38" height="42" rx="8" fill="#9fe4d7" />
+      <rect x="107" y="68" width="38" height="66" rx="8" fill="#7fd7ca" />
+      <rect x="157" y="31" width="38" height="103" rx="8" fill="#78cfc3" />
+      <path d="M74 75l6-10 6 10-6 10-6-10Zm55-32 6-10 6 10-6 10-6-10Zm52-20 6-10 6 10-6 10-6-10Z" fill="#91e0d4" />
+      <circle cx="218" cy="57" r="5" fill="#a7e9de" />
+    </svg>
+  );
+}
+
+function BillingPlanIcon() {
+  return (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M24 5 39 13.5v21L24 43 9 34.5v-21L24 5Z" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+      <path d="m9.5 13.8 14.5 8.5 14.5-8.5M24 22.3V43" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function BillingView() {
   const { state, retry } = useApiResource('/billing', subscriptionResponseSchema);
   const [busy, setBusy] = useState(false);
@@ -317,32 +342,74 @@ export function BillingView() {
       setMessage(error instanceof ApiClientError ? error.message : 'Billing could not be updated.');
     } finally { setBusy(false); }
   }
+  const freeFeatures = ['10 analyses per month','Basic website intelligence','Core opportunity insights','Standard support'];
+  const proFeatures = ['Higher monthly limits','Advanced opportunity scoring','AI-powered pitch generation','Export data & reports','Priority support'];
+
   return (
     <ResourceFeedback state={state} retry={retry} notFoundTitle="Billing API is not available yet">
       {({ data }) => (
         <div className="billing-page">
           <section className="billing-hero">
-            <div className="billing-plan-icon"><Package size={28}/></div>
-            <div className="billing-plan-copy"><span>Current plan</span><h2>{data.plan}</h2><p>ProspectAI for individuals and small projects.</p>
-              <div className="actions"><Button disabled={busy} onClick={() => void billingAction('upgrade')}><Crown size={16}/> Upgrade to Pro</Button><Button className="button-secondary">Download invoice</Button><Button className="button-secondary">Manage plan</Button></div>
+            <div className="billing-hero-main">
+              <div className="billing-plan-icon"><BillingPlanIcon /></div>
+              <div className="billing-plan-copy">
+                <span className="billing-eyebrow">Current plan</span>
+                <h2>{data.plan}</h2>
+                <p>ProspectAI for individuals and small projects.</p>
+                <div className="billing-actions">
+                  <Button className="billing-upgrade-button" disabled={busy} onClick={() => void billingAction('upgrade')}><Crown size={16} fill="currentColor" /> Upgrade to Pro</Button>
+                  <Button className="button-secondary billing-outline-button"><Download size={17} /> Download invoice</Button>
+                  <Button className="button-secondary billing-outline-button"><Settings size={17} /> Manage plan</Button>
+                </div>
+              </div>
             </div>
-            <Badge tone="positive">Active</Badge>
-            <div className="billing-insight"><strong>Unlock more insights</strong><p>Upgrade to get higher limits, advanced features, and priority processing.</p></div>
+            <span className="billing-active"><span /> Active</span>
+            <BillingHeroArt />
+            <div className="billing-insight">
+              <strong>Unlock more insights</strong>
+              <p>Upgrade to get higher limits, advanced features, and priority processing.</p>
+            </div>
           </section>
 
           <div className="billing-summary-grid">
-            <Metric icon={BarChart3} label="Used analyses" value="1" helper="This billing period" />
-            <Metric icon={PieChart} label="Remaining" value="9" helper="of 10 included" />
-            <Metric icon={CalendarDays} label="Billing period" value="Sep 1, 2026 – Oct 1, 2026" helper="UTC timezone" />
+            <article className="billing-summary-card">
+              <div className="billing-summary-icon billing-blue"><BarChart3 size={28} /></div>
+              <div><span>Used analyses</span><strong>1</strong><small>This billing period</small></div>
+            </article>
+            <article className="billing-summary-card">
+              <div className="billing-summary-icon billing-green"><PieChart size={29} /></div>
+              <div><span>Remaining</span><strong>9</strong><small>of 10 included</small></div>
+            </article>
+            <article className="billing-summary-card">
+              <div className="billing-summary-icon billing-purple"><CalendarDays size={28} /></div>
+              <div><span>Billing period</span><strong className="billing-period-value">Sep 1, 2026 – Oct 1, 2026</strong><small>UTC timezone</small></div>
+            </article>
           </div>
 
           <section className="billing-features">
-            <div><h2>Plan features</h2><h3>Included in Free</h3>{['10 analyses per month','Basic website intelligence','Core opportunity insights','Standard support'].map(x=><p key={x}>✓ {x}</p>)}</div>
-            <div className="pro-features"><h3>👑 Get more with Pro</h3>{['Higher monthly limits','Advanced opportunity scoring','AI-powered pitch generation','Export data & reports','Priority support'].map(x=><p key={x}>✓ {x}</p>)}</div>
-            <div className="pro-card"><Zap size={22}/><h3>Ready to do more?</h3><p>Upgrade to Pro and unlock the full potential of ProspectAI.</p><Button>Upgrade to Pro</Button></div>
+            <div className="billing-feature-column billing-free-column">
+              <h2>Plan features</h2>
+              <h3>Included in Free</h3>
+              {freeFeatures.map(x => <p key={x}><span className="feature-check">✓</span>{x}</p>)}
+            </div>
+            <div className="billing-feature-column billing-pro-column">
+              <h3><Crown size={18} fill="currentColor" /> Get more with Pro</h3>
+              {proFeatures.map(x => <p key={x}><span className="feature-check">✓</span>{x}</p>)}
+            </div>
+            <div className="pro-card">
+              <div className="pro-card-icon"><Zap size={22} fill="currentColor" /></div>
+              <h3>Ready to do more?</h3>
+              <p>Upgrade to Pro and unlock the full potential of ProspectAI.</p>
+              <Button className="pro-card-button" disabled={busy} onClick={() => void billingAction('upgrade')}><Crown size={16} fill="currentColor" /> Upgrade to Pro</Button>
+            </div>
           </section>
-          <section className="billing-help"><h3>Need help with billing?</h3><p>Visit our help center or contact our support team.</p><Button className="button-secondary">View help center ↗</Button></section>
-          {message && <p role="status">{message}</p>}
+
+          <section className="billing-help">
+            <div className="billing-help-icon"><HelpCircle size={28} /></div>
+            <div className="billing-help-copy"><h3>Need help with billing?</h3><p>Visit our help center or contact our support team.</p></div>
+            <Button className="button-secondary billing-help-button"><span>View help center</span><ExternalLink size={15} /></Button>
+          </section>
+          {message && <p role="status" className="billing-message">{message}</p>}
         </div>
       )}
     </ResourceFeedback>
@@ -353,6 +420,7 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
   const { state, retry } = useApiResource('/settings', settingsResponseSchema);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -379,6 +447,7 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
       setBusy(false);
     }
   }
+
   async function disconnect() {
     setBusy(true);
     try {
@@ -395,60 +464,259 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
       setBusy(false);
     }
   }
+
+  if (extensionOnly) {
+    return (
+      <ResourceFeedback state={state} retry={retry} notFoundTitle="Settings API is not available yet">
+        {({ data }) => {
+          const connected = data.extension.connected;
+
+          return (
+            <div className="extension-management-page">
+              <section className={`extension-hero${connected ? ' is-connected' : ''}`}>
+                <div className="extension-hero-copy">
+                  <div className="extension-brand-row">
+                    <span className="extension-chrome-icon" aria-hidden="true">
+                      <span className="extension-chrome-logo">
+                        <span />
+                      </span>
+                    </span>
+                    <div>
+                      <div className="extension-title-row">
+                        <h2>Chrome Extension</h2>
+                        <span className={`extension-status${connected ? ' is-connected' : ''}`}>
+                          <span aria-hidden="true" />
+                          {connected ? 'Connected' : 'Disconnected'}
+                        </span>
+                      </div>
+                      <p>
+                        The ProspectAI extension is active and ready to analyze websites,
+                        <br className="extension-desktop-break" />
+                        find opportunities, and capture prospects.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="extension-actions">
+                    {connected ? (
+                      <Button
+                        className="extension-primary-button"
+                        disabled={busy}
+                        onClick={() => void disconnect()}
+                      >
+                        <Link2 size={20} strokeWidth={2.2} aria-hidden="true" />
+                        Disconnect
+                      </Button>
+                    ) : (
+                      <Link className="button extension-primary-button" href="/extension/connect">
+                        <Link2 size={20} strokeWidth={2.2} aria-hidden="true" />
+                        Reconnect
+                      </Link>
+                    )}
+                    <button className="extension-store-button" type="button">
+                      <ExternalLink size={20} strokeWidth={1.9} aria-hidden="true" />
+                      View in Chrome Web Store
+                    </button>
+                  </div>
+                </div>
+
+                <div className="extension-illustration" aria-hidden="true">
+                  <div className="extension-glow" />
+                  <span className="extension-spark extension-spark-one">✦</span>
+                  <span className="extension-spark extension-spark-two">✦</span>
+                  <span className="extension-spark extension-spark-three">✦</span>
+                  <div className="extension-browser">
+                    <div className="extension-browser-bar">
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                    <div className="extension-browser-body">
+                      <span className="extension-logo-tile">
+                        <img src="/brand-mark.png" alt="" />
+                      </span>
+                    </div>
+                  </div>
+                  <div className="extension-toast">
+                    <span className="extension-toast-check">
+                      <CheckCircle2 size={20} strokeWidth={2.4} />
+                    </span>
+                    <span>
+                      <strong>Extension active</strong>
+                      <small>Ready to analyze websites</small>
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              <section className="extension-feature-grid" aria-label="Extension capabilities">
+                <article className="extension-feature-card">
+                  <span className="extension-feature-icon extension-feature-icon-teal" aria-hidden="true">
+                    <Zap size={29} strokeWidth={2.3} />
+                  </span>
+                  <div>
+                    <h3>Analyze websites</h3>
+                    <p>Get instant opportunity insights<br />while browsing.</p>
+                  </div>
+                </article>
+
+                <article className="extension-feature-card">
+                  <span className="extension-feature-icon extension-feature-icon-blue" aria-hidden="true">
+                    <UserRound size={29} strokeWidth={1.9} />
+                  </span>
+                  <div>
+                    <h3>Capture prospects</h3>
+                    <p>Save companies and contacts<br />directly to your workspace.</p>
+                  </div>
+                </article>
+
+                <article className="extension-feature-card">
+                  <span className="extension-feature-icon extension-feature-icon-purple" aria-hidden="true">
+                    <Database size={29} strokeWidth={1.9} />
+                  </span>
+                  <div>
+                    <h3>Sync automatically</h3>
+                    <p>All activity syncs to your account<br />in real time.</p>
+                  </div>
+                </article>
+              </section>
+
+              <section className="extension-help-card">
+                <div className="extension-help-copy">
+                  <span className="extension-help-icon" aria-hidden="true">
+                    <HelpCircle size={30} strokeWidth={1.9} />
+                  </span>
+                  <div>
+                    <h2>Having issues?</h2>
+                    <p>Try these steps or visit our help center.</p>
+                  </div>
+                </div>
+
+                <button className="extension-help-button" type="button">
+                  View help center
+                  <ExternalLink size={17} strokeWidth={1.9} aria-hidden="true" />
+                </button>
+
+                <ol className="extension-help-steps">
+                  <li>
+                    <span>1</span>
+                    <p>Make sure the extension is enabled in Chrome</p>
+                  </li>
+                  <li>
+                    <span>2</span>
+                    <p>Refresh your browser and try again</p>
+                  </li>
+                  <li>
+                    <span>3</span>
+                    <p>Contact support if the issue persists</p>
+                  </li>
+                </ol>
+              </section>
+
+              {message && <p className="extension-message" role="status">{message}</p>}
+            </div>
+          );
+        }}
+      </ResourceFeedback>
+    );
+  }
+
+  const settingNav = [
+    { label: 'Profile', description: 'Personal information', icon: UserRound },
+    { label: 'Account', description: 'Plan and billing', icon: CreditCard },
+    { label: 'Preferences', description: 'App settings', icon: SlidersHorizontal },
+    { label: 'Integrations', description: 'Connected tools', icon: Link2 },
+    { label: 'Notifications', description: 'Email and updates', icon: Bell },
+    { label: 'Security', description: 'Password and access', icon: Shield },
+  ];
+
   return (
     <ResourceFeedback state={state} retry={retry} notFoundTitle="Settings API is not available yet">
-      {({ data }) =>
-        extensionOnly ? (
-          <section className="settings-section">
-            <div className="status-row">
-              <div>
-                <h2>Chrome Extension</h2>
-                <p className="muted">{data.extension.status}</p>
-              </div>
-              <Badge tone={data.extension.connected ? 'positive' : 'warning'}>
-                {data.extension.connected ? 'Connected' : 'Disconnected'}
-              </Badge>
+      {({ data }) => (
+        <div className="settings-page">
+          <aside className="settings-nav" aria-label="Settings sections">
+            {settingNav.map(({ label, description, icon: Icon }, index) => (
+              <button
+                className={`settings-nav-item${index === 0 ? ' is-active' : ''}`}
+                key={label}
+                type="button"
+                aria-current={index === 0 ? 'page' : undefined}
+              >
+                <span className="settings-nav-icon" aria-hidden="true">
+                  <Icon size={22} strokeWidth={1.8} />
+                </span>
+                <span className="settings-nav-copy">
+                  <strong>{label}</strong>
+                  <small>{description}</small>
+                </span>
+              </button>
+            ))}
+          </aside>
+
+          <form className="settings-form" onSubmit={(event) => void submit(event)}>
+            <div className="settings-form-heading">
+              <h2>Profile information</h2>
+              <p>Update your profile details and how ProspectAI personalizes your experience.</p>
             </div>
-            {data.extension.connected ? (
-              <Button disabled={busy} onClick={() => void disconnect()}>
-                Disconnect
-              </Button>
-            ) : (
-              <Link className="button" href="/extension/connect">
-                Reconnect
-              </Link>
-            )}
-            {message && <p role="status">{message}</p>}
-          </section>
-        ) : (
-          <form className="form-panel" onSubmit={(event) => void submit(event)}>
-            <label className="field">
-              Display name
-              <input name="displayName" defaultValue={data.displayName ?? ''} />
+
+            <label className="settings-field">
+              <span className="settings-field-label">Display name</span>
+              <span className="settings-control">
+                <UserRound size={19} strokeWidth={1.8} aria-hidden="true" />
+                <input name="displayName" defaultValue={data.displayName ?? ''} />
+              </span>
+              <small>This name will be shown in your workspace.</small>
             </label>
-            <label className="field">
-              Role
-              <input name="role" defaultValue={data.role ?? ''} />
+
+            <label className="settings-field">
+              <span className="settings-field-label">Role</span>
+              <span className="settings-control">
+                <BriefcaseBusiness size={19} strokeWidth={1.8} aria-hidden="true" />
+                <select name="role" defaultValue={data.role ?? ''}>
+                  <option value="">Select a role</option>
+                  <option value="Freelancer">Freelancer</option>
+                  <option value="Agency owner">Agency owner</option>
+                  <option value="Consultant">Consultant</option>
+                  <option value="Sales">Sales</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Other">Other</option>
+                </select>
+              </span>
+              <small>Your role helps us tailor recommendations.</small>
             </label>
-            <label className="field">
-              Services
-              <input name="services" defaultValue={data.services.join(', ')} />
+
+            <label className="settings-field">
+              <span className="settings-field-label">Services</span>
+              <span className="settings-control">
+                <Tag size={19} strokeWidth={1.8} aria-hidden="true" />
+                <input name="services" defaultValue={data.services.join(', ')} />
+              </span>
+              <small>List the services you offer (e.g., web design, SEO, marketing).</small>
             </label>
-            <label className="field">
-              Outreach preferences
-              <textarea
-                name="outreachPreferences"
-                rows={4}
-                defaultValue={data.outreachPreferences ?? ''}
-              />
+
+            <label className="settings-field">
+              <span className="settings-field-label">Outreach preferences</span>
+              <span className="settings-control settings-control-textarea">
+                <FieldFileText size={19} strokeWidth={1.8} aria-hidden="true" />
+                <textarea
+                  name="outreachPreferences"
+                  rows={2}
+                  placeholder="Tell us about your preferred outreach style, industries, or any specific notes..."
+                  defaultValue={data.outreachPreferences ?? ''}
+                />
+              </span>
+              <small>This helps generate more relevant opportunities and pitches.</small>
             </label>
-            {message && <p role="status">{message}</p>}
-            <Button type="submit" disabled={busy}>
+
+            {message && <p className="settings-message" role="status">{message}</p>}
+
+            <Button className="settings-save-button" type="submit" disabled={busy}>
+              <Save size={19} strokeWidth={2} aria-hidden="true" />
               {busy ? 'Saving...' : 'Save settings'}
             </Button>
           </form>
-        )
-      }
+        </div>
+      )}
     </ResourceFeedback>
   );
 }
