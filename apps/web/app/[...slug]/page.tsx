@@ -8,7 +8,7 @@ import { HowItWorksPage } from '../../components/how-it-works-page';
 import { LeadListView } from '../../components/lead-list-view';
 import { LeadDetailView } from '../../components/lead-detail-view';
 import { AnalysisDetailView } from '../../components/analysis-detail-view';
-import { FaqPage, FeaturesPage, PricingPage } from '../../components/reference-marketing-pages';
+import { FaqPage, FeaturesPage, PricingPage, ResourcesPage } from '../../components/reference-marketing-pages';
 import { AuthForm } from '../../components/auth-form';
 import { OnboardingForm } from '../../components/onboarding-form';
 import { ExtensionConnect } from '../../components/extension-connect';
@@ -262,6 +262,12 @@ export default async function RoutedPage({
         <HowItWorksPage />
       </SiteShell>
     );
-  if (['contact', 'resources'].includes(path)) return <Marketing page={path} />;
+  if (path === 'resources')
+    return (
+      <SiteShell activePath="/resources">
+        <ResourcesPage />
+      </SiteShell>
+    );
+  if (path === 'contact') return <Marketing page={path} />;
   notFound();
 }

@@ -4,6 +4,8 @@
   FileText,
   Home,
   Lightbulb,
+  Crown,
+  ChevronRight,
   PieChart,
   Search,
   Settings,
@@ -42,12 +44,13 @@ export function AppShell({
   activePath?: string;
 }) {
   const isExtensionPage = title === 'Extension management';
+  const isResearchPage = title === 'Research';
 
   return (
     <div
       className={`app-shell${title === 'Settings' ? ' settings-shell' : ''}${
         isExtensionPage ? ' extension-management-shell' : ''
-      }`}
+      }${isResearchPage ? ' research-shell' : ''}`}
     >
       <aside className="workspace-sidebar">
         <Link className="brand workspace-brand" href="/" aria-label="ProspectAI home">
@@ -56,7 +59,7 @@ export function AppShell({
             Prospect<span className="brand-accent">AI</span>
           </span>
         </Link>
-        <div className="workspace-label">Workspace</div>
+        {!isResearchPage && <div className="workspace-label">Workspace</div>}
         <nav aria-label="Application">
           {applicationNavigation.map(([label, href]) => (
             <Link
@@ -74,22 +77,37 @@ export function AppShell({
           ))}
         </nav>
         <div className="sidebar-spacer" />
-        <Link
-          className="extension-nav"
-          href="/app/settings/extension"
-          aria-current={activePath === '/app/settings/extension' ? 'page' : undefined}
-        >
-          <ShieldCheck size={18} strokeWidth={1.9} aria-hidden="true" />
-          <span>
-            <strong>Extension</strong>
-          </span>
-        </Link>
-        {activePath === '/app/settings/extension' && (
-          <span className="extension-nav-status">Connected</span>
-        )}
-        <div className="sidebar-note">
-          <Lightbulb size={17} aria-hidden="true" />
-          <span>Evidence first. Opportunity focused.</span>
+        <div className={isResearchPage ? 'research-sidebar-bottom' : undefined}>
+          <Link
+            className="extension-nav"
+            href="/app/settings/extension"
+            aria-current={activePath === '/app/settings/extension' ? 'page' : undefined}
+          >
+            <ShieldCheck size={18} strokeWidth={1.9} aria-hidden="true" />
+            <span>
+              <strong>Extension</strong>
+              {isResearchPage && <small className="research-connected">Connected</small>}
+            </span>
+            {isResearchPage && <i className="research-connected-dot" aria-hidden="true" />}
+          </Link>
+          {activePath === '/app/settings/extension' && !isResearchPage && (
+            <span className="extension-nav-status">Connected</span>
+          )}
+          {isResearchPage ? (
+            <Link className="research-upgrade-card" href="/app/billing">
+              <Crown size={22} fill="currentColor" aria-hidden="true" />
+              <span>
+                <strong>Upgrade to Pro</strong>
+                <small>Get more analyses,<br />advanced insights and more.</small>
+              </span>
+              <ChevronRight size={19} aria-hidden="true" />
+            </Link>
+          ) : (
+            <div className="sidebar-note">
+              <Lightbulb size={17} aria-hidden="true" />
+              <span>Evidence first. Opportunity focused.</span>
+            </div>
+          )}
         </div>
       </aside>
       <main className="workspace-main">
@@ -115,7 +133,9 @@ export function AppShell({
               <p>
                 {isExtensionPage
                   ? 'Connect and manage the ProspectAI browser extension.'
-                  : 'Prospect opportunity intelligence, grounded in evidence.'}
+                  : isResearchPage
+                    ? 'Analyze any business website to discover opportunities, weaknesses, and growth potential.'
+                    : 'Prospect opportunity intelligence, grounded in evidence.'}
               </p>
             </div>
             <div className="desktop-account">

@@ -9,6 +9,7 @@ import {
   ChevronDown,
   CircleHelp,
   Database,
+  FileText,
   Lightbulb,
   Mail,
   Monitor,
@@ -40,6 +41,26 @@ const featureCards = [
     copy: 'Prioritize grounded opportunities that fit the services you actually offer.',
     icon: TrendingUp,
     tone: 'blue',
+  },
+] as const;
+
+
+
+const resourceCards = [
+  {
+    title: 'Evidence first',
+    copy: 'See the specific signals ProspectAI detected before considering a recommendation.',
+    icon: BarChart3,
+  },
+  {
+    title: 'Commercial interpretation',
+    copy: "Understand why a website issue may matter to the prospect's business.",
+    icon: FileText,
+  },
+  {
+    title: 'Services worth selling',
+    copy: 'Prioritize grounded opportunities that fit the services you actually offer.',
+    icon: Target,
   },
 ] as const;
 
@@ -117,6 +138,97 @@ export function FeaturesPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+
+
+export function ResourcesPage() {
+  return (
+    <main className="reference-page reference-resources">
+      <ResourcesBackdrop />
+      <div className="reference-container reference-resources-container">
+        <section className="reference-resources-hero" aria-labelledby="resources-page-title">
+          <div className="reference-heading reference-enter reference-enter-1">
+            <span className="reference-resources-eyebrow">ProspectAI</span>
+            <h1 id="resources-page-title">
+              Talk to the <span>ProspectAI</span> team
+            </h1>
+            <p>Built for freelancers, agencies, consultants, and small sales teams.</p>
+          </div>
+        </section>
+
+        <section className="reference-resources-grid" aria-label="ProspectAI principles">
+          {resourceCards.map(({ title, copy, icon: Icon }, index) => (
+            <article
+              className="reference-resource-card reference-enter"
+              style={{ animationDelay: `${210 + index * 90}ms` }}
+              key={title}
+            >
+              <span className="reference-resource-icon" aria-hidden="true">
+                <Icon size={31} strokeWidth={2.25} />
+              </span>
+              <h2>{title}</h2>
+              <p>{copy}</p>
+              <Link className="reference-resource-arrow" href="/how-it-works" aria-label={`Learn more about ${title}`}>
+                <ArrowRight size={22} strokeWidth={2.35} aria-hidden="true" />
+              </Link>
+            </article>
+          ))}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function ResourcesBackdrop() {
+  return (
+    <svg
+      className="reference-resources-backdrop"
+      viewBox="0 0 1672 850"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="resources-mint-a" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#dff8f1" stopOpacity="0.9" />
+          <stop offset="1" stopColor="#b9ece0" stopOpacity="0.34" />
+        </linearGradient>
+        <linearGradient id="resources-mint-b" x1="1" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#caefe7" stopOpacity="0.78" />
+          <stop offset="1" stopColor="#eefbf8" stopOpacity="0.22" />
+        </linearGradient>
+        <filter id="resources-soft-shadow" x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow dx="0" dy="18" stdDeviation="26" floodColor="#159d88" floodOpacity="0.10" />
+        </filter>
+      </defs>
+      <path
+        d="M1672 20C1480 46 1324 121 1210 245c-81 88-132 179-226 225 127 33 267 12 381-52 137-77 213-191 307-223V20Z"
+        fill="url(#resources-mint-a)"
+        filter="url(#resources-soft-shadow)"
+      />
+      <path
+        d="M1672 270c-152 20-266 76-351 167-77 83-130 183-248 219 139 28 288 2 401-76 83-57 143-138 198-183V270Z"
+        fill="url(#resources-mint-b)"
+      />
+      <path
+        d="M0 486c120 26 219 82 292 165 55 63 106 133 202 169H0V486Z"
+        fill="url(#resources-mint-a)"
+        opacity="0.74"
+      />
+      <g fill="#87d7c8" opacity="0.31">
+        {Array.from({ length: 4 }).map((_, row) =>
+          Array.from({ length: 4 }).map((__, col) => (
+            <circle key={`left-${row}-${col}`} cx={40 + col * 19} cy={196 + row * 19} r="2.3" />
+          )),
+        )}
+        {Array.from({ length: 4 }).map((_, row) =>
+          Array.from({ length: 5 }).map((__, col) => (
+            <circle key={`right-${row}-${col}`} cx={1512 + col * 22} cy={143 + row * 24} r="2.5" />
+          )),
+        )}
+      </g>
+    </svg>
   );
 }
 

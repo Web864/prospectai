@@ -10,16 +10,13 @@ import {
 } from 'lucide-react';
 
 export const prospectWorkflow = [
-  ['Visit Website', 'Open the public business website you are already evaluating.'],
-  ['Analyze', 'Start a scoped analysis from the ProspectAI Chrome Extension.'],
-  [
-    'Detect Evidence',
-    'Capture observable technical, content, trust, UX, SEO, and conversion signals.',
-  ],
-  ['Identify Opportunity', 'Separate factual findings from their likely commercial meaning.'],
-  ['Recommend Service', 'Match credible opportunities to services the user actually offers.'],
-  ['Generate Pitch', 'Draft editable outreach grounded in the evidence and opportunity.'],
-  ['Save Lead', 'Keep the company, contacts, findings, pitches, and activity together.'],
+  ['Enter Website', 'Analyze any company domain with one click.'],
+  ['AI Research', 'We scan their website, tech stack, content and market signals.'],
+  ['Detect Needs', "Find what’s missing, outdated or under-optimized."],
+  ['Match Opportunity', 'Get tailored service recommendations.'],
+  ['Review Insights', 'See evidence, scores and reasoning.'],
+  ['Generate Pitch', 'Create personalized outreach, grounded in real data.'],
+  ['Go to Market', 'Copy, edit and send with confidence.'],
 ] as const;
 
 const workflowIcons = [
@@ -34,40 +31,24 @@ const workflowIcons = [
 
 export const prospectFaqQuestions = [
   [
-    'What does ProspectAI analyze?',
-    'ProspectAI analyzes accessible public website pages for technical, content, trust, conversion, and business signals relevant to a sales opportunity.',
+    'What is ProspectAI?',
+    'ProspectAI is an AI-powered opportunity intelligence platform that turns public website evidence into service opportunities and grounded outreach ideas.',
   ],
   [
-    'How is Opportunity Score different from Website Score?',
-    'Website Score summarizes observed website quality. Opportunity Score estimates how strong and relevant the service opportunity is for your business. A weak website does not automatically make a strong prospect.',
+    'What types of businesses can I analyze?',
+    'You can analyze most public business websites across industries, provided the site can be accessed and reviewed from the public web.',
   ],
   [
-    'Does ProspectAI send outreach automatically?',
-    'No. V1 generates editable pitches but does not send outreach. You review, edit, and choose what to do with every pitch.',
+    'How does the opportunity scoring work?',
+    'The score combines observable website signals with commercial relevance to help you prioritize prospects without treating every finding as a buying signal.',
   ],
   [
-    'What data does the Chrome Extension access?',
-    'The extension uses the active tab URL and title only when you invoke an analysis. Account and analysis data are exchanged with the ProspectAI API over an authenticated session.',
+    'Can I use this for multiple industries?',
+    'Yes. ProspectAI is designed to support freelancers, agencies, consultants and small sales teams working across different industries and service categories.',
   ],
   [
-    'Does ProspectAI monitor all browsing?',
-    'No. It does not monitor browsing history or continuously inspect tabs. Analysis begins only from an explicit action on the current tab.',
-  ],
-  [
-    'How are analyses counted?',
-    'Usage is counted server-side according to your plan when an analysis job is accepted. Retries and partial outcomes follow the billing rules shown in your usage history.',
-  ],
-  [
-    'Can an analysis partially complete?',
-    'Yes. If some checks cannot run, ProspectAI can return verified results with a clear partial status and identify what was unavailable.',
-  ],
-  [
-    'What happens if a website blocks automated analysis?',
-    'ProspectAI reports the blocked or failed state instead of inventing findings. You can retry later or continue with the evidence that was safely collected.',
-  ],
-  [
-    'Can I edit AI-generated pitches?',
-    'Yes. Generated pitches are drafts. You can edit them before saving or using them outside ProspectAI.',
+    'Do you offer a free plan?',
+    'Yes. The free plan lets you explore the core workflow and run a limited number of website analyses before upgrading.',
   ],
 ] as const;
 

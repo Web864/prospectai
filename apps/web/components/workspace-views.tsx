@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
-import { FileText, CheckCircle2, Clock3, AlertTriangle, Search, Eye, MoreVertical, Plus, CalendarDays, Crown, Zap, BarChart3, Package, PieChart, Download, Settings, RotateCcw, ExternalLink, HelpCircle, UserRound, CreditCard, SlidersHorizontal, Link2, Bell, Shield, BriefcaseBusiness, Tag, FileText as FieldFileText, Save, Database, type LucideIcon } from 'lucide-react';
+import { FileText, CheckCircle2, Clock3, AlertTriangle, Search, Eye, MoreVertical, Plus, CalendarDays, Crown, Zap, BarChart3, Package, PieChart, Download, Settings, RotateCcw, ExternalLink, HelpCircle, UserRound, CreditCard, SlidersHorizontal, Link2, Bell, Shield, BriefcaseBusiness, Tag, FileText as FieldFileText, Save, Database, Globe2, ArrowRight, Target, Lightbulb, Mail, Check, type LucideIcon } from 'lucide-react';
 import {
   actionResponseSchema,
   analysisAcceptedResponseSchema,
@@ -23,16 +23,18 @@ export function ResearchView() {
     busy: false,
     message: '',
   });
+  const [url, setUrl] = useState('');
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (status.busy) return;
-    const url = String(new FormData(event.currentTarget).get('url') ?? '');
+    const submittedUrl = String(new FormData(event.currentTarget).get('url') ?? '');
     setStatus({ busy: true, message: '' });
     try {
       const result = await webApiRequest('/analyses', analysisAcceptedResponseSchema, {
         method: 'POST',
         headers: { 'Idempotency-Key': crypto.randomUUID() },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: submittedUrl }),
       });
       window.location.assign(`/app/analysis/pending?job=${encodeURIComponent(result.data.jobId)}`);
     } catch (error) {
@@ -42,21 +44,141 @@ export function ResearchView() {
       });
     }
   }
+
+  const examples = [
+    { name: 'Apple', url: 'https://www.apple.com', mark: '', className: 'apple' },
+    { name: 'Stripe', url: 'https://stripe.com', mark: 'S', className: 'stripe' },
+    { name: 'Notion', url: 'https://www.notion.so', mark: 'N', className: 'notion' },
+    { name: 'HubSpot', url: 'https://www.hubspot.com', mark: '⌘', className: 'hubspot' },
+  ];
+
   return (
-    <form className="form-panel" onSubmit={(event) => void submit(event)}>
-      <label className="field">
-        Company website
-        <input name="url" type="url" inputMode="url" required placeholder="https://company.com" />
-      </label>
-      {status.message && (
-        <p className="form-message form-message-error" role="alert">
-          {status.message}
-        </p>
-      )}
-      <Button type="submit" disabled={status.busy}>
-        {status.busy ? 'Starting analysis...' : 'Analyze website'}
-      </Button>
-    </form>
+    <div className="research-page">
+      <section className="research-hero-card">
+        <div className="research-hero-copy">
+          <div className="research-heading-row">
+            <span className="research-globe-icon" aria-hidden="true">
+              <Globe2 size={29} strokeWidth={2.1} />
+            </span>
+            <div>
+              <span className="research-kicker">Website analysis</span>
+              <h2>Enter a company website</h2>
+              <p>Get AI-powered insights, find opportunities, and generate outreach ideas in seconds.</p>
+            </div>
+          </div>
+
+          <form className="research-url-form" onSubmit={(event) => void submit(event)}>
+            <div className="research-url-input">
+              <Link2 size={21} strokeWidth={2} aria-hidden="true" />
+              <input
+                name="url"
+                type="url"
+                inputMode="url"
+                required
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+                placeholder="https://company.com"
+                aria-label="Company website"
+              />
+            </div>
+            <Button type="submit" className="research-analyze-button" disabled={status.busy}>
+              <Search size={20} strokeWidth={2.1} aria-hidden="true" />
+              <span>{status.busy ? 'Starting analysis...' : 'Analyze website'}</span>
+              <ArrowRight size={20} strokeWidth={2} aria-hidden="true" />
+            </Button>
+          </form>
+
+          {status.message && (
+            <p className="form-message form-message-error research-error" role="alert">
+              {status.message}
+            </p>
+          )}
+
+          <div className="research-benefits" aria-label="Analysis benefits">
+            <div>
+              <span className="research-benefit-icon"><Shield size={19} fill="currentColor" /></span>
+              <span><strong>Secure &amp; private</strong><small>We only analyze the page you choose</small></span>
+            </div>
+            <div>
+              <span className="research-benefit-icon"><Zap size={20} fill="currentColor" /></span>
+              <span><strong>AI-powered insights</strong><small>Find real opportunities</small></span>
+            </div>
+            <div>
+              <span className="research-benefit-icon"><BarChart3 size={20} /></span>
+              <span><strong>Actionable results</strong><small>Turn insights into outreach</small></span>
+            </div>
+          </div>
+        </div>
+
+        <div className="research-visual" aria-hidden="true">
+          <div className="research-browser-card">
+            <div className="research-browser-dots"><i /><i /><i /></div>
+            <div className="research-browser-body">
+              <span className="research-browser-globe"><Globe2 size={25} /></span>
+              <div className="research-browser-copy">
+                <i /><i /><i /><i />
+              </div>
+              <div className="research-score-ring"><strong>94</strong></div>
+              <div className="research-browser-lines"><i /><i /><i /><i /></div>
+            </div>
+          </div>
+          <div className="research-checklist">
+            {['Website analysis', 'Opportunity insights', 'Outreach recommendations'].map((item) => (
+              <div key={item}>
+                <span><Check size={14} strokeWidth={3} /></span>
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="research-examples-section">
+        <div className="research-section-heading">
+          <h2>Try an example</h2>
+          <button type="button">View more examples <ArrowRight size={17} /></button>
+        </div>
+        <div className="research-example-grid">
+          {examples.map((example) => (
+            <button
+              type="button"
+              className="research-example-card"
+              key={example.name}
+              onClick={() => setUrl(example.url)}
+            >
+              <span className={`research-example-logo ${example.className}`}>{example.mark}</span>
+              <span className="research-example-copy">
+                <strong>{example.name}</strong>
+                <small>{example.url}</small>
+              </span>
+              <ArrowRight size={18} />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="research-output-card">
+        <h2>What you’ll get</h2>
+        <div className="research-output-grid">
+          <div className="research-output-item">
+            <span className="research-output-icon green"><FileText size={25} /></span>
+            <div><strong>Website analysis</strong><p>Technical, SEO, content, UX,<br />and more</p></div>
+          </div>
+          <div className="research-output-item">
+            <span className="research-output-icon purple"><Target size={25} /></span>
+            <div><strong>Opportunity scoring</strong><p>Identify real business<br />opportunities</p></div>
+          </div>
+          <div className="research-output-item">
+            <span className="research-output-icon amber"><Lightbulb size={26} /></span>
+            <div><strong>AI insights</strong><p>Evidence-based<br />recommendations</p></div>
+          </div>
+          <div className="research-output-item">
+            <span className="research-output-icon pink"><Mail size={25} /></span>
+            <div><strong>Outreach ideas</strong><p>Turn insights into personalized<br />pitches</p></div>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 

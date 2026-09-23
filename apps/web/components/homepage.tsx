@@ -9,8 +9,9 @@ import {
   Chrome,
   FileSearch,
   Gauge,
+  Github,
   Lightbulb,
-  LockKeyhole,
+  Linkedin,
   Megaphone,
   MousePointer2,
   Rocket,
@@ -19,6 +20,7 @@ import {
   Sparkles,
   Target,
   Users,
+  Youtube,
 } from 'lucide-react';
 import { AnimatedSection } from './animated-section';
 import { FaqView, HowItWorksView } from './marketing-views';
@@ -28,112 +30,109 @@ import { ProductPreview } from './product-preview';
 const values = [
   [
     'Evidence',
-    'See the website signal, its source, and the confidence behind it.',
+    'We analyze real website data, public signals and market context.',
     ScanSearch,
     'blue',
   ],
   [
     'Interpretation',
-    'Understand what that signal may mean without inflated claims.',
+    'Our AI turns insights into clear opportunity and recommendations.',
     Lightbulb,
     'violet',
   ],
   [
     'Opportunity',
-    'Match credible business needs to services you can reasonably offer.',
+    'You get a ranked list of what to sell and how to frame it.',
     Rocket,
     'green',
   ],
 ] as const;
 
 const audiences = [
-  [
-    'Freelancers',
-    'Replace open-ended research with a grounded reason to start a conversation.',
-    BriefcaseBusiness,
-  ],
-  [
-    'Agencies',
-    'Qualify websites consistently and align opportunities with the right service line.',
-    Building2,
-  ],
-  [
-    'Consultants',
-    'Turn observable signals into a sharper diagnosis and a more relevant first call.',
-    Users,
-  ],
-  [
-    'Small Sales Teams',
-    'Give focused reps credible context without automating the human judgment.',
-    Megaphone,
-  ],
+  ['Freelancers', 'Find clients with real needs and craft personalized outreach.', BriefcaseBusiness],
+  ['Agencies', 'Spot new business opportunities and expand your pipeline.', Building2],
+  ['Consultants', 'Discover companies ready for your expertise.', Users],
+  ['Small Sales Teams', 'Do more with less. Find and reach out to high-intent prospects.', Megaphone],
 ] as const;
 
 export function Homepage() {
   return (
     <main className="homepage">
       <section className="home-hero" aria-labelledby="home-title">
-        <div className="hero-grid-texture" aria-hidden="true" />
+        <HeroAtmosphere />
         <div className="home-container hero-stage">
           <div className="hero-copy">
             <span className="hero-eyebrow hero-enter hero-enter-1">
-              <Sparkles size={16} /> AI Prospect Opportunity Intelligence
+              <Sparkles size={14} /> AI powered opportunity intelligence
             </span>
             <h1 className="hero-enter hero-enter-2" id="home-title">
               Know <span>what service to sell</span> before you write the first message.
             </h1>
             <p className="hero-lede hero-enter hero-enter-3">
-              ProspectAI analyzes business websites, detects evidence-backed needs, matches them to
-              relevant services, and helps you write outreach grounded in what you actually found.
+              ProspectAI analyzes company websites, detects what they need, researches the
+              opportunity and helps you write outreach grounded in real evidence. Less guessing.
+              More conversations.
             </p>
             <div className="hero-actions hero-enter hero-enter-4">
               <Link className="home-button home-button-primary" href="/signup">
-                Start analyzing <ArrowRight size={18} />
+                Start analyzing <ArrowRight size={17} />
               </Link>
               <Link className="home-button home-button-secondary" href="/how-it-works">
-                <MousePointer2 size={18} /> See how it works
+                <MousePointer2 size={17} /> See how it works
               </Link>
             </div>
             <ul className="hero-trust hero-enter hero-enter-4" aria-label="Product highlights">
               <li>
-                <Chrome size={16} /> Save hours of research
+                <Chrome size={14} /> Save hours of research
               </li>
               <li>
-                <ShieldCheck size={16} /> Backed by real web data
+                <ShieldCheck size={14} /> Backed by real web data
               </li>
               <li>
-                <CheckCircle2 size={16} /> Trusted by builders
+                <CheckCircle2 size={14} /> Trusted by builders
               </li>
             </ul>
           </div>
+
           <div className="hero-product hero-enter hero-enter-product">
             <span className="hero-note hero-note-top" aria-hidden="true">
-              From website to opportunity
+              From website<br />to pipeline
+              <svg viewBox="0 0 74 34" aria-hidden="true">
+                <defs>
+                  <filter id="note-shadow" x="-40%" y="-40%" width="180%" height="180%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="1.5" floodOpacity=".18" />
+                  </filter>
+                </defs>
+                <path d="M4 5c24-4 42 2 59 20" filter="url(#note-shadow)" />
+                <path d="m58 18 7 8-11 1" />
+              </svg>
             </span>
             <ProductPreview />
-            <span className="hero-note hero-note-bottom" aria-hidden="true">
-              Evidence before outreach
-            </span>
+            <div className="pipeline-chip" aria-hidden="true">
+              <span className="pipeline-bars">
+                <i />
+                <i />
+                <i />
+              </span>
+              <strong>Turn website data<br />into pipeline</strong>
+            </div>
           </div>
         </div>
       </section>
 
       <AnimatedSection className="home-container value-band is-visible">
-        <div className="value-intro">
-          <span>One clear reasoning chain</span>
-          <strong>Evidence → Interpretation → Opportunity</strong>
-        </div>
+        <p className="value-caption">Every great conversation starts with insight.</p>
         <div className="value-grid">
           {values.map(([title, copy, Icon, tone]) => (
             <article className="value-card" key={title}>
               <span className={`home-icon home-icon-${tone}`}>
-                <Icon size={24} />
+                <Icon size={21} />
               </span>
               <div>
                 <h2>{title}</h2>
                 <p>{copy}</p>
               </div>
-              <ArrowRight className="card-arrow" size={18} />
+              <ArrowRight className="card-arrow" size={17} />
             </article>
           ))}
         </div>
@@ -141,10 +140,22 @@ export function Homepage() {
 
       <AnimatedSection className="home-section home-container workflow-section">
         <SectionHeading
-          eyebrow="A focused workflow"
+          eyebrow="Faster, smarter workflow"
           title="Move from browsing to a credible sales angle"
-          copy="Keep the evidence, commercial interpretation, service opportunity, and editable pitch connected from the first click."
+          copy="Go from a website, to evidence, to a compelling outreach message. ProspectAI streamlines the research and messaging process so you can focus on what matters — starting conversations."
         />
+        <span className="workflow-note" aria-hidden="true">
+          From research<br />to results
+          <svg viewBox="0 0 130 70">
+            <defs>
+              <filter id="workflow-note-shadow" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="2" stdDeviation="1.5" floodOpacity=".18" />
+              </filter>
+            </defs>
+            <path d="M117 4c3 23-13 41-35 45-23 5-39 4-60 15" filter="url(#workflow-note-shadow)" />
+            <path d="m24 57-9 8 11 3" />
+          </svg>
+        </span>
         <HowItWorksView />
       </AnimatedSection>
 
@@ -154,46 +165,46 @@ export function Homepage() {
             <SectionHeading
               eyebrow="Opportunity intelligence"
               title="A finding is not automatically a sales opportunity"
-              copy="ProspectAI separates what can be observed from what can reasonably be inferred, then weighs whether the result fits the services you offer."
+              copy="ProspectAI separates noise from real opportunity. Our scoring model helps you focus on the companies most likely to buy your services, so you can prioritize with confidence."
             />
             <div className="reasoning-stack">
               <ReasoningRow
                 icon={FileSearch}
-                label="Observed evidence"
-                text="The primary call to action is missing from key service pages."
-              />
-              <ReasoningRow
-                icon={Lightbulb}
-                label="Business interpretation"
-                text="Qualified visitors may have no obvious next step after evaluating the offer."
+                label="Data-backed analysis"
+                text="Interprets website content, tech stack and market signals."
               />
               <ReasoningRow
                 icon={Target}
-                label="Service opportunity"
-                text="A conversion-focused redesign is relevant if it matches your capabilities."
+                label="Clear opportunity scoring"
+                text="See which companies are ready, and what to sell."
+              />
+              <ReasoningRow
+                icon={Lightbulb}
+                label="Actionable recommendations"
+                text="Get specific service suggestions with real evidence."
               />
             </div>
           </div>
           <div className="score-explainer">
             <div className="score-banner">
-              <Sparkles size={15} /> Higher scores. Better conversations.
+              <Sparkles size={14} /> Higher scores. Better conversations.
             </div>
             <ScoreCard
               icon={Gauge}
               label="Website Score"
               score="62"
-              copy="How the website performs against measurable quality signals."
+              copy="The website is functional but missing key pages, recent content and social proof."
               kind="website"
             />
             <ScoreCard
               icon={Target}
               label="Opportunity Score"
               score="87"
-              copy="How commercially relevant the evidence is to your selected services."
+              copy="Strong signals of need, growth and budget. A high-value opportunity for your services."
               kind="opportunity"
             />
             <p className="score-guidance">
-              <Target size={15} /> Focus on the right opportunities. Let the data do the heavy
+              <Target size={14} /> Focus on the right opportunities. Let the data do the heavy
               lifting.
             </p>
           </div>
@@ -207,49 +218,56 @@ export function Homepage() {
               <span />
               <span />
               <span />
-              <div>prospect-company.com</div>
+              <div>https://example.com</div>
             </div>
             <div className="browser-page">
               <div className="browser-site-copy">
-                <span>Product engineering</span>
-                <strong>Build better software, faster.</strong>
+                <span>PRODUCT ENGINEERING</span>
+                <strong>Build better<br />software, faster.</strong>
                 <p>Focused delivery for ambitious product teams.</p>
                 <span className="browser-site-button" />
               </div>
-              <div className="browser-copy-lines" />
+              <svg className="browser-illustration" viewBox="0 0 220 180">
+                <defs>
+                  <filter id="browser-svg-shadow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feDropShadow dx="0" dy="12" stdDeviation="12" floodColor="#0c786f" floodOpacity=".12" />
+                  </filter>
+                </defs>
+                <path d="M40 150C68 66 124 22 192 54c-5 60-48 111-112 115-21 2-33-5-40-19Z" filter="url(#browser-svg-shadow)" />
+              </svg>
               <div className="extension-popover">
                 <span className="extension-popover-icon">
-                  <Chrome size={23} />
+                  <Chrome size={20} />
                 </span>
                 <div>
                   <strong>Analyze this website</strong>
-                  <small>Start only when you choose</small>
+                  <small>Uncover opportunities in seconds</small>
                 </div>
-                <ArrowRight size={17} />
+                <ArrowRight size={16} />
               </div>
             </div>
           </div>
         </div>
         <div className="extension-copy">
-          <span className="section-eyebrow">Built for Chrome</span>
+          <span className="section-eyebrow">Website analysis</span>
           <h2>Analyze the business website you are already viewing</h2>
           <p>
-            Start a scoped analysis from the active tab. ProspectAI does not continuously monitor
-            browsing or inspect every website you visit.
+            Run a deep analysis from any website. ProspectAI scans key pages, detects what&apos;s
+            missing and surfaces opportunities you can turn into tailored outreach.
           </p>
           <ul className="check-list">
             <li>
-              <CheckCircle2 size={17} /> Explicit user action
+              <CheckCircle2 size={16} /> Works with any website
             </li>
             <li>
-              <CheckCircle2 size={17} /> Minimal tab access
+              <CheckCircle2 size={16} /> Detects gaps and risks
             </li>
             <li>
-              <CheckCircle2 size={17} /> Secure account pairing
+              <CheckCircle2 size={16} /> Finds relevant services to sell
             </li>
           </ul>
           <Link className="text-link" href="/app/settings/extension">
-            Explore the extension workflow <ArrowRight size={16} />
+            Explore the website analysis <ArrowRight size={15} />
           </Link>
         </div>
       </AnimatedSection>
@@ -257,15 +275,15 @@ export function Homepage() {
       <AnimatedSection className="home-section audience-section">
         <div className="home-container">
           <SectionHeading
-            eyebrow="Built for considered outreach"
+            eyebrow="Built for people who create impact"
             title="Research support for people who sell expertise"
-            copy="Use the same evidence-first workflow whether you work alone, lead an agency, advise clients, or equip a focused sales team."
+            copy="Use the same intelligence as top performers to find opportunities, tailor your messaging, and win more business — across any industry."
             centered
           />
           <div className="audience-grid">
             {audiences.map(([title, copy, Icon]) => (
               <article key={title}>
-                <Icon size={22} />
+                <span className="audience-icon"><Icon size={19} /></span>
                 <h3>{title}</h3>
                 <p>{copy}</p>
               </article>
@@ -277,17 +295,15 @@ export function Homepage() {
       <AnimatedSection className="home-section home-container pitch-section">
         <div className="pitch-copy">
           <SectionHeading
-            eyebrow="Grounded pitch generation"
+            eyebrow="AI-powered pitch generation"
             title="Write from the evidence, not from a generic template"
-            copy="Generated pitches stay connected to the finding, its likely business meaning, and the service opportunity. You remain in control of every edit and every send."
+            copy="Generate high-quality outreach based on real findings. Our AI creates personalized, credible messages that reference what matters — so you can start conversations with confidence."
           />
           <div className="security-note">
-            <LockKeyhole size={20} />
+            <Sparkles size={19} />
             <div>
-              <strong>No automatic outreach in V1</strong>
-              <span>
-                ProspectAI creates editable drafts. It does not send messages on your behalf.
-              </span>
+              <strong>No more blank pages</strong>
+              <span>Turn insights into outreach in seconds.</span>
             </div>
           </div>
         </div>
@@ -297,69 +313,67 @@ export function Homepage() {
       <AnimatedSection className="home-section pricing-section">
         <div className="home-container">
           <SectionHeading
-            eyebrow="Start at your pace"
+            eyebrow="Plan for your pace"
             title="A plan for the way you prospect"
-            copy="Begin with the core workflow, then add capacity when evidence-backed prospecting becomes part of your routine."
-            centered
+            copy="From your first few conversations to a full outbound engine, there&apos;s a plan to fit your goals."
           />
           <div className="home-pricing-grid">
             <PricingCard
               name="Free"
-              allowance="Core workflow access"
-              copy="Explore evidence-backed analysis before making it part of your routine."
-              features={['Opportunity scoring', 'Editable pitch drafts', 'Saved analysis history']}
+              descriptor="Get started"
+              copy="Explore core features and analyze a few websites per month."
+              features={['3 website analyses / month', 'Basic AI insights']}
               cta="Start free"
+              icon="user"
             />
             <PricingCard
               name="Pro / Individual"
-              allowance="Higher individual capacity"
-              copy="For independent professionals who prospect consistently."
-              features={['More website analyses', 'Lead and pitch workspace', 'Usage visibility']}
-              cta="View Pro"
+              descriptor="For serious prospectors"
+              copy="More analyses, full features and pitch generation."
+              features={['100 website analyses / month', 'Opportunity scoring', 'AI pitch generation']}
+              cta="Start Pro"
+              icon="team"
               featured
             />
             <PricingCard
               name="Agency"
-              allowance="Shared team capacity"
-              copy="For client-services teams building a repeatable research workflow."
-              features={['Organization workspace', 'Shared lead context', 'Centralized billing']}
-              cta="View Agency"
+              descriptor="Built for teams"
+              copy="Advanced usage limits, team collaboration and priority support."
+              features={['Everything in Pro', 'Team seats', 'Priority support']}
+              cta="Contact sales"
+              icon="building"
             />
           </div>
-          <p className="pricing-disclosure">
-            Current limits and billing terms are shown before checkout.
-          </p>
         </div>
       </AnimatedSection>
 
       <AnimatedSection className="home-section home-container home-faq-section">
         <div className="faq-heading-wrap">
           <SectionHeading
-            eyebrow="Questions, answered plainly"
+            eyebrow="Questions? We have answers"
             title="Know what ProspectAI does before you start"
-            copy="Clear boundaries matter when software supports sales research and AI-assisted writing."
+            copy="Clear answers to help you get the most out of ProspectAI."
           />
-          <Link className="text-link" href="/faq">
-            View all questions <ArrowRight size={16} />
-          </Link>
         </div>
         <FaqView />
       </AnimatedSection>
 
       <AnimatedSection className="final-cta-section">
+        <FinalCtaAtmosphere />
         <div className="home-container final-cta">
           <div>
-            <span className="section-eyebrow">Research with a reason</span>
-            <h2>Find the opportunity before you write the outreach.</h2>
-            <p>Turn public website evidence into a clearer, more credible first conversation.</p>
+            <span className="section-eyebrow">Ready to find your next client?</span>
+            <h2>Find the opportunity<br />before you write the outreach.</h2>
+            <p>Turn website data into real conversations. Start analyzing today.</p>
+          </div>
+          <div className="final-cta-visual" aria-hidden="true">
+            <span className="cta-bars"><i /><i /><i /></span>
           </div>
           <div className="final-cta-actions">
             <Link className="home-button home-button-light" href="/signup">
-              Start analyzing <ArrowRight size={18} />
+              Start analyzing <ArrowRight size={17} />
             </Link>
-            <Link className="final-cta-link" href="/how-it-works">
-              See the workflow <ArrowRight size={15} />
-            </Link>
+            <small>No credit card required</small>
           </div>
         </div>
       </AnimatedSection>
@@ -368,36 +382,88 @@ export function Homepage() {
         <div className="home-container footer-grid">
           <div className="footer-brand">
             <span>
-              <Image src="/brand-mark.png" alt="" width={30} height={30} />
+              <Image src="/brand-mark.png" alt="" width={28} height={28} />
               <strong>ProspectAI</strong>
             </span>
-            <p>Evidence-backed prospect opportunity intelligence.</p>
+            <p>Real websites. Real insights. Real opportunities.</p>
+            <div className="footer-socials" aria-label="Social links">
+              <span aria-hidden="true">X</span>
+              <Linkedin size={14} aria-hidden="true" />
+              <Youtube size={15} aria-hidden="true" />
+              <Github size={14} aria-hidden="true" />
+            </div>
+            <small>© 2026 ProspectAI. All rights reserved.</small>
           </div>
           <nav aria-label="Product links">
             <strong>Product</strong>
             <Link href="/features">Features</Link>
             <Link href="/pricing">Pricing</Link>
-            <Link href="/app">Workspace</Link>
+            <Link href="/how-it-works">Use Cases</Link>
+            <Link href="/resources">Changelog</Link>
           </nav>
           <nav aria-label="Resource links">
             <strong>Resources</strong>
-            <Link href="/how-it-works">How it works</Link>
-            <Link href="/faq">FAQ</Link>
-            <Link href="/resources">Resources</Link>
+            <Link href="/resources">Blog</Link>
+            <Link href="/faq">Help Center</Link>
+            <Link href="/resources">Guides</Link>
+            <Link href="/resources">API / Coming soon</Link>
           </nav>
           <nav aria-label="Company links">
             <strong>Company</strong>
+            <Link href="/contact">About</Link>
             <Link href="/contact">Contact</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
           </nav>
         </div>
         <div className="home-container footer-bottom">
-          <span>© 2026 ProspectAI</span>
-          <span>Built for evidence-first outreach.</span>
+          <span />
+          <span>Built for the people who build business.</span>
         </div>
       </footer>
     </main>
+  );
+}
+
+function HeroAtmosphere() {
+  return (
+    <svg className="hero-atmosphere" viewBox="0 0 1600 760" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="hero-wave-a" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#d9fbf5" stopOpacity=".04" />
+          <stop offset="1" stopColor="#0eaa9b" stopOpacity=".34" />
+        </linearGradient>
+        <linearGradient id="hero-wave-b" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stopColor="#d6e9ff" stopOpacity=".04" />
+          <stop offset="1" stopColor="#4ad3c2" stopOpacity=".42" />
+        </linearGradient>
+        <filter id="hero-wave-shadow" x="-20%" y="-30%" width="150%" height="170%">
+          <feDropShadow dx="0" dy="22" stdDeviation="28" floodColor="#0d8278" floodOpacity=".15" />
+        </filter>
+      </defs>
+      <path d="M1040-20c204 8 376 91 520 246 41 44 61 101 65 173-170-121-343-128-514-20-125 79-218 169-351 127 59-111 144-203 280-276 91-49 117-154 0-250Z" fill="url(#hero-wave-a)" filter="url(#hero-wave-shadow)" />
+      <path d="M1031 98c176 30 322 115 437 252 48 57 89 126 129 211-140-56-278-57-420 4-112 49-202 103-335 70 48-102 122-184 228-246 96-56 137-147  -39-291Z" fill="url(#hero-wave-b)" opacity=".86" />
+      <path d="M-50 542c151 22 264 70 358 150 63 53 142 72 236 57C401 834 217 866-36 844Z" fill="#c9f5ef" opacity=".5" />
+    </svg>
+  );
+}
+
+function FinalCtaAtmosphere() {
+  return (
+    <svg className="final-cta-atmosphere" viewBox="0 0 1600 310" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="cta-wave" x1="0" y1="0" x2="1" y2="0">
+          <stop stopColor="#0d5c5c" />
+          <stop offset=".5" stopColor="#0a7f76" />
+          <stop offset="1" stopColor="#04565a" />
+        </linearGradient>
+        <filter id="cta-svg-shadow" x="-20%" y="-40%" width="140%" height="190%">
+          <feDropShadow dx="0" dy="16" stdDeviation="14" floodColor="#001f25" floodOpacity=".28" />
+        </filter>
+      </defs>
+      <path d="M0 210c180-55 280-35 408 22 148 67 278-112 408-82 128 30 207 122 340 70 132-52 225-77 444 1v89H0Z" fill="url(#cta-wave)" opacity=".78" filter="url(#cta-svg-shadow)" />
+      <path d="M430 290c180-130 278-130 385-15 80 86 147 54 224-33 91-103 166-72 251 29 67 80 157 68 310-8v47H430Z" fill="#0a6d68" opacity=".54" />
+    </svg>
   );
 }
 
@@ -433,7 +499,7 @@ function ReasoningRow({
   return (
     <div className="reasoning-row">
       <span>
-        <Icon size={19} />
+        <Icon size={17} />
       </span>
       <div>
         <strong>{label}</strong>
@@ -456,22 +522,22 @@ function ScoreCard({
   copy: string;
   kind: string;
 }) {
-  const context = kind === 'website' ? 'Site quality signal' : 'Commercial service fit';
+  const context = kind === 'website' ? 'Overall website maturity' : 'Likelihood to buy your services';
 
   return (
     <div className={`score-card-large score-card-${kind}`}>
       <div className="score-card-heading">
         <span className="score-card-icon">
-          <Icon size={20} aria-hidden="true" />
+          <Icon size={18} aria-hidden="true" />
         </span>
         <span>
           <strong>{label}</strong>
           <small>{context}</small>
         </span>
       </div>
-      <div className="score-ring-large " style={{ '--score': score } as CSSProperties}>
+      <div className="score-ring-large" style={{ '--score': score } as CSSProperties}>
         <strong>{score}</strong>
-        <small>out of 100</small>
+        <small>/100</small>
       </div>
       <p>{copy}</p>
     </div>
@@ -480,42 +546,46 @@ function ScoreCard({
 
 function PricingCard({
   name,
-  allowance,
+  descriptor,
   copy,
   features,
   cta,
+  icon,
   featured = false,
 }: {
   name: string;
-  allowance: string;
+  descriptor: string;
   copy: string;
   features: readonly string[];
   cta: string;
+  icon: 'user' | 'team' | 'building';
   featured?: boolean;
 }) {
+  const Icon = icon === 'building' ? Building2 : icon === 'team' ? Users : Users;
+
   return (
     <article className={`home-plan ${featured ? 'home-plan-featured' : ''}`}>
       {featured && <span className="plan-ribbon">Most popular</span>}
-      <span className="plan-label">
-        {featured ? 'For serious prospectors' : 'Flexible starting point'}
-      </span>
-      <h3>{name}</h3>
-      <strong className="plan-allowance">{allowance}</strong>
+      <div className="plan-title-row">
+        <span className="plan-icon"><Icon size={18} /></span>
+        <div>
+          <h3>{name}</h3>
+          <strong className="plan-descriptor">{descriptor}</strong>
+        </div>
+      </div>
       <p>{copy}</p>
       <ul>
         {features.map((feature) => (
           <li key={feature}>
-            <CheckCircle2 size={15} aria-hidden="true" /> {feature}
+            <CheckCircle2 size={14} aria-hidden="true" /> {feature}
           </li>
         ))}
       </ul>
       <Link
-        className={
-          featured ? 'home-button home-button-primary' : 'home-button home-button-secondary'
-        }
-        href="/pricing"
+        className={featured ? 'home-button home-button-primary' : 'home-button home-button-secondary'}
+        href={name === 'Agency' ? '/contact' : '/signup'}
       >
-        {cta} <ArrowRight size={16} />
+        {cta} {featured && <ArrowRight size={15} />}
       </Link>
     </article>
   );

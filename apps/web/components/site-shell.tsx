@@ -16,7 +16,7 @@ function BrandLink() {
 
 const navigation = [
   ['Features', '/features'],
-  ['How it works', '/how-it-works'],
+  ['Use Cases', '/how-it-works'],
   ['Pricing', '/pricing'],
   ['FAQ', '/faq'],
   ['Resources', '/resources'],
