@@ -19,8 +19,8 @@ describe('PitchPreview', () => {
 
     render(<PitchPreview />);
 
-    expect(screen.getByText('Evidence')).toBeTruthy();
-    expect(screen.getByText('Opportunity')).toBeTruthy();
+    expect(screen.getByText('Pitch draft')).toBeTruthy();
+    expect(screen.getByText(/missing recent case studies/)).toBeTruthy();
     expect(
       screen.getByRole('link', { name: 'Edit pitch in ProspectAI' }).getAttribute('href'),
     ).toBe('/app/pitches/new');

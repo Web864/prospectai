@@ -11,23 +11,23 @@ describe('ProspectAI marketing compositions', () => {
       .getAllByRole('listitem')
       .map((item) => item.querySelector('h3')?.textContent);
     expect(steps).toEqual([
-      'Visit Website',
-      'Analyze',
-      'Detect Evidence',
-      'Identify Opportunity',
-      'Recommend Service',
+      'Enter Website',
+      'AI Research',
+      'Detect Needs',
+      'Match Opportunity',
+      'Review Insights',
       'Generate Pitch',
-      'Save Lead',
+      'Go to Market',
     ]);
     expect(screen.getByText(/Prospect Opportunity Intelligence platform/)).toBeTruthy();
   });
 
   it('answers the V1 privacy, usage, failure, and outreach questions', () => {
     render(<FaqView />);
-    expect(screen.getByText('What data does the Chrome Extension access?')).toBeTruthy();
-    expect(screen.getByText('Does ProspectAI monitor all browsing?')).toBeTruthy();
-    expect(screen.getByText('How are analyses counted?')).toBeTruthy();
-    expect(screen.getByText('Can an analysis partially complete?')).toBeTruthy();
-    expect(screen.getByText('Can I edit AI-generated pitches?')).toBeTruthy();
+    expect(screen.getByText('What is ProspectAI?')).toBeTruthy();
+    expect(screen.getByText('What types of businesses can I analyze?')).toBeTruthy();
+    expect(screen.getByText('How does the opportunity scoring work?')).toBeTruthy();
+    expect(screen.getByText('Can I use this for multiple industries?')).toBeTruthy();
+    expect(screen.getByText('Do you offer a free plan?')).toBeTruthy();
   });
 });

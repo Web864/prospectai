@@ -66,7 +66,8 @@ describe('Phase 5 frontend flows', () => {
       ),
     );
     render(<UsageView />);
-    expect(await screen.findByText('Analysis limit reached')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'View plans' })).toBeTruthy();
+    expect(await screen.findByText('Remaining')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '0' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /View plans/ })).toBeTruthy();
   });
 });

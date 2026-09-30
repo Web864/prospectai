@@ -1,4 +1,4 @@
-﻿import {
+import {
   BarChart3,
   CalendarDays,
   FileSearch,
@@ -60,7 +60,7 @@ export default function DashboardStats({
         graphColor="#78cdbd"
       />
       <MetricCard
-        title="opportunities"
+        title="Qualified opportunities"
         value={qualifiedOpportunities}
         subtitle="Based on your services"
         icon={Target}

@@ -12,13 +12,13 @@ describe('How It Works page', () => {
       .getByRole('list', { name: 'Prospect-to-pitch workflow' })
       .querySelectorAll('[role="listitem"]');
     expect(Array.from(steps, (step) => step.querySelector('h3')?.textContent)).toEqual([
-      'Visit Website',
-      'Analyze',
-      'Detect Evidence',
-      'Identify Opportunity',
-      'Recommend Service',
+      'Enter Website',
+      'AI Research',
+      'Detect Needs',
+      'Match Opportunity',
+      'Review Insights',
       'Generate Pitch',
-      'Save Lead',
+      'Go to Market',
     ]);
   });
 

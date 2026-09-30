@@ -37,13 +37,13 @@ describe('dedicated marketing pages', () => {
     const user = userEvent.setup();
     render(<FaqPage />);
 
-    const question = screen.getByText('What does ProspectAI analyze?');
+    const question = screen.getByText('What is ProspectAI?');
     const details = question.closest('details');
     expect(details?.open).toBe(false);
 
     await user.click(question);
 
     expect(details?.open).toBe(true);
-    expect(screen.getByText(/accessible public website pages/)).toBeTruthy();
+    expect(screen.getByText(/AI-powered opportunity intelligence platform/)).toBeTruthy();
   });
 });

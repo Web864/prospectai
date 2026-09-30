@@ -8,7 +8,12 @@ import { HowItWorksPage } from '../../components/how-it-works-page';
 import { LeadListView } from '../../components/lead-list-view';
 import { LeadDetailView } from '../../components/lead-detail-view';
 import { AnalysisDetailView } from '../../components/analysis-detail-view';
-import { FaqPage, FeaturesPage, PricingPage, ResourcesPage } from '../../components/reference-marketing-pages';
+import {
+  FaqPage,
+  FeaturesPage,
+  PricingPage,
+  ResourcesPage,
+} from '../../components/reference-marketing-pages';
 import { AuthForm } from '../../components/auth-form';
 import { OnboardingForm } from '../../components/onboarding-form';
 import { ExtensionConnect } from '../../components/extension-connect';

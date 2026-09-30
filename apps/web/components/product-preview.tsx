@@ -31,8 +31,12 @@ export function ProductPreview() {
           <strong>ProspectAI</strong>
         </div>
         <div className="preview-toolbar" aria-hidden="true">
-          <span><ArrowUpRight size={12} /> Export</span>
-          <span><Share2 size={12} /> Share</span>
+          <span>
+            <ArrowUpRight size={12} /> Export
+          </span>
+          <span>
+            <Share2 size={12} /> Share
+          </span>
           <b>P</b>
         </div>
       </div>
@@ -97,7 +101,9 @@ export function ProductPreview() {
                   </article>
                 ))}
               </div>
-              <span className="preview-inline-link">View all insights <ArrowUpRight size={11} /></span>
+              <span className="preview-inline-link">
+                View all insights <ArrowUpRight size={11} />
+              </span>
             </section>
 
             <section className="preview-services" aria-labelledby="preview-services">
@@ -113,7 +119,9 @@ export function ProductPreview() {
                   </div>
                 ))}
               </div>
-              <span className="preview-inline-link">View details <ArrowUpRight size={11} /></span>
+              <span className="preview-inline-link">
+                View details <ArrowUpRight size={11} />
+              </span>
             </section>
           </div>
         </div>

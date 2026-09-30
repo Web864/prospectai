@@ -1,13 +1,13 @@
 :root {
-  --reference-ink: #0b1832;
-  --reference-copy: #566885;
-  --reference-teal: #079681;
-  --reference-green: #18bd79;
-  --reference-blue: #258ce8;
-  --reference-violet: #705cf4;
-  --reference-line: #dce8ed;
+  --reference-ink: var(--pa-color-ink);
+  --reference-copy: var(--pa-color-muted);
+  --reference-teal: var(--pa-color-primary);
+  --reference-green: var(--pa-color-success);
+  --reference-blue: var(--pa-color-blue);
+  --reference-violet: var(--pa-color-violet);
+  --reference-line: var(--pa-color-border);
   --reference-surface: rgb(255 255 255 / 95%);
-  --reference-shadow: 0 24px 60px rgb(29 66 91 / 12%);
+  --reference-shadow: var(--pa-shadow-lg);
 }
 
 body:has(.reference-page) .marketing-nav-inner {
@@ -672,7 +672,7 @@ body:has(.reference-page) .nav-cta {
   height: 174px;
   display: grid;
   grid-template-columns: auto 1fr;
-  align-items: start;
+  align-items: flex-start;
   gap: 20px;
   padding: 34px;
   border: 1px solid var(--reference-line);
@@ -1491,5 +1491,131 @@ body:has(.reference-resources) .nav-cta {
   .reference-resource-arrow {
     right: 24px;
     bottom: 24px;
+  }
+}
+
+/* Shared marketing shell contract: route content must not resize global navigation. */
+body:has(.reference-page) .marketing-nav,
+body:has(.reference-resources) .marketing-nav {
+  position: relative;
+  z-index: 50;
+  border-bottom: 1px solid rgb(214 228 234 / 72%);
+  background: rgb(255 255 255 / 94%);
+}
+
+body:has(.reference-page) .marketing-nav-inner,
+body:has(.reference-resources) .marketing-nav-inner {
+  width: min(1710px, calc(100% - 80px));
+  min-height: 92px;
+  grid-template-columns: auto 1fr auto;
+}
+
+body:has(.reference-page) .brand-lockup,
+body:has(.reference-resources) .brand-lockup {
+  gap: 15px;
+  font-size: 31px;
+  letter-spacing: 0;
+}
+
+body:has(.reference-page) .brand-lockup img,
+body:has(.reference-resources) .brand-lockup img {
+  width: 54px;
+  height: 54px;
+}
+
+body:has(.reference-page) .marketing-nav .marketing-links,
+body:has(.reference-resources) .marketing-nav .marketing-links {
+  gap: 49px;
+}
+
+body:has(.reference-page) .marketing-nav .marketing-links a,
+body:has(.reference-page) .marketing-actions > a:first-child,
+body:has(.reference-resources) .marketing-nav .marketing-links a,
+body:has(.reference-resources) .marketing-actions > a:first-child {
+  color: var(--pa-color-text);
+  font-size: 17px;
+  font-weight: var(--pa-font-weight-semibold);
+}
+
+body:has(.reference-page) .nav-cta,
+body:has(.reference-resources) .nav-cta {
+  min-width: 177px;
+  min-height: 54px;
+  padding-inline: 24px;
+  border-radius: var(--pa-radius-pill);
+  font-size: 17px;
+}
+
+@media (max-width: 1280px) {
+  body:has(.reference-page) .marketing-nav-inner,
+  body:has(.reference-resources) .marketing-nav-inner {
+    width: min(1180px, calc(100% - 56px));
+  }
+
+  body:has(.reference-page) .brand-lockup,
+  body:has(.reference-resources) .brand-lockup {
+    font-size: 26px;
+  }
+
+  body:has(.reference-page) .brand-lockup img,
+  body:has(.reference-resources) .brand-lockup img {
+    width: 46px;
+    height: 46px;
+  }
+
+  body:has(.reference-page) .marketing-nav .marketing-links,
+  body:has(.reference-resources) .marketing-nav .marketing-links {
+    gap: 26px;
+  }
+}
+
+@media (max-width: 1100px) {
+  body:has(.reference-page) .marketing-nav-inner,
+  body:has(.reference-resources) .marketing-nav-inner {
+    grid-template-columns: 1fr auto;
+  }
+
+  body:has(.reference-page) .marketing-nav .marketing-links,
+  body:has(.reference-page) .marketing-actions,
+  body:has(.reference-resources) .marketing-nav .marketing-links,
+  body:has(.reference-resources) .marketing-actions {
+    display: none;
+  }
+
+  body:has(.reference-page) .marketing-mobile-menu,
+  body:has(.reference-resources) .marketing-mobile-menu {
+    display: block;
+  }
+}
+
+@media (max-width: 1024px) {
+  body:has(.reference-page) .marketing-nav-inner,
+  body:has(.reference-resources) .marketing-nav-inner {
+    min-height: 74px;
+  }
+
+  body:has(.reference-page) .brand-lockup,
+  body:has(.reference-resources) .brand-lockup {
+    font-size: 23px;
+  }
+
+  body:has(.reference-page) .brand-lockup img,
+  body:has(.reference-resources) .brand-lockup img {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+@media (max-width: 900px) {
+  body:has(.reference-page) .marketing-nav-inner,
+  body:has(.reference-resources) .marketing-nav-inner {
+    width: min(100% - 40px, 760px);
+  }
+}
+
+@media (max-width: 520px) {
+  body:has(.reference-page) .marketing-nav-inner,
+  body:has(.reference-resources) .marketing-nav-inner {
+    width: calc(100% - 24px);
   }
 }

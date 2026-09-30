@@ -44,8 +44,6 @@ const featureCards = [
   },
 ] as const;
 
-
-
 const resourceCards = [
   {
     title: 'Evidence first',
@@ -141,8 +139,6 @@ export function FeaturesPage() {
   );
 }
 
-
-
 export function ResourcesPage() {
   return (
     <main className="reference-page reference-resources">
@@ -170,7 +166,11 @@ export function ResourcesPage() {
               </span>
               <h2>{title}</h2>
               <p>{copy}</p>
-              <Link className="reference-resource-arrow" href="/how-it-works" aria-label={`Learn more about ${title}`}>
+              <Link
+                className="reference-resource-arrow"
+                href="/how-it-works"
+                aria-label={`Learn more about ${title}`}
+              >
                 <ArrowRight size={22} strokeWidth={2.35} aria-hidden="true" />
               </Link>
             </article>

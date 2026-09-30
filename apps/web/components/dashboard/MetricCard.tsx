@@ -35,15 +35,15 @@ export default function MetricCard({
         >
           <Icon size={21} strokeWidth={1.9} />
         </span>
-      
       </div>
-      
+
       <div className="metric-card-copy">
-          <div className="">
-             <span className="metric-card-title">{title}</span><br />
-             <small>{subtitle}</small>
-           </div>
-          {visual ?? <MiniTrend color={graphColor} />}
+        <div className="">
+          <span className="metric-card-title">{title}</span>
+          <br />
+          <small>{subtitle}</small>
+        </div>
+        {visual ?? <MiniTrend color={graphColor} />}
       </div>
     </article>
   );

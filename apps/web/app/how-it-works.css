@@ -324,7 +324,7 @@
   z-index: 3;
   width: 120px;
   color: #466c78;
-  font-family: 'Segoe Print', 'Bradley Hand', cursive;
+  font-family: var(--pa-font-sans);
   font-size: 12px;
   line-height: 1.45;
 }

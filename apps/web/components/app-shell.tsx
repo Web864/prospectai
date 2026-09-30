@@ -1,11 +1,17 @@
-﻿import {
+'use client';
+
+import {
   BarChart3,
+  Bell,
+  CircleHelp,
   CreditCard,
   FileText,
   Home,
   Lightbulb,
   Crown,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
   PieChart,
   Search,
   Settings,
@@ -15,6 +21,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { applicationNavigation } from './application-navigation';
 import { MobileNavigation } from './mobile-navigation';
 import { AccountSession } from './account-session';
@@ -32,6 +39,11 @@ function NavigationIcon({ href }: { href: string }) {
   return <Settings {...props} />;
 }
 
+const searchableNavigation = [
+  ...applicationNavigation,
+  ['Extension', '/app/settings/extension'] as const,
+];
+
 export function AppShell({
   title,
   children,
@@ -43,14 +55,22 @@ export function AppShell({
   trail?: string;
   activePath?: string;
 }) {
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const isExtensionPage = title === 'Extension management';
   const isResearchPage = title === 'Research';
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const searchResults = normalizedQuery
+    ? searchableNavigation.filter(([label]) => label.toLocaleLowerCase().includes(normalizedQuery))
+    : [];
 
   return (
     <div
-      className={`app-shell${title === 'Settings' ? ' settings-shell' : ''}${
-        isExtensionPage ? ' extension-management-shell' : ''
-      }${isResearchPage ? ' research-shell' : ''}`}
+      className={`app-shell${sidebarExpanded ? '' : ' sidebar-collapsed'}${
+        title === 'Settings' ? ' settings-shell' : ''
+      }${isExtensionPage ? ' extension-management-shell' : ''}${
+        isResearchPage ? ' research-shell' : ''
+      }`}
     >
       <aside className="workspace-sidebar">
         <Link className="brand workspace-brand" href="/" aria-label="ProspectAI home">
@@ -98,7 +118,11 @@ export function AppShell({
               <Crown size={22} fill="currentColor" aria-hidden="true" />
               <span>
                 <strong>Upgrade to Pro</strong>
-                <small>Get more analyses,<br />advanced insights and more.</small>
+                <small>
+                  Get more analyses,
+                  <br />
+                  advanced insights and more.
+                </small>
               </span>
               <ChevronRight size={19} aria-hidden="true" />
             </Link>
@@ -111,16 +135,79 @@ export function AppShell({
         </div>
       </aside>
       <main className="workspace-main">
-        <div className="mobile-app-bar">
-          <MobileNavigation />
-          <Link className="brand workspace-brand" href="/app">
+        <header className="workspace-topbar">
+          <Link className="brand workspace-brand workspace-topbar-brand" href="/app">
             <Image src="/brand-mark.png" alt="" width={30} height={30} />
             <span>
               Prospect<span className="brand-accent">AI</span>
             </span>
           </Link>
-          <AccountSession />
-        </div>
+          <button
+            className="workspace-topbar-button workspace-sidebar-toggle"
+            type="button"
+            aria-label={sidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+            aria-expanded={sidebarExpanded}
+            onClick={() => setSidebarExpanded((expanded) => !expanded)}
+          >
+            {sidebarExpanded ? (
+              <PanelLeftClose size={19} aria-hidden="true" />
+            ) : (
+              <PanelLeftOpen size={19} aria-hidden="true" />
+            )}
+          </button>
+          <div className="workspace-mobile-menu">
+            <MobileNavigation />
+          </div>
+          <div className="workspace-live-search">
+            <Search size={18} aria-hidden="true" />
+            <label className="sr-only" htmlFor="workspace-search">
+              Search workspace
+            </label>
+            <input
+              id="workspace-search"
+              type="search"
+              value={searchQuery}
+              placeholder="Search workspace"
+              autoComplete="off"
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+            {normalizedQuery && (
+              <div className="workspace-search-results" role="listbox" aria-label="Search results">
+                {searchResults.length > 0 ? (
+                  searchResults.map(([label, href]) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      role="option"
+                      aria-selected="false"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <NavigationIcon href={href} />
+                      <span>{label}</span>
+                    </Link>
+                  ))
+                ) : (
+                  <span>No matching workspace pages.</span>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="workspace-topbar-actions">
+            <details className="workspace-notifications">
+              <summary className="workspace-topbar-button" aria-label="Notifications">
+                <Bell size={19} aria-hidden="true" />
+              </summary>
+              <div className="workspace-notification-panel">
+                <strong>Notifications</strong>
+                <p>No new notifications.</p>
+              </div>
+            </details>
+            <Link className="workspace-topbar-button" href="/resources" aria-label="Help">
+              <CircleHelp size={19} aria-hidden="true" />
+            </Link>
+            <AccountSession />
+          </div>
+        </header>
         <div className="workspace-content">
           <div className="breadcrumb">
             <span>{trail}</span>
@@ -137,9 +224,6 @@ export function AppShell({
                     ? 'Analyze any business website to discover opportunities, weaknesses, and growth potential.'
                     : 'Prospect opportunity intelligence, grounded in evidence.'}
               </p>
-            </div>
-            <div className="desktop-account">
-              <AccountSession />
             </div>
           </header>
           {children}

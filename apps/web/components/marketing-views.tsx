@@ -12,7 +12,7 @@ import {
 export const prospectWorkflow = [
   ['Enter Website', 'Analyze any company domain with one click.'],
   ['AI Research', 'We scan their website, tech stack, content and market signals.'],
-  ['Detect Needs', "Find what’s missing, outdated or under-optimized."],
+  ['Detect Needs', 'Find what’s missing, outdated or under-optimized.'],
   ['Match Opportunity', 'Get tailored service recommendations.'],
   ['Review Insights', 'See evidence, scores and reasoning.'],
   ['Generate Pitch', 'Create personalized outreach, grounded in real data.'],

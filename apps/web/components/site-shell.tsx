@@ -1,4 +1,4 @@
-import { ArrowRight, Menu } from 'lucide-react';
+import { ArrowRight, Github, Linkedin, Menu, Youtube } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { InputHTMLAttributes, ReactNode } from 'react';
@@ -72,7 +72,54 @@ export function SiteShell({ children, activePath }: { children: ReactNode; activ
         </div>
       </header>
       {children}
+      <PublicFooter />
     </>
+  );
+}
+
+export function PublicFooter() {
+  return (
+    <footer className="home-footer">
+      <div className="home-container footer-grid">
+        <div className="footer-brand">
+          <span>
+            <Image src="/brand-mark.png" alt="" width={28} height={28} />
+            <strong>ProspectAI</strong>
+          </span>
+          <p>Real websites. Real insights. Real opportunities.</p>
+          <div className="footer-socials" aria-hidden="true">
+            <span>X</span>
+            <Linkedin size={16} />
+            <Youtube size={17} />
+            <Github size={16} />
+          </div>
+          <small>(c) 2026 ProspectAI. All rights reserved.</small>
+        </div>
+        <nav aria-label="Product links">
+          <strong>Product</strong>
+          <Link href="/features">Features</Link>
+          <Link href="/pricing">Pricing</Link>
+          <Link href="/how-it-works">Use Cases</Link>
+          <Link href="/resources">Resources</Link>
+        </nav>
+        <nav aria-label="Resource links">
+          <strong>Resources</strong>
+          <Link href="/resources">Guides</Link>
+          <Link href="/faq">Help Center</Link>
+          <Link href="/contact">Contact</Link>
+        </nav>
+        <nav aria-label="Company links">
+          <strong>Company</strong>
+          <Link href="/contact">About</Link>
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+        </nav>
+      </div>
+      <div className="home-container footer-bottom">
+        <span>Opportunity intelligence, grounded in evidence.</span>
+        <span>Built for the people who build business.</span>
+      </div>
+    </footer>
   );
 }
 

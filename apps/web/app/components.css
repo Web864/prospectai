@@ -33,9 +33,9 @@
   width: min(520px, 100%);
   max-height: min(720px, calc(100vh - 40px));
   overflow: auto;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  background: var(--pa-color-surface);
+  border: 1px solid var(--pa-color-border);
+  border-radius: var(--pa-radius-md);
   box-shadow: 0 24px 64px rgb(13 22 36 / 28%);
 }
 .drawer-panel {
@@ -82,9 +82,9 @@
   min-width: 180px;
   display: grid;
   padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--pa-color-border);
+  border-radius: var(--pa-radius-md);
+  background: var(--pa-color-surface);
   box-shadow: 0 12px 28px rgb(13 22 36 / 15%);
 }
 .dropdown-menu button {
@@ -93,7 +93,7 @@
   padding: 10px;
   text-align: left;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--pa-radius-sm);
 }
 .dropdown-menu button:hover,
 .dropdown-menu button:focus-visible {
@@ -138,9 +138,9 @@
 .pagination button {
   min-height: 38px;
   padding: 7px 12px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: #fff;
+  border: 1px solid var(--pa-color-border);
+  border-radius: var(--pa-radius-sm);
+  background: var(--pa-color-surface);
   cursor: pointer;
 }
 .pagination button:disabled {
@@ -163,8 +163,8 @@
   gap: 12px;
   padding: 13px 15px;
   border-left: 4px solid var(--brand);
-  border-radius: 4px;
-  background: #fff;
+  border-radius: var(--pa-radius-sm);
+  background: var(--pa-color-surface);
   box-shadow: 0 12px 30px rgb(13 22 36 / 18%);
 }
 .toast-danger {
@@ -187,7 +187,7 @@
   width: 220px;
   transform: translateX(-50%);
   padding: 8px 10px;
-  border-radius: 4px;
+  border-radius: var(--pa-radius-sm);
   background: var(--ink);
   color: #fff;
   font-size: 12px;
@@ -205,14 +205,14 @@
   display: grid;
   gap: 12px;
   padding: 20px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  background: var(--pa-color-surface);
+  border: 1px solid var(--pa-color-border);
+  border-radius: var(--pa-radius-md);
 }
 .skeleton span {
   display: block;
   height: 18px;
-  border-radius: 4px;
+  border-radius: var(--pa-radius-sm);
   background: linear-gradient(90deg, #e8edf2, #f7f9fb, #e8edf2);
   background-size: 200% 100%;
   animation: skeleton-shift 1.4s ease infinite;
@@ -245,7 +245,7 @@
   padding: 14px 16px;
   border: 1px solid #91cab0;
   border-left: 4px solid #25865b;
-  border-radius: 4px;
+  border-radius: var(--pa-radius-sm);
   background: #effaf4;
 }
 .confirmation-state {
@@ -307,7 +307,7 @@
 }
 .faq details {
   border-top: 1px solid var(--line);
-  background: #fff;
+  background: var(--pa-color-surface);
 }
 .faq details:last-child {
   border-bottom: 1px solid var(--line);
@@ -330,9 +330,9 @@
   justify-content: space-between;
   gap: 20px;
   padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--pa-color-border);
+  border-radius: var(--pa-radius-md);
+  background: var(--pa-color-surface);
 }
 .detail-hero h2 {
   margin: 5px 0 8px;
@@ -357,9 +357,9 @@
 .detail-actions select {
   min-height: 40px;
   padding: 7px 10px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: #fff;
+  border: 1px solid var(--pa-color-border);
+  border-radius: var(--pa-radius-sm);
+  background: var(--pa-color-surface);
   color: var(--ink);
 }
 .detail-grid {
@@ -376,9 +376,9 @@
 .finding,
 .lead-table {
   padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--pa-color-border);
+  border-radius: var(--pa-radius-md);
+  background: var(--pa-color-surface);
 }
 .detail-section h3,
 .finding h3 {
@@ -466,7 +466,7 @@
   margin-bottom: 12px;
   padding: 10px;
   border: 1px solid #b8c3d3;
-  border-radius: 4px;
+  border-radius: var(--pa-radius-sm);
   resize: vertical;
 }
 .timeline {
@@ -559,7 +559,7 @@
 }
 .mobile-navigation nav a {
   padding: 10px;
-  border-radius: 4px;
+  border-radius: var(--pa-radius-sm);
 }
 .loading-page {
   min-height: 60vh;

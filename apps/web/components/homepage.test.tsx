@@ -20,7 +20,11 @@ describe('ProspectAI homepage', () => {
     expect(screen.getAllByText('Opportunity').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Website Score').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Opportunity Score').length).toBeGreaterThan(0);
-    expect(screen.getByText('No automatic outreach in V1')).toBeTruthy();
+    expect(
+      screen.getByRole('heading', {
+        name: 'A finding is not automatically a sales opportunity',
+      }),
+    ).toBeTruthy();
   });
 
   it('provides conversion actions and accessible desktop and mobile navigation', () => {
@@ -34,5 +38,9 @@ describe('ProspectAI homepage', () => {
     expect(screen.getByLabelText('Open navigation menu')).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Mobile navigation' })).toBeTruthy();
+    expect(screen.getByRole('contentinfo')).toBeTruthy();
+    expect(screen.getByRole('navigation', { name: 'Product links' })).toBeTruthy();
+    expect(screen.getByRole('navigation', { name: 'Resource links' })).toBeTruthy();
+    expect(screen.getByRole('navigation', { name: 'Company links' })).toBeTruthy();
   });
 });
