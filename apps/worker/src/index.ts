@@ -168,7 +168,7 @@ async function processJob(
     const rawContentExpiresAt = new Date(
       Date.now() + guestEnvironment.GUEST_RESULT_RETENTION_DAYS * 24 * 60 * 60_000,
     );
-    await prisma.$transaction(async (transaction) => {
+    await queue.withLease(lease, async (transaction) => {
       await transaction.opportunity.deleteMany({ where: { analysisId: analysis.id } });
       await transaction.finding.deleteMany({ where: { analysisId: analysis.id } });
       const persistedFindings: Array<{ id: string }> = [];

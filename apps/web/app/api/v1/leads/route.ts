@@ -30,10 +30,16 @@ export async function GET(request: Request) {
       prisma.lead.count({ where }),
       prisma.lead.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          updatedAt: true,
           website: {
-            include: {
+            select: {
+              domain: true,
               analyses: {
+                select: { id: true, opportunityScore: true },
                 orderBy: { createdAt: 'desc' },
                 take: 1,
               },

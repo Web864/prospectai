@@ -113,4 +113,47 @@ describe('guest authentication handoff', () => {
     expect(replay).toEqual({ connected: false });
     expect(storage.accessToken).toBe('access-token');
   });
+  it('keeps guest state for a transient conversion outage and retries it later', async () => {
+    vi.mocked(fetch).mockReset();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        Response.json({
+          data: {
+            accessToken: 'access-token',
+            refreshToken: 'refresh-token',
+            expiresAt: '2030-01-01T00:00:00.000Z',
+          },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(
+        Response.json({
+          data: {
+            converted: true,
+            alreadyConverted: false,
+            preservedAnalysisId: 'guest-analysis-id',
+          },
+        }),
+      );
+
+    const connected = await new Promise<{ connected: boolean }>((resolve) => {
+      messageListener(
+        { type: 'complete-pairing', code: 'one-time-code' },
+        { id: 'prospectai-extension' } as chrome.runtime.MessageSender,
+        (value) => resolve(value as { connected: boolean }),
+      );
+    });
+    expect(connected).toEqual({ connected: true });
+    expect(storage.guestToken).toBe('g'.repeat(43));
+
+    await new Promise<void>((resolve) => {
+      messageListener(
+        { type: 'convert-guest' },
+        { id: 'prospectai-extension' } as chrome.runtime.MessageSender,
+        () => resolve(),
+      );
+    });
+    expect(storage.lastConvertedAnalysisId).toBe('guest-analysis-id');
+    expect(storage.guestToken).toBeUndefined();
+  });
 });

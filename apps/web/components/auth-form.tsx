@@ -94,7 +94,7 @@ export function AuthForm({
     );
 
   return (
-    <form className="form-panel" onSubmit={(event) => void submit(event)} noValidate>
+    <form className="form-panel auth-form" onSubmit={(event) => void submit(event)} noValidate>
       {!['verify-email', 'reset-password'].includes(page) && (
         <TextField label="Email" name="email" type="email" autoComplete="email" required />
       )}
@@ -118,7 +118,7 @@ export function AuthForm({
           {state.message}
         </p>
       )}
-      <Button type="submit" disabled={state.status === 'submitting'}>
+      <Button className="auth-submit-button" type="submit" disabled={state.status === 'submitting'}>
         {state.status === 'submitting'
           ? 'Working...'
           : page === 'verify-email'

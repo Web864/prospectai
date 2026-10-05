@@ -554,6 +554,24 @@ export class PostgresAnalysisJobQueue {
     if (updated.count !== 1)
       throw new AppError('CONFLICT', 'The worker no longer owns this job lease.', 409);
   }
+
+  async withLease<T>(lease: JobLease, work: (transaction: Transaction) => Promise<T>) {
+    return this.database.$transaction(async (transaction) => {
+      const rows = await transaction.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT id
+        FROM AnalysisJob
+        WHERE id = ${lease.id}
+          AND lockedBy = ${lease.lockedBy}
+          AND attempt = ${lease.attempt}
+          AND lockedAt IS NOT NULL
+        FOR UPDATE
+      `);
+      if (!rows[0])
+        throw new AppError('CONFLICT', 'The worker no longer owns this job lease.', 409);
+      return work(transaction);
+    });
+  }
+
   async complete(lease: JobLease, outcome: 'completed' | 'partial') {
     await this.database.$transaction(async (transaction) => {
       const job = await transaction.analysisJob.findFirst({ where: leaseWhere(lease) });

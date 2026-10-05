@@ -68,17 +68,18 @@ export async function issueAuthAction(
 ) {
   const token = newOpaqueToken();
   const environment = loadAuthEnvironment();
-  await prisma.$transaction([
-    prisma.authActionToken.deleteMany({ where: { userId, kind, usedAt: null } }),
-    prisma.authActionToken.create({
+  await prisma.$transaction(async (transaction) => {
+    await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`auth-action:${userId}:${kind}`}, 0))`;
+    await transaction.authActionToken.deleteMany({ where: { userId, kind, usedAt: null } });
+    await transaction.authActionToken.create({
       data: {
         userId,
         kind,
         tokenHash: hashSecret(token, environment.SESSION_SECRET),
         expiresAt: new Date(Date.now() + actionTtlMs[kind]),
       },
-    }),
-  ]);
+    });
+  });
   return token;
 }
 
@@ -88,15 +89,18 @@ export async function consumeAuthAction(
 ) {
   const environment = loadAuthEnvironment();
   return prisma.$transaction(async (transaction) => {
+    const now = new Date();
     const record = await transaction.authActionToken.findUnique({
       where: { tokenHash: hashSecret(token, environment.SESSION_SECRET) },
     });
-    if (!record || record.kind !== kind || record.usedAt || record.expiresAt <= new Date())
+    if (!record || record.kind !== kind || record.usedAt || record.expiresAt <= now)
       throw new AppError('AUTH_EXPIRED', 'This account action link is invalid or expired.', 401);
-    await transaction.authActionToken.update({
-      where: { id: record.id },
+    const consumed = await transaction.authActionToken.updateMany({
+      where: { id: record.id, kind, usedAt: null, expiresAt: { gt: now } },
       data: { usedAt: new Date() },
     });
+    if (consumed.count !== 1)
+      throw new AppError('AUTH_EXPIRED', 'This account action link is invalid or expired.', 401);
     return record;
   });
 }

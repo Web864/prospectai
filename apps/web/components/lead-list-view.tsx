@@ -53,10 +53,6 @@ export function LeadListView() {
   const { state, retry } = useApiResource(`/leads?${params}`, leadListResponseSchema);
   return (
     <>
-      <div className="lead-actions">
-        <button className="button button-secondary">⇧ Import</button>
-        <button className="button">＋ Add lead</button>
-      </div>
       <section className="lead-stats">
         {cards.map(([t, v, s, I]) => {
           const Icon = I;
@@ -121,8 +117,8 @@ export function LeadListView() {
             </span>
           </label>
           <div className="lead-filter-control">
-            <select id="lead-industry">
-              <option>All industries</option>
+            <select id="lead-industry" disabled title="Industry filtering is not available yet">
+              <option>Industry filter unavailable</option>
             </select>
           </div>
         </div>
@@ -135,8 +131,8 @@ export function LeadListView() {
             </span>
           </label>
           <div className="lead-filter-control">
-            <select id="lead-location">
-              <option>All locations</option>
+            <select id="lead-location" disabled title="Location filtering is not available yet">
+              <option>Location filter unavailable</option>
             </select>
           </div>
         </div>
@@ -170,7 +166,6 @@ export function LeadListView() {
                 <Link className="button" href="/app/research">
                   ⌕ Start research
                 </Link>
-                <button className="button button-secondary">＋ Add lead manually</button>
               </div>
               <footer>
                 <span>

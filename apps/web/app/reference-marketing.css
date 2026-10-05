@@ -591,38 +591,6 @@ body:has(.reference-page) .nav-cta {
   flex: 1;
 }
 
-.reference-primary-button {
-  width: fit-content;
-  min-width: 178px;
-  min-height: 55px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 20px;
-  padding: 12px 24px;
-  border-radius: 999px;
-  color: #fff;
-  background: linear-gradient(95deg, #058e83, #18b971);
-  box-shadow: 0 12px 25px rgb(8 143 123 / 22%);
-  font-size: 16px;
-  font-weight: 800;
-  transition:
-    transform 180ms ease,
-    box-shadow 180ms ease;
-}
-
-.reference-primary-button:hover {
-  color: #fff;
-  text-decoration: none;
-  box-shadow: 0 17px 32px rgb(8 143 123 / 28%);
-  transform: translateY(-2px);
-}
-
-.reference-primary-button:hover svg {
-  transform: translateX(3px);
-}
-
 .reference-card-arc {
   position: absolute;
   right: -42px;
@@ -1128,8 +1096,6 @@ body:has(.reference-page) .nav-cta {
 
   .reference-feature-card,
   .reference-plan,
-  .reference-primary-button,
-  .reference-primary-button svg,
   .reference-faq-item,
   .reference-faq-chevron {
     transition: none;

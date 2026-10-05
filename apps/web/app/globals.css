@@ -2,7 +2,9 @@
   color-scheme: light;
 
   /* Canonical ProspectAI tokens, derived from the approved Pricing experience. */
-  --pa-font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --pa-font-sans:
+    Inter, 'Segoe UI Variable', 'Segoe UI', ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, sans-serif;
   --pa-color-ink: #0b1832;
   --pa-color-text: #13213a;
   --pa-color-muted: #566885;
@@ -33,14 +35,25 @@
   --pa-shadow-hover: 0 16px 38px rgb(25 55 86 / 12%);
   --pa-focus-ring: 0 0 0 3px rgb(7 150 129 / 20%);
 
+  /* One type scale for marketing, product, and account surfaces. */
+  --pa-font-size-2xs: 11px;
   --pa-font-size-xs: 12px;
   --pa-font-size-sm: 14px;
   --pa-font-size-md: 16px;
   --pa-font-size-lg: 18px;
   --pa-font-size-xl: 24px;
   --pa-font-size-2xl: 30px;
+  --pa-font-size-3xl: 36px;
+  --pa-font-size-display: 56px;
+  --pa-font-size-display-mobile: 40px;
+  --pa-line-height-tight: 1.08;
+  --pa-line-height-heading: 1.2;
+  --pa-line-height-body: 1.6;
+  --pa-line-height-ui: 1.4;
+  --pa-font-weight-regular: 400;
   --pa-font-weight-medium: 500;
-  --pa-font-weight-semibold: 650;
+  --pa-font-weight-semibold: 600;
+  --pa-font-weight-heading: 700;
   --pa-font-weight-bold: 800;
 
   --pa-space-1: 4px;
@@ -60,6 +73,10 @@
   --pa-container-marketing: 1408px;
   --pa-container-content: 1180px;
   --pa-container-workspace: 1360px;
+  --pa-page-padding: 34px;
+  --pa-section-space: 72px;
+  --pa-card-padding: 20px;
+  --pa-grid-gap: 16px;
 
   font-family: var(--pa-font-sans);
   color: var(--pa-color-text);
@@ -85,9 +102,33 @@ body {
   color: var(--pa-color-text);
   background: var(--pa-color-canvas);
   font-family: var(--pa-font-sans);
+  font-size: var(--pa-font-size-md);
+  font-weight: var(--pa-font-weight-regular);
+  line-height: var(--pa-line-height-body);
   letter-spacing: 0;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--pa-font-sans);
+  font-weight: var(--pa-font-weight-heading);
+  letter-spacing: 0;
 }
 
 button,

@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   Search,
   Eye,
-  MoreVertical,
   Plus,
   CalendarDays,
   Crown,
@@ -50,7 +49,7 @@ import {
   subscriptionResponseSchema,
   usageResponseSchema,
 } from '@prospectai/validation';
-import { Badge, Button, Metric } from './design-system';
+import { Badge, Button, Metric, StatePanel } from './design-system';
 import { ResourceFeedback } from './resource-feedback';
 import { useApiResource } from '../lib/use-api-resource';
 import { ApiClientError, webApiRequest } from '../lib/web-api';
@@ -210,9 +209,6 @@ export function ResearchView() {
       <section className="research-examples-section">
         <div className="research-section-heading">
           <h2>Try an example</h2>
-          <button type="button">
-            View more examples <ArrowRight size={17} />
-          </button>
         </div>
         <div className="research-example-grid">
           {examples.map((example) => (
@@ -382,9 +378,6 @@ export function AnalysesView() {
                   <Link href={`/app/analysis/${encodeURIComponent(item.id)}`}>
                     <Eye size={16} /> View
                   </Link>
-                  <button>
-                    <MoreVertical size={18} />
-                  </button>
                 </div>
               </div>
             ))}
@@ -416,42 +409,46 @@ export function OpportunitiesView() {
           <div className="opportunity-summary">
             <Metric
               label="Total opportunities"
-              value={String(data.length || 16)}
-              note="Across 4 analyses"
+              value={String(data.length)}
+              note="Loaded from workspace"
             />
-            <Metric label="High priority" value="6" note="Score 70+" />
-            <Metric label="Estimated impact" value="$48K+" note="Potential value" />
-            <Metric label="Top category" value="SEO" note="6 opportunities" />
+            <Metric
+              label="High priority"
+              value={String(data.filter((item) => item.opportunityScore >= 70).length)}
+              note="Score 70+"
+            />
+            <Metric
+              label="Average score"
+              value={
+                data.length
+                  ? String(
+                      Math.round(
+                        data.reduce((sum, item) => sum + item.opportunityScore, 0) / data.length,
+                      ),
+                    )
+                  : '--'
+              }
+              note="Across loaded opportunities"
+            />
+            <Metric
+              label="Categories"
+              value={String(new Set(data.map((item) => item.serviceCategory)).size)}
+              note="Recommended services"
+            />
           </div>
 
           <div className="opportunity-toolbar">
-            <input placeholder="Search opportunities..." />
-            <button>All categories</button>
-            <button>All scores</button>
-            <button>All analyses</button>
-            <button>Score (high to low)</button>
+            <input
+              aria-label="Search opportunities"
+              placeholder="Search opportunities..."
+              disabled
+              title="Filtering is not available until the opportunities query contract supports it"
+            />
+            <span className="muted">Opportunity filtering is not available yet.</span>
           </div>
 
           <div className="opportunity-list">
-            {(data.length
-              ? data
-              : Array.from({ length: 16 }, (_, i) => ({
-                  id: i,
-                  title:
-                    i < 3
-                      ? 'Conversion Optimization opportunity'
-                      : i < 8
-                        ? 'SEO opportunity'
-                        : i < 12
-                          ? 'Accessibility opportunity'
-                          : 'Brand Strategy opportunity',
-                  domain: 'raregloves.csoftsystem.com',
-                  opportunityScore: 76 - i,
-                  analysisId: String(i),
-                  serviceCategory: 'General',
-                  confidence: 70,
-                }))
-            ).map((item, index) => (
+            {data.map((item, index) => (
               <article className="opportunity-row" key={item.id}>
                 <div className={`opportunity-icon ${icons[index % icons.length]!.color}`}>
                   {icons[index % icons.length]!.icon}
@@ -487,6 +484,9 @@ export function OpportunitiesView() {
                 </div>
               </article>
             ))}
+            {data.length === 0 && (
+              <p className="empty-state">No opportunities have been found yet.</p>
+            )}
           </div>
         </>
       )}
@@ -642,34 +642,11 @@ export function UsageView() {
                 <h2>Recent usage</h2>
                 {/* <p>Your most recent analyses and usage activity.</p> */}
               </div>
-              <button className="button button-secondary">View all →</button>
             </div>
-            <div className="usage-table">
-              <div className="usage-row head">
-                <span>Date</span>
-                <span>Website</span>
-                <span>Type</span>
-                <span>Status</span>
-                <span>Usage</span>
-              </div>
-              <div className="usage-row">
-                <span>
-                  Sep 17, 2026
-                  <br />
-                  <small>19:28 UTC</small>
-                </span>
-                <span>
-                  <b>raregloves.csoftsystem.com</b>
-                  <br />
-                  <small>Rare Gloves</small>
-                </span>
-                <span>Website analysis</span>
-                <span>
-                  <Badge tone="positive">Completed</Badge>
-                </span>
-                <span>1 credit</span>
-              </div>
-            </div>
+            <StatePanel title="Usage history is not available in this response">
+              Current usage and entitlement values above are authoritative. Detailed history will
+              appear when the usage history API is enabled.
+            </StatePanel>
             <div className="upgrade-banner">
               <Zap size={25} />
               <div>
@@ -780,16 +757,24 @@ export function BillingView() {
                 <p>ProspectAI for individuals and small projects.</p>
                 <div className="billing-actions">
                   <Button
-                    className="billing-upgrade-button"
+                    className="button-primary billing-upgrade-button"
                     disabled={busy}
                     onClick={() => void billingAction('upgrade')}
                   >
                     <Crown size={16} fill="currentColor" /> Upgrade to Pro
                   </Button>
-                  <Button className="button-secondary billing-outline-button">
+                  <Button
+                    className="button-secondary billing-outline-button"
+                    disabled
+                    title="Invoice download is not available yet"
+                  >
                     <Download size={17} /> Download invoice
                   </Button>
-                  <Button className="button-secondary billing-outline-button">
+                  <Button
+                    className="button-secondary billing-outline-button"
+                    disabled
+                    title="Plan management is not available yet"
+                  >
                     <Settings size={17} /> Manage plan
                   </Button>
                 </div>
@@ -867,7 +852,7 @@ export function BillingView() {
               <h3>Ready to do more?</h3>
               <p>Upgrade to Pro and unlock the full potential of ProspectAI.</p>
               <Button
-                className="pro-card-button"
+                className="button-primary pro-card-button"
                 disabled={busy}
                 onClick={() => void billingAction('upgrade')}
               >
@@ -884,10 +869,10 @@ export function BillingView() {
               <h3>Need help with billing?</h3>
               <p>Visit our help center or contact our support team.</p>
             </div>
-            <Button className="button-secondary billing-help-button">
+            <Link className="button button-secondary billing-help-button" href="/faq">
               <span>View help center</span>
               <ExternalLink size={15} />
-            </Button>
+            </Link>
           </section>
           {message && (
             <p role="status" className="billing-message">
@@ -988,7 +973,7 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
                   <div className="extension-actions">
                     {connected ? (
                       <Button
-                        className="extension-primary-button"
+                        className="button-primary extension-primary-button"
                         disabled={busy}
                         onClick={() => void disconnect()}
                       >
@@ -996,12 +981,20 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
                         Disconnect
                       </Button>
                     ) : (
-                      <Link className="button extension-primary-button" href="/extension/connect">
+                      <Link
+                        className="button button-primary extension-primary-button"
+                        href="/extension/connect"
+                      >
                         <Link2 size={20} strokeWidth={2.2} aria-hidden="true" />
                         Reconnect
                       </Link>
                     )}
-                    <button className="extension-store-button" type="button">
+                    <button
+                      className="button button-secondary extension-store-button"
+                      type="button"
+                      disabled
+                      title="The Chrome Web Store listing is not available yet"
+                    >
                       <ExternalLink size={20} strokeWidth={1.9} aria-hidden="true" />
                       View in Chrome Web Store
                     </button>
@@ -1101,10 +1094,10 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
                   </div>
                 </div>
 
-                <button className="extension-help-button" type="button">
+                <Link className="button button-secondary extension-help-button" href="/faq">
                   View help center
                   <ExternalLink size={17} strokeWidth={1.9} aria-hidden="true" />
-                </button>
+                </Link>
 
                 <ol className="extension-help-steps">
                   <li>
@@ -1154,6 +1147,8 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
                 key={label}
                 type="button"
                 aria-current={index === 0 ? 'page' : undefined}
+                disabled={index !== 0}
+                title={index !== 0 ? `${label} settings are not available yet` : undefined}
               >
                 <span className="settings-nav-icon" aria-hidden="true">
                   <Icon size={22} strokeWidth={1.8} />
@@ -1227,7 +1222,7 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
               </p>
             )}
 
-            <Button className="settings-save-button" type="submit" disabled={busy}>
+            <Button className="button-primary settings-save-button" type="submit" disabled={busy}>
               <Save size={19} strokeWidth={2} aria-hidden="true" />
               {busy ? 'Saving...' : 'Save settings'}
             </Button>

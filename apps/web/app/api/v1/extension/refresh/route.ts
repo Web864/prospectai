@@ -25,8 +25,13 @@ export async function POST(request: Request) {
     const accessToken = newOpaqueToken();
     const refreshToken = newOpaqueToken();
     const expiresAt = new Date(Date.now() + 60 * 60_000);
-    await prisma.extensionSession.update({
-      where: { id: session.id },
+    const rotated = await prisma.extensionSession.updateMany({
+      where: {
+        id: session.id,
+        refreshTokenHash: hashSecret(input.refreshToken, environment.EXTENSION_TOKEN_PEPPER),
+        status: 'CONNECTED',
+        revokedAt: null,
+      },
       data: {
         tokenHash: hashSecret(accessToken, environment.EXTENSION_TOKEN_PEPPER),
         refreshTokenHash: hashSecret(refreshToken, environment.EXTENSION_TOKEN_PEPPER),
@@ -34,6 +39,8 @@ export async function POST(request: Request) {
         lastActiveAt: new Date(),
       },
     });
+    if (rotated.count !== 1)
+      throw new AppError('SESSION_REVOKED', 'Extension session is not active.', 401);
     return Response.json(
       { data: { accessToken, refreshToken, expiresAt: expiresAt.toISOString() } },
       { headers: { 'Cache-Control': 'no-store', 'X-Request-Id': id } },

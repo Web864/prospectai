@@ -1,12 +1,13 @@
 import { apiError, parseJson, requestId } from '@prospectai/api';
 import { createStripeBillingProvider } from '@prospectai/billing';
-import { loadBillingEnvironment } from '@prospectai/config';
+import { loadBillingEnvironment, loadPublicEnvironment } from '@prospectai/config';
 import { prisma } from '@prospectai/database';
 import { AppError } from '@prospectai/shared';
 import { checkoutRequestSchema } from '@prospectai/validation';
 import { requireRole } from '@prospectai/auth';
 import { enforceRateLimit } from '../../../../../lib/rate-limit';
 import { requireRequestActor } from '../../../../../lib/request-actor';
+import { assertSameAppOrigin } from '../../../../../lib/billing-security';
 
 export async function POST(request: Request) {
   const id = requestId(request.headers);
@@ -26,6 +27,17 @@ export async function POST(request: Request) {
       throw new AppError('VALIDATION_ERROR', 'Idempotency-Key is required.', 400);
     const input = await parseJson(request, checkoutRequestSchema);
     const environment = loadBillingEnvironment();
+    const publicEnvironment = loadPublicEnvironment();
+    const successUrl = assertSameAppOrigin(
+      input.successUrl,
+      publicEnvironment.NEXT_PUBLIC_APP_URL,
+      'successUrl',
+    );
+    const cancelUrl = assertSameAppOrigin(
+      input.cancelUrl,
+      publicEnvironment.NEXT_PUBLIC_APP_URL,
+      'cancelUrl',
+    );
     const current = await prisma.subscription.findFirst({
       where: { organizationId: actor.organizationId },
       orderBy: { updatedAt: 'desc' },
@@ -43,8 +55,8 @@ export async function POST(request: Request) {
           ? environment.STRIPE_AGENCY_PRICE_ID
           : environment.STRIPE_PRO_PRICE_ID,
       planCode: input.plan,
-      successUrl: input.successUrl,
-      cancelUrl: input.cancelUrl,
+      successUrl,
+      cancelUrl,
     });
     return Response.json({ data }, { headers: { 'X-Request-Id': id } });
   } catch (error) {

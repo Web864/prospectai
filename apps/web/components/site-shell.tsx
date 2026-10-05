@@ -42,7 +42,7 @@ export function SiteShell({ children, activePath }: { children: ReactNode; activ
           </nav>
           <div className="marketing-actions">
             <Link href="/login">Log in</Link>
-            <Link className="home-button home-button-primary nav-cta" href="/signup">
+            <Link className="button button-primary home-button nav-cta" href="/signup">
               Start free <ArrowRight size={17} aria-hidden="true" />
             </Link>
           </div>
@@ -64,7 +64,7 @@ export function SiteShell({ children, activePath }: { children: ReactNode; activ
                 ))}
               </nav>
               <Link href="/login">Log in</Link>
-              <Link className="home-button home-button-primary" href="/signup">
+              <Link className="button button-primary home-button" href="/signup">
                 Start free <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>

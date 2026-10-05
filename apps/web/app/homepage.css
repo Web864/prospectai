@@ -107,63 +107,6 @@
   display: none;
 }
 
-.home-button {
-  min-height: 43px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  padding: 10px 19px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  font-size: 13px;
-  font-weight: 750;
-  line-height: 1;
-  text-decoration: none;
-  transition:
-    transform 170ms ease,
-    box-shadow 170ms ease,
-    background 170ms ease,
-    border-color 170ms ease;
-}
-
-.home-button:hover {
-  text-decoration: none;
-  transform: translateY(-1px);
-}
-
-.home-button svg {
-  transition: transform 170ms ease;
-}
-
-.home-button:hover svg {
-  transform: translateX(2px);
-}
-
-.home-button-primary {
-  color: #fff;
-  background: linear-gradient(135deg, #079781, #06776e);
-  box-shadow: 0 10px 24px rgb(4 118 105 / 20%);
-}
-
-.home-button-primary:hover {
-  color: #fff;
-  background: linear-gradient(135deg, #078c7b, #055f5b);
-  box-shadow: 0 13px 30px rgb(4 104 94 / 25%);
-}
-
-.home-button-secondary {
-  color: #24314a;
-  border-color: #d9e5ec;
-  background: rgb(255 255 255 / 88%);
-  box-shadow: 0 7px 20px rgb(31 61 84 / 7%);
-}
-
-.home-button-secondary:hover {
-  color: var(--home-teal-dark);
-  border-color: #a9d6cc;
-}
-
 .nav-cta {
   min-width: 177px;
   min-height: 54px;
@@ -1832,13 +1775,6 @@
   display: grid;
   justify-items: center;
   gap: 7px;
-}
-
-.home-button-light {
-  min-width: 145px;
-  color: #223147;
-  background: #fff;
-  box-shadow: 0 11px 24px rgb(1 32 36 / 22%);
 }
 
 .final-cta-actions small {

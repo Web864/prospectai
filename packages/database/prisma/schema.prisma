@@ -257,6 +257,7 @@ model ExtensionSession {
   authorizationRequest   ExtensionAuthorizationRequest @relation(fields: [authorizationRequestId], references: [publicId], onDelete: Cascade)
 
   @@index([organizationId, status])
+  @@index([organizationId, updatedAt])
   @@index([userId, status])
 }
 
@@ -450,6 +451,7 @@ model Pitch {
   analysis       WebsiteAnalysis? @relation(fields: [analysisId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, createdAt])
+  @@index([organizationId, updatedAt])
 }
 
 model Activity {

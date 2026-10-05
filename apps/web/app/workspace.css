@@ -2124,19 +2124,6 @@
   font-size: 14px;
   white-space: nowrap;
 }
-.billing-upgrade-button {
-  min-width: 194px;
-}
-.billing-outline-button {
-  border: 1px solid #56bfc0 !important;
-  color: #263b59 !important;
-  background: #fff !important;
-  box-shadow: none !important;
-  min-width: 209px;
-}
-.billing-outline-button:last-child {
-  min-width: 170px;
-}
 .billing-active {
   position: absolute;
   right: 18px;
@@ -2335,16 +2322,6 @@
   color: #667894;
   font-size: 14px;
   line-height: 20px;
-}
-.pro-card-button {
-  width: 100%;
-  height: 42px;
-  min-height: 42px;
-  border-radius: 6px !important;
-  background: #6931d2 !important;
-  border-color: #6931d2 !important;
-  box-shadow: none !important;
-  justify-content: center;
 }
 .billing-help {
   height: 83px;
@@ -2785,25 +2762,6 @@
   font-size: 13px;
 }
 
-.settings-save-button {
-  width: 100%;
-  min-height: 47px !important;
-  justify-content: center;
-  margin-top: 26px;
-  border: 0 !important;
-  border-radius: 6px !important;
-  background: #078f84 !important;
-  box-shadow: none !important;
-  font-size: 15px !important;
-  font-weight: 500 !important;
-}
-
-.settings-save-button:hover:not(:disabled) {
-  transform: none !important;
-  background: #087f75 !important;
-  box-shadow: none !important;
-}
-
 @media (max-width: 1050px) {
   .settings-page {
     grid-template-columns: 260px minmax(0, 1fr);
@@ -3133,44 +3091,6 @@
 }
 
 .extension-primary-button,
-.extension-store-button {
-  min-height: 56px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 11px;
-  padding: 0 29px;
-  border-radius: 5px;
-  font-size: 17px;
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.extension-primary-button {
-  min-width: 193px;
-  color: #fff !important;
-  background: #078f7e !important;
-  border: 1px solid #078f7e !important;
-  box-shadow: none !important;
-}
-
-.extension-primary-button:hover:not(:disabled) {
-  transform: none !important;
-  background: #087f72 !important;
-}
-
-.extension-store-button {
-  min-width: 304px;
-  color: #2c405e;
-  background: #fff;
-  border: 1px solid #9fb4c8;
-  cursor: pointer;
-}
-
-.extension-store-button:hover {
-  background: #f9fbfd;
-}
-
 .extension-illustration {
   position: relative;
   min-height: 278px;
@@ -3403,24 +3323,6 @@
   margin: 7px 0 0;
   color: #6c7a92;
   font-size: 16px;
-}
-
-.extension-help-button {
-  position: absolute;
-  top: 23px;
-  right: 20px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 0 17px;
-  border: 1px solid #d4dee9;
-  border-radius: 7px;
-  color: #2d405e;
-  background: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .extension-help-steps {
@@ -4518,7 +4420,7 @@
   z-index: 35;
   min-height: 72px;
   display: grid;
-  grid-template-columns: auto auto minmax(240px, 560px) minmax(0, 1fr);
+  grid-template-columns: auto minmax(240px, 1fr) auto;
   align-items: center;
   gap: var(--pa-space-3);
   padding: 12px 34px;

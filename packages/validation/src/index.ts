@@ -96,20 +96,21 @@ export const analysisJobProgressResponseSchema = z.object({
   }),
 });
 
+const leadContactSchema = z
+  .object({
+    name: z.string().trim().min(1).max(200).optional(),
+    email: z.string().trim().email().max(320).optional(),
+    title: z.string().trim().min(1).max(200).optional(),
+  })
+  .refine((contact) => Boolean(contact.name || contact.email || contact.title), {
+    message: 'A contact must include a name, email, or title.',
+  });
+
 export const leadCreateSchema = z.object({
   analysisId: z.string().cuid().optional(),
   name: z.string().trim().min(1).max(200).optional(),
   notes: z.string().trim().max(10_000).optional(),
-  contacts: z
-    .array(
-      z.object({
-        name: z.string().trim().max(200).optional(),
-        email: z.string().trim().email().max(320).optional(),
-        title: z.string().trim().max(200).optional(),
-      }),
-    )
-    .max(20)
-    .default([]),
+  contacts: z.array(leadContactSchema).max(20).default([]),
 });
 
 export const leadUpdateSchema = z.object({

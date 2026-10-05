@@ -60,7 +60,14 @@ export async function GET(request: Request) {
     const actor = await requireRequestActor(request);
     const analyses = await prisma.websiteAnalysis.findMany({
       where: { organizationId: actor.organizationId },
-      include: { website: { select: { domain: true } } },
+      select: {
+        id: true,
+        status: true,
+        websiteScore: true,
+        opportunityScore: true,
+        createdAt: true,
+        website: { select: { domain: true } },
+      },
       orderBy: { createdAt: 'desc' },
       take: 100,
     });

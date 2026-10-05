@@ -136,12 +136,12 @@ export function AppShell({
       </aside>
       <main className="workspace-main">
         <header className="workspace-topbar">
-          <Link className="brand workspace-brand workspace-topbar-brand" href="/app">
+          {/* <Link className="brand workspace-brand workspace-topbar-brand" href="/app">
             <Image src="/brand-mark.png" alt="" width={30} height={30} />
             <span>
               Prospect<span className="brand-accent">AI</span>
             </span>
-          </Link>
+          </Link> */}
           <button
             className="workspace-topbar-button workspace-sidebar-toggle"
             type="button"

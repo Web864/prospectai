@@ -101,6 +101,45 @@ describe('PostgreSQL analysis queue policy', () => {
       }),
     );
   });
+
+  it('holds a row lock while persisting results for the active lease', async () => {
+    const transaction = {
+      $queryRaw: vi.fn(async (query: { strings: readonly string[] }) => {
+        expect(query.strings.join('?')).toContain('FOR UPDATE');
+        expect(query.strings.join('?')).toContain('lockedBy');
+        expect(query.strings.join('?')).toContain('attempt');
+        return [{ id: 'job' }];
+      }),
+    };
+    const database = {
+      $transaction: vi.fn(async (work: (value: typeof transaction) => unknown) =>
+        work(transaction),
+      ),
+    };
+    const queue = new PostgresAnalysisJobQueue(database as never);
+    const persist = vi.fn(async () => 'persisted');
+
+    await expect(
+      queue.withLease({ id: 'job', lockedBy: 'worker-1', attempt: 2 }, persist),
+    ).resolves.toBe('persisted');
+    expect(persist).toHaveBeenCalledWith(transaction);
+  });
+
+  it('rejects result persistence after the worker lease is lost', async () => {
+    const transaction = { $queryRaw: vi.fn(async () => []) };
+    const database = {
+      $transaction: vi.fn(async (work: (value: typeof transaction) => unknown) =>
+        work(transaction),
+      ),
+    };
+    const queue = new PostgresAnalysisJobQueue(database as never);
+    const persist = vi.fn();
+
+    await expect(
+      queue.withLease({ id: 'job', lockedBy: 'stale-worker', attempt: 1 }, persist),
+    ).rejects.toMatchObject({ code: 'CONFLICT', status: 409 });
+    expect(persist).not.toHaveBeenCalled();
+  });
   it('atomically locks guest allowance before creating analysis work', async () => {
     const calls: string[] = [];
     const transaction = {

@@ -108,7 +108,7 @@ export function HowItWorksPage() {
             <span>Start with the website in front of you</span>
             <h2>Turn evidence into a better first conversation.</h2>
           </div>
-          <Link className="home-button home-button-primary" href="/signup">
+          <Link className="button button-primary home-button" href="/signup">
             Start analyzing <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>

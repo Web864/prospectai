@@ -73,10 +73,10 @@ export function Homepage() {
               More conversations.
             </p>
             <div className="hero-actions hero-enter hero-enter-4">
-              <Link className="home-button home-button-primary" href="/signup">
+              <Link className="button button-primary home-button" href="/signup">
                 Start analyzing <ArrowRight size={17} />
               </Link>
-              <Link className="home-button home-button-secondary" href="/how-it-works">
+              <Link className="button button-secondary home-button" href="/how-it-works">
                 <MousePointer2 size={17} /> See how it works
               </Link>
             </div>
@@ -404,7 +404,7 @@ export function Homepage() {
             </span>
           </div>
           <div className="final-cta-actions">
-            <Link className="home-button home-button-light" href="/signup">
+            <Link className="button button-inverse home-button" href="/signup">
               Start analyzing <ArrowRight size={17} />
             </Link>
             <small>No credit card required</small>
@@ -607,7 +607,7 @@ function PricingCard({
       </ul>
       <Link
         className={
-          featured ? 'home-button home-button-primary' : 'home-button home-button-secondary'
+          featured ? 'button button-primary home-button' : 'button button-secondary home-button'
         }
         href={name === 'Agency' ? '/contact' : '/signup'}
       >

@@ -267,7 +267,7 @@ export function PricingPage() {
               </div>
               <h2>{name}</h2>
               <p>{copy}</p>
-              <Link className="reference-primary-button" href={href}>
+              <Link className="button button-primary reference-plan-action" href={href}>
                 {cta} <ArrowRight size={18} aria-hidden="true" />
               </Link>
               <span className="reference-card-arc" aria-hidden="true" />

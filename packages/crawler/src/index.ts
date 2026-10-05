@@ -1,4 +1,7 @@
 import { lookup } from 'node:dns/promises';
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
+import { Readable } from 'node:stream';
 import { isIP } from 'node:net';
 import * as cheerio from 'cheerio';
 import { AppError } from '@prospectai/shared';
@@ -118,6 +121,40 @@ export async function validateNetworkTarget(
       400,
     );
   return addresses;
+}
+
+async function fetchPinned(url: URL, init: RequestInit, address: string): Promise<Response> {
+  const transport = url.protocol === 'https:' ? httpsRequest : httpRequest;
+  const headers = Object.fromEntries(new Headers(init.headers).entries());
+  headers.host = url.host;
+  return new Promise((resolve, reject) => {
+    const request = transport(
+      {
+        protocol: url.protocol,
+        hostname: address,
+        port: url.port || (url.protocol === 'https:' ? 443 : 80),
+        path: url.pathname + url.search,
+        method: init.method ?? 'GET',
+        headers,
+        ...(url.protocol === 'https:' ? { servername: url.hostname } : {}),
+        ...(init.signal ? { signal: init.signal } : {}),
+      },
+      (response) => {
+        const responseHeaders = new Headers();
+        for (const [key, value] of Object.entries(response.headers)) {
+          if (value !== undefined)
+            responseHeaders.set(key, Array.isArray(value) ? value.join(', ') : value);
+        }
+        resolve(
+          new Response(Readable.toWeb(response) as unknown as ReadableStream, {
+            status: response.statusCode ?? 502,
+            headers: responseHeaders,
+          }),
+        );
+      },
+    );
+    request.once('error', reject);
+  });
 }
 
 export interface ExtractedPage {
@@ -272,20 +309,33 @@ export class HttpFirstCrawler implements Crawler {
     let current = normalizePublicUrl(input.toString());
 
     for (let redirect = 0; redirect <= maxRedirects; redirect += 1) {
-      await validateNetworkTarget(current, resolver);
+      const addresses = await validateNetworkTarget(current, resolver);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       const startedAt = performance.now();
       let response: Response;
       try {
-        response = await fetcher(current, {
-          redirect: 'manual',
-          signal: controller.signal,
-          headers: {
-            Accept: 'text/html,application/xhtml+xml;q=0.9,text/plain;q=0.5',
-            'User-Agent': 'ProspectAI/1.0 (+https://prospectai.local/crawler)',
-          },
-        });
+        response = this.options.fetcher
+          ? await fetcher(current, {
+              redirect: 'manual',
+              signal: controller.signal,
+              headers: {
+                Accept: 'text/html,application/xhtml+xml;q=0.9,text/plain;q=0.5',
+                'User-Agent': 'ProspectAI/1.0 (+https://prospectai.local/crawler)',
+              },
+            })
+          : await fetchPinned(
+              current,
+              {
+                redirect: 'manual',
+                signal: controller.signal,
+                headers: {
+                  Accept: 'text/html,application/xhtml+xml;q=0.9,text/plain;q=0.5',
+                  'User-Agent': 'ProspectAI/1.0 (+https://prospectai.local/crawler)',
+                },
+              },
+              addresses[0]!,
+            );
       } catch (error) {
         if (controller.signal.aborted)
           throw new AppError('ANALYSIS_TIMEOUT', 'The website took too long to respond.', 504);

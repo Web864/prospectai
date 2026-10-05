@@ -72,6 +72,7 @@ export function PopupApp() {
       chrome.storage.local.get([
         'accessToken',
         'guestToken',
+        'guestSessionId',
         'privacyAcknowledged',
         'lastConvertedAnalysisId',
       ]),
@@ -86,6 +87,8 @@ export function PopupApp() {
           return;
         }
         if (typeof stored.accessToken === 'string') {
+          if (typeof stored.guestToken === 'string' && typeof stored.guestSessionId === 'string')
+            await chrome.runtime.sendMessage({ type: 'convert-guest' }).catch(() => undefined);
           if (typeof stored.lastConvertedAnalysisId === 'string') {
             const response = await apiRequest(
               `/analyses/${encodeURIComponent(stored.lastConvertedAnalysisId)}`,

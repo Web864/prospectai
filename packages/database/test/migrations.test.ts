@@ -8,9 +8,11 @@ describe('Prisma migration chain', () => {
   const initial = migration('20260908000000_init');
   const postgresQueue = migration('20260914000000_postgres_analysis_job_queue');
   const guestSessions = migration('20260917000000_value_first_guest_sessions');
+  const phaseSix = migration('20260918000000_phase_6_backend');
+  const phaseSeven = migration('20261005000000_database_hardening');
 
   it('keeps SQL statements outside line comments', () => {
-    for (const sql of [initial, postgresQueue, guestSessions]) {
+    for (const sql of [initial, postgresQueue, guestSessions, phaseSix, phaseSeven]) {
       expect(sql).not.toMatch(/^--[^\r\n]*(?:CREATE|ALTER|DROP)\s+(?:SCHEMA|TYPE|TABLE|INDEX)/m);
     }
   });
@@ -29,5 +31,15 @@ describe('Prisma migration chain', () => {
     expect(guestSessions).toContain('GuestSession_trialLimit_check');
     expect(guestSessions).not.toMatch(/DROP\s+(?:TABLE|COLUMN|TYPE)/i);
     expect(guestSessions).not.toContain('TRUNCATE');
+  });
+
+  it('adds Phase 7 constraints and indexes without destructive operations', () => {
+    expect(phaseSeven).toContain('Lead_organizationId_websiteId_key');
+    expect(phaseSeven).toContain('AnalysisJob_claimable_partial_idx');
+    expect(phaseSeven).toContain('UsageLedger_quantity_check');
+    expect(phaseSeven).toContain('WebsiteAnalysis_scores_check');
+    expect(phaseSeven).toContain('VALIDATE CONSTRAINT');
+    expect(phaseSeven).not.toMatch(/DROP\s+(?:TABLE|COLUMN|TYPE)/i);
+    expect(phaseSeven).not.toContain('TRUNCATE');
   });
 });

@@ -9,6 +9,49 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
   void chrome.storage.local.remove(['sessionState']);
 });
 
+async function convertStoredGuest() {
+  const stored = await chrome.storage.local.get([
+    'guestToken',
+    'guestSessionId',
+    'currentGuestAnalysisId',
+  ]);
+  if (typeof stored.guestToken !== 'string' || typeof stored.guestSessionId !== 'string') return;
+  let response: Response;
+  try {
+    response = await apiRequest('/guest-sessions/convert', {
+      method: 'POST',
+      headers: { 'X-Guest-Token': stored.guestToken },
+      body: JSON.stringify({ guestSessionId: stored.guestSessionId }),
+    });
+  } catch {
+    return;
+  }
+  if (!response.ok) {
+    if (response.status === 401)
+      await chrome.storage.local.remove([
+        'guestToken',
+        'guestSessionId',
+        'privacyAcknowledged',
+        'currentGuestAnalysisId',
+      ]);
+    return;
+  }
+  const parsed = guestConversionResponseSchema.safeParse(await response.json());
+  if (!parsed.success) return;
+  const preservedAnalysisId =
+    typeof stored.currentGuestAnalysisId === 'string'
+      ? stored.currentGuestAnalysisId
+      : parsed.data.data.preservedAnalysisId;
+  if (preservedAnalysisId)
+    await chrome.storage.local.set({ lastConvertedAnalysisId: preservedAnalysisId });
+  await chrome.storage.local.remove([
+    'guestToken',
+    'guestSessionId',
+    'privacyAcknowledged',
+    'currentGuestAnalysisId',
+  ]);
+}
+
 async function completePairing(code: string) {
   const stored = await chrome.storage.local.get([
     'pkceVerifier',
@@ -37,29 +80,7 @@ async function completePairing(code: string) {
   });
   await chrome.storage.local.remove(['pkceVerifier', 'authorizationRequestId']);
 
-  if (typeof stored.guestToken === 'string' && typeof stored.guestSessionId === 'string') {
-    const conversion = await apiRequest('/guest-sessions/convert', {
-      method: 'POST',
-      headers: { 'X-Guest-Token': stored.guestToken },
-      body: JSON.stringify({ guestSessionId: stored.guestSessionId }),
-    });
-    if (conversion.ok) {
-      const parsedConversion = guestConversionResponseSchema.safeParse(await conversion.json());
-      if (!parsedConversion.success) throw new Error('Guest conversion response was invalid.');
-      const preservedAnalysisId =
-        typeof stored.currentGuestAnalysisId === 'string'
-          ? stored.currentGuestAnalysisId
-          : parsedConversion.data.data.preservedAnalysisId;
-      if (preservedAnalysisId)
-        await chrome.storage.local.set({ lastConvertedAnalysisId: preservedAnalysisId });
-      await chrome.storage.local.remove([
-        'guestToken',
-        'guestSessionId',
-        'privacyAcknowledged',
-        'currentGuestAnalysisId',
-      ]);
-    }
-  }
+  await convertStoredGuest();
 }
 
 chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
@@ -70,6 +91,12 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     !('type' in message)
   )
     return;
+  if (message.type === 'convert-guest') {
+    void convertStoredGuest()
+      .then(() => sendResponse({ connected: true }))
+      .catch(() => sendResponse({ connected: true }));
+    return true;
+  }
   if (message.type === 'get-session') {
     chrome.storage.local
       .get(['sessionState', 'accessToken', 'guestSessionId'])
