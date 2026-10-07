@@ -774,6 +774,69 @@
   background: var(--pa-color-surface-muted);
 }
 
+[data-theme='dark']
+  .app-shell
+  :is(.pitch-empty-panel, .pitch-card, .billing-period-card, .upgrade-banner) {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-card);
+  background-image: none;
+  box-shadow: var(--pa-shadow-sm);
+}
+
+[data-theme='dark'] .app-shell .pitch-empty-panel :is(h2, strong),
+[data-theme='dark'] .app-shell .billing-period-card h2 {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .pitch-empty-art,
+    .pitch-benefits svg,
+    .pitch-card-icon,
+    .usage-icon,
+    .settings-nav-icon,
+    .pro-card-icon,
+    .billing-help-icon
+  ) {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+  background-image: none;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .app-shell .pitch-benefits {
+  border-color: var(--pa-color-border);
+}
+
+[data-theme='dark'] .app-shell .pitch-benefits div + div {
+  border-color: var(--pa-color-border);
+}
+
+[data-theme='dark'] .app-shell .usage-row.head {
+  color: var(--pa-color-muted);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell .billing-feature-column + .billing-feature-column {
+  border-color: var(--pa-color-border);
+}
+
+[data-theme='dark'] .app-shell .pro-card-icon {
+  color: var(--pa-color-primary);
+}
+
+[data-theme='dark'] .app-shell .metrics:not(.secondary-metrics) .metric:nth-child(n) .metric-icon,
+[data-theme='dark'] .app-shell .secondary-metrics .metric:nth-child(n) .metric-icon,
+[data-theme='dark'] .app-shell .metric:nth-child(n) .metric-icon {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+  background-image: none;
+}
+
 [data-theme='dark'] .app-shell .analysis-stat-icon.blue {
   color: var(--pa-color-blue);
 }
@@ -908,6 +971,48 @@
 
 [data-theme='dark'] .app-shell :is(.billing-hero, .billing-insight) {
   background-image: none;
+}
+
+[data-theme='dark'] .app-shell .billing-hero-svg > path:first-child {
+  fill: transparent;
+}
+
+[data-theme='dark'] .app-shell :is(.extension-chrome-icon, .extension-browser, .extension-toast) {
+  color: var(--pa-color-card-foreground);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell .extension-browser-bar {
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface);
+}
+
+[data-theme='dark'] .app-shell .extension-browser-bar span {
+  background: var(--pa-color-border);
+}
+
+[data-theme='dark'] .app-shell .extension-logo-tile img {
+  filter: none;
+}
+
+[data-theme='dark'] .app-shell .extension-glow {
+  background: transparent;
+}
+
+[data-theme='dark'] .app-shell .extension-status.is-connected {
+  color: var(--pa-color-success);
+  border: 1px solid var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell .extension-help-steps li > span {
+  color: var(--pa-color-primary);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell .extension-spark {
+  color: var(--pa-color-primary);
 }
 
 [data-theme='dark']
