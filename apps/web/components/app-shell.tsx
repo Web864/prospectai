@@ -25,6 +25,7 @@ import { useState } from 'react';
 import { applicationNavigation } from './application-navigation';
 import { MobileNavigation } from './mobile-navigation';
 import { AccountSession } from './account-session';
+import { ThemeToggle } from './theme-toggle';
 
 function NavigationIcon({ href }: { href: string }) {
   const props = { size: 18, strokeWidth: 1.9, 'aria-hidden': true } as const;
@@ -193,6 +194,7 @@ export function AppShell({
             )}
           </div>
           <div className="workspace-topbar-actions">
+            <ThemeToggle />
             <details className="workspace-notifications">
               <summary className="workspace-topbar-button" aria-label="Notifications">
                 <Bell size={19} aria-hidden="true" />

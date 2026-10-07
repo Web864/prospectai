@@ -2,6 +2,7 @@ import { ArrowRight, Github, Linkedin, Menu, Youtube } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { InputHTMLAttributes, ReactNode } from 'react';
+import { ThemeToggle } from './theme-toggle';
 
 function BrandLink() {
   return (
@@ -41,6 +42,7 @@ export function SiteShell({ children, activePath }: { children: ReactNode; activ
             ))}
           </nav>
           <div className="marketing-actions">
+            <ThemeToggle />
             <Link href="/login">Log in</Link>
             <Link className="button button-primary home-button nav-cta" href="/signup">
               Start free <ArrowRight size={17} aria-hidden="true" />
@@ -134,7 +136,10 @@ export function FormPage({
 }) {
   return (
     <main className="form-wrap">
-      <BrandLink />
+      <div className="form-page-top">
+        <BrandLink />
+        <ThemeToggle />
+      </div>
       <section className="form-panel">
         <div>
           <h1>{title}</h1>

@@ -109,17 +109,21 @@
 
 :is(.button, .home-button, .reference-plan-action).button-primary,
 .button:not(.button-secondary, .button-danger, .button-inverse) {
-  color: #fff;
-  border-color: var(--pa-color-primary);
-  background: linear-gradient(135deg, var(--pa-color-primary), var(--pa-color-primary-dark));
+  color: var(--pa-color-primary-foreground);
+  border-color: var(--pa-color-primary-action);
+  background: linear-gradient(
+    135deg,
+    var(--pa-color-primary-action),
+    var(--pa-color-primary-action-hover)
+  );
   box-shadow: 0 10px 24px rgb(4 118 105 / 20%);
 }
 
 :is(.button, .home-button, .reference-plan-action).button-primary:hover:not(:disabled),
 .button:not(.button-secondary, .button-danger, .button-inverse):hover:not(:disabled) {
-  color: #fff;
-  border-color: var(--pa-color-primary-dark);
-  background: linear-gradient(135deg, var(--pa-color-primary-dark), #055f5b);
+  color: var(--pa-color-primary-foreground);
+  border-color: var(--pa-color-primary-action-hover);
+  background: var(--pa-color-primary-action-hover);
   box-shadow: 0 13px 30px rgb(4 104 94 / 25%);
   text-decoration: none;
   transform: translateY(-1px);
@@ -367,12 +371,12 @@
 .settings-save-button,
 .extension-primary-button,
 .billing-upgrade-button {
-  color: #fff !important;
-  border-color: var(--pa-color-primary) !important;
+  color: var(--pa-color-primary-foreground) !important;
+  border-color: var(--pa-color-primary-action) !important;
   background: linear-gradient(
     135deg,
-    var(--pa-color-primary),
-    var(--pa-color-primary-dark)
+    var(--pa-color-primary-action),
+    var(--pa-color-primary-action-hover)
   ) !important;
   box-shadow: 0 10px 24px rgb(4 118 105 / 20%) !important;
 }
@@ -381,7 +385,9 @@
 .settings-save-button:hover:not(:disabled),
 .extension-primary-button:hover:not(:disabled),
 .billing-upgrade-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--pa-color-primary-dark), #055f5b) !important;
+  color: var(--pa-color-primary-foreground) !important;
+  border-color: var(--pa-color-primary-action-hover) !important;
+  background: var(--pa-color-primary-action-hover) !important;
   box-shadow: 0 13px 30px rgb(4 104 94 / 25%) !important;
   transform: translateY(-1px) !important;
 }

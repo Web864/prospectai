@@ -1,5 +1,6 @@
 ﻿import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import type { CSSProperties } from 'react';
 import { MiniTrend } from './MiniTrend';
 
 export interface MetricCardProps {
@@ -21,18 +22,15 @@ export default function MetricCard({
   graphColor = '#8dd8c9',
   visual,
 }: MetricCardProps) {
+  const iconStyle: CSSProperties & { '--metric-icon-color': string } = {
+    '--metric-icon-color': iconColor,
+  };
+
   return (
     <article className="metric-card">
       <div className="metric-card-top">
         <strong className="metric-card-value">{value}</strong>
-        <span
-          className="metric-card-icon"
-          style={{
-            color: iconColor,
-            backgroundColor: `color-mix(in srgb, ${iconColor} 11%, white)`,
-          }}
-          aria-hidden="true"
-        >
+        <span className="metric-card-icon" style={iconStyle} aria-hidden="true">
           <Icon size={21} strokeWidth={1.9} />
         </span>
       </div>

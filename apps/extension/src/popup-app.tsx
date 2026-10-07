@@ -53,6 +53,7 @@ export function PopupApp() {
   const [registeredResult, setRegisteredResult] = useState<RegisteredResult>();
   const [usage, setUsage] = useState<typeof usageResponseSchema._output.data>();
   const [progress, setProgress] = useState(0);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const pollingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshGuest = async () => {
@@ -64,6 +65,14 @@ export function PopupApp() {
     await chrome.storage.local.set({ guestSessionId: parsed.data.data.sessionId });
     return parsed.data.data;
   };
+
+  useEffect(() => {
+    void chrome.storage.local.get('theme').then((stored) => {
+      const nextTheme = stored.theme === 'dark' ? 'dark' : 'light';
+      setTheme(nextTheme);
+      document.documentElement.dataset.theme = nextTheme;
+    });
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -310,6 +319,20 @@ export function PopupApp() {
           </strong>
         </div>
         <span className="mode-pill">{guest ? 'Guest mode' : 'ProspectAI'}</span>
+        <button
+          className="theme-toggle"
+          type="button"
+          aria-label={theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
+          aria-pressed={theme === 'dark'}
+          onClick={() => {
+            const nextTheme = theme === 'dark' ? 'light' : 'dark';
+            setTheme(nextTheme);
+            document.documentElement.dataset.theme = nextTheme;
+            void chrome.storage.local.set({ theme: nextTheme });
+          }}
+        >
+          {theme === 'dark' ? 'Light' : 'Dark'}
+        </button>
       </header>
 
       <section className="value-card" aria-live="polite">

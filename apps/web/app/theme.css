@@ -1,0 +1,1389 @@
+/* One theme layer for public, auth, and workspace surfaces. */
+:root {
+  --pa-color-background: var(--pa-color-canvas);
+  --pa-color-foreground: var(--pa-color-text);
+  --pa-color-surface-elevated: var(--pa-color-surface);
+  --pa-color-surface-muted: var(--pa-color-surface-soft);
+  --pa-color-border-strong: #b8cbd6;
+  --pa-color-primary-foreground: #ffffff;
+  --pa-color-primary-action: #06776e;
+  --pa-color-primary-action-hover: #055f5b;
+  --pa-color-muted-foreground: var(--pa-color-muted);
+  --pa-color-accent: var(--pa-color-primary);
+  --pa-color-accent-foreground: #ffffff;
+  --pa-color-success-foreground: #ffffff;
+  --pa-color-warning-foreground: #241605;
+  --pa-color-danger-foreground: #ffffff;
+  --pa-color-info: var(--pa-color-blue);
+  --pa-color-info-foreground: #ffffff;
+  --pa-color-input: var(--pa-color-surface);
+  --pa-color-input-foreground: var(--pa-color-text);
+  --pa-color-placeholder: var(--pa-color-subtle);
+  --pa-color-overlay: rgb(8 22 40 / 62%);
+  --pa-color-card: var(--pa-color-surface);
+  --pa-color-card-foreground: var(--pa-color-text);
+  --pa-color-popover: var(--pa-color-surface);
+  --pa-color-popover-foreground: var(--pa-color-text);
+  --pa-color-sidebar: #0a1c31;
+  --pa-color-sidebar-foreground: #d8e4f3;
+  --pa-color-sidebar-border: rgb(255 255 255 / 9%);
+  --pa-color-sidebar-active: rgb(8 139 125 / 27%);
+  --pa-color-header: rgb(255 255 255 / 94%);
+  --pa-color-header-foreground: var(--pa-color-text);
+  --pa-color-code: #edf3f8;
+  --pa-color-code-foreground: #17304e;
+  --pa-color-selection: rgb(24 189 121 / 24%);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --pa-color-ink: #e8f2f3;
+  --pa-color-text: #e0ecef;
+  --pa-color-muted: #a6bac0;
+  --pa-color-subtle: #80979f;
+  --pa-color-primary: #27c5aa;
+  --pa-color-primary-dark: #159580;
+  --pa-color-success: #42d49a;
+  --pa-color-blue: #69aef7;
+  --pa-color-violet: #a997ff;
+  --pa-color-warning: #f1b64f;
+  --pa-color-danger: #f27687;
+  --pa-color-border: #29424d;
+  --pa-color-border-soft: #203640;
+  --pa-color-canvas: #0d171d;
+  --pa-color-surface: #14232b;
+  --pa-color-surface-soft: #192c35;
+  --pa-color-background: #0d171d;
+  --pa-color-foreground: #e0ecef;
+  --pa-color-surface-elevated: #1a2d36;
+  --pa-color-surface-muted: #102027;
+  --pa-color-border-strong: #3b5a65;
+  --pa-color-primary-foreground: #06221f;
+  --pa-color-primary-action: #27c5aa;
+  --pa-color-primary-action-hover: #169b86;
+  --pa-color-muted-foreground: #a6bac0;
+  --pa-color-accent-foreground: #06221f;
+  --pa-color-success-foreground: #06221f;
+  --pa-color-warning-foreground: #241605;
+  --pa-color-danger-foreground: #2c0d14;
+  --pa-color-info-foreground: #071d31;
+  --pa-color-input: #101e25;
+  --pa-color-input-foreground: #e0ecef;
+  --pa-color-placeholder: #78929b;
+  --pa-color-overlay: rgb(2 8 12 / 76%);
+  --pa-color-card: #14232b;
+  --pa-color-card-foreground: #e0ecef;
+  --pa-color-popover: #1a2d36;
+  --pa-color-popover-foreground: #e0ecef;
+  --pa-color-sidebar: #09151d;
+  --pa-color-sidebar-foreground: #d4e6ea;
+  --pa-color-sidebar-border: #203640;
+  --pa-color-sidebar-active: rgb(29 164 141 / 26%);
+  --pa-color-header: rgb(13 23 29 / 94%);
+  --pa-color-header-foreground: #e0ecef;
+  --pa-color-code: #0a151b;
+  --pa-color-code-foreground: #b9d5da;
+  --pa-color-selection: rgb(39 197 170 / 28%);
+  --pa-shadow-sm: 0 8px 28px rgb(0 0 0 / 22%);
+  --pa-shadow-md: 0 18px 46px rgb(0 0 0 / 30%);
+  --pa-shadow-lg: 0 24px 60px rgb(0 0 0 / 36%);
+  --pa-shadow-hover: 0 16px 38px rgb(0 0 0 / 34%);
+  --pa-focus-ring: 0 0 0 3px rgb(39 197 170 / 32%);
+}
+
+[data-theme='dark'] :is(html, body) {
+  background: var(--pa-color-canvas);
+  color: var(--pa-color-text);
+}
+
+.theme-toggle {
+  width: 38px;
+  height: 38px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--pa-color-border);
+  border-radius: var(--pa-radius-md);
+  color: var(--pa-color-muted);
+  background: var(--pa-color-surface);
+  cursor: pointer;
+  transition:
+    color var(--pa-motion-fast),
+    border-color var(--pa-motion-fast),
+    background var(--pa-motion-fast),
+    transform var(--pa-motion-fast);
+}
+
+.theme-toggle:hover {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-primary);
+  background: var(--pa-color-surface-muted);
+  transform: translateY(-1px);
+}
+
+[data-theme='dark']
+  :is(
+    .homepage,
+    .how-page,
+    .reference-page,
+    .page,
+    .form-wrap,
+    .auth-shell,
+    .workspace-main,
+    .workspace-content
+  ) {
+  color: var(--pa-color-text);
+  background-color: var(--pa-color-canvas);
+}
+
+[data-theme='dark']
+  :is(
+    .marketing-nav,
+    .home-footer,
+    .marketing-nav-inner,
+    .form-panel,
+    .app-header,
+    .workspace-topbar,
+    .feature,
+    .plan,
+    .metric,
+    .metric-card,
+    .state-panel,
+    .settings-section,
+    .detail-section,
+    .finding,
+    .lead-table,
+    .lead-empty,
+    .billing-summary-card,
+    .usage-card,
+    .recent-usage-card,
+    .pitch-card,
+    .extension-feature-card,
+    .reference-feature-card,
+    .reference-plan,
+    .reference-resource-card,
+    .faq-question-card,
+    .overlay-panel,
+    .dropdown-menu,
+    .toast,
+    .skeleton,
+    .workspace-search-results,
+    .workspace-notification-panel
+  ) {
+  color: var(--pa-color-card-foreground);
+  border-color: var(--pa-color-border);
+  background-color: var(--pa-color-card);
+  box-shadow: var(--pa-shadow-sm);
+}
+
+[data-theme='dark'] :is(.marketing-nav, .workspace-topbar) {
+  background: var(--pa-color-header);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 18%);
+}
+
+[data-theme='dark'] .home-footer {
+  background: var(--pa-color-sidebar);
+  color: var(--pa-color-sidebar-foreground);
+}
+
+[data-theme='dark'] .app-shell .workspace-sidebar {
+  color: var(--pa-color-sidebar-foreground);
+  background: var(--pa-color-sidebar);
+  border-color: var(--pa-color-sidebar-border);
+  box-shadow: 8px 0 28px rgb(0 0 0 / 20%);
+}
+
+[data-theme='dark'] .app-shell .workspace-sidebar :is(nav a, .extension-nav) {
+  color: #a9c0c7;
+}
+
+[data-theme='dark'] .app-shell .workspace-sidebar :is(nav a:hover, .extension-nav:hover) {
+  color: var(--pa-color-text);
+  background: rgb(255 255 255 / 6%);
+  border-color: var(--pa-color-border);
+}
+
+[data-theme='dark']
+  .app-shell
+  .workspace-sidebar
+  :is(nav a[aria-current='page'], .extension-nav[aria-current='page']) {
+  color: var(--pa-color-text);
+  background: var(--pa-color-sidebar-active);
+  border-color: rgb(39 197 170 / 34%);
+}
+
+[data-theme='dark']
+  :is(
+    .field input,
+    .field select,
+    .field textarea,
+    .toolbar input,
+    .toolbar select,
+    .settings-control,
+    .detail-actions select,
+    .detail-section textarea,
+    .pitch textarea,
+    .workspace-live-search input,
+    .lead-filter-control input,
+    .lead-filter-control select,
+    .research-url-input input
+  ) {
+  color: var(--pa-color-input-foreground);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-input);
+}
+
+[data-theme='dark']
+  :is(
+    .field input,
+    .field select,
+    .field textarea,
+    .toolbar input,
+    .toolbar select,
+    .settings-control,
+    .detail-actions select,
+    .detail-section textarea,
+    .pitch textarea,
+    .workspace-live-search input,
+    .lead-filter-control input,
+    .lead-filter-control select,
+    .research-url-input input
+  )::placeholder {
+  color: var(--pa-color-placeholder);
+}
+
+[data-theme='dark']
+  :is(
+    .workspace-live-search input:focus,
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus,
+    .toolbar input:focus,
+    .toolbar select:focus,
+    .settings-control:focus-within
+  ) {
+  background: var(--pa-color-input);
+}
+
+[data-theme='dark']
+  :is(
+    .button-secondary,
+    .pagination button,
+    .workspace-topbar-button,
+    .workspace-topbar .icon-button
+  ) {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface);
+}
+
+[data-theme='dark']
+  :is(
+    .button-secondary:hover,
+    .pagination button:hover:not(:disabled),
+    .workspace-topbar-button:hover
+  ) {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-primary);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] :is(.tab-list button, .muted, .breadcrumb, .workspace-search-results > span) {
+  color: var(--pa-color-muted);
+}
+
+[data-theme='dark'] :is(.tab-list button[aria-selected='true'], a, .text-link) {
+  color: var(--pa-color-primary);
+}
+
+[data-theme='dark'] :is(.skeleton span) {
+  background: linear-gradient(
+    90deg,
+    var(--pa-color-surface-muted),
+    var(--pa-color-border),
+    var(--pa-color-surface-muted)
+  );
+}
+
+[data-theme='dark'] :is(.overlay, .mobile-navigation .overlay) {
+  background: var(--pa-color-overlay);
+}
+
+[data-theme='dark']
+  :is(.badge-neutral, .privacy-note, .code-block, .evidence-quote, .analysis-evidence) {
+  color: var(--pa-color-muted);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] :is(.form-message, .confirmation-state, .partial-banner) {
+  background: var(--pa-color-surface-muted);
+  border-color: var(--pa-color-border);
+}
+
+[data-theme='dark'] :is(.error, .form-message-error, .alert-error) {
+  color: var(--pa-color-danger);
+  background: rgb(242 118 135 / 12%);
+  border-color: rgb(242 118 135 / 38%);
+}
+
+[data-theme='dark'] :is(.badge-positive, .badge-success, .success-message) {
+  color: var(--pa-color-success);
+  background: rgb(66 212 154 / 14%);
+}
+
+[data-theme='dark'] :is(.badge-warning, .warning-message) {
+  color: var(--pa-color-warning);
+  background: rgb(241 182 79 / 14%);
+}
+
+[data-theme='dark'] :is(.badge-danger, .danger-message) {
+  color: var(--pa-color-danger);
+  background: rgb(242 118 135 / 14%);
+}
+
+[data-theme='dark']
+  :is(
+    .how-hero,
+    .home-hero,
+    .reference-hero,
+    .reference-page,
+    .reference-pricing,
+    .reference-faq,
+    .reference-resources
+  ) {
+  background-color: var(--pa-color-canvas);
+  background-image: none;
+}
+[data-theme='dark']
+  :is(
+    .home-section,
+    .workflow-section,
+    .intelligence-section,
+    .pitch-section,
+    .audience-section,
+    .pricing-section,
+    .how-principles,
+    .reference-pricing,
+    .reference-faq,
+    .reference-resources,
+    .reference-page
+  ) {
+  color: var(--pa-color-text);
+  background-color: var(--pa-color-canvas);
+  background-image: none;
+}
+
+[data-theme='dark']
+  :is(
+    .home-section-heading h2,
+    .how-section-heading h2,
+    .reference-heading h1,
+    .reference-pricing-heading h1,
+    .reference-faq-heading h1,
+    .reference-resources-hero h1
+  ) {
+  color: var(--pa-color-ink);
+}
+
+[data-theme='dark']
+  :is(
+    .home-section-heading p,
+    .how-section-heading p,
+    .reference-heading > p,
+    .reference-pricing-heading > p,
+    .reference-faq-heading > p,
+    .reference-resources-hero > p
+  ) {
+  color: var(--pa-color-muted);
+}
+
+[data-theme='dark']
+  :is(.marketing-mobile-menu .mobile-menu-panel, .mobile-navigation .mobile-menu-panel) {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface-elevated);
+}
+
+/* Legacy workspace views share the same shell but have a few later, page-specific
+ * selectors that predate the semantic token layer. Keep those views on the same
+ * surfaces and text hierarchy without changing their functional styling. */
+[data-theme='dark'] .app-shell {
+  color: var(--pa-color-text);
+  background: var(--pa-color-canvas);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .analysis-stat,
+    .analysis-stat-card,
+    .analysis-head,
+    .analysis-table-head,
+    .analysis-row,
+    .analysis-table-row,
+    .analysis-table,
+    .analysis-filters,
+    .analysis-toolbar,
+    .analysis-tabs,
+    .score,
+    .score-progress,
+    .settings-card,
+    .settings-shell .workspace-content > section,
+    .research-panel,
+    .research-output-card,
+    .research-output,
+    .research-output-item,
+    .research-url-card,
+    .extension-management-card
+  ) {
+  color: var(--pa-color-card-foreground);
+  border-color: var(--pa-color-border);
+  background-color: var(--pa-color-card);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .analysis-stat span,
+    .analysis-stat small,
+    .analysis-stat-card span,
+    .analysis-stat-card small,
+    .analysis-row small,
+    .analysis-filters label,
+    .analysis-tabs,
+    .research-output-item small,
+    .settings-card p
+  ) {
+  color: var(--pa-color-muted);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .analysis-stat strong,
+    .analysis-stat-card strong,
+    .analysis-row strong,
+    .analysis-head,
+    .analysis-table h2,
+    .research-output-item strong,
+    .settings-card h2,
+    .settings-card h3
+  ) {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .analysis-filters input,
+    .analysis-filters select,
+    .analysis-filters button,
+    .research-url-card input,
+    .settings-card input,
+    .settings-card select,
+    .settings-card textarea
+  ) {
+  color: var(--pa-color-input-foreground);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-input);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(.analysis-row:hover, .analysis-filters button:hover, .research-output-item:hover) {
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell :is(.analysis-tabs button, .analysis-filters button) {
+  color: var(--pa-color-muted);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(.analysis-tabs button[aria-selected='true'], .analysis-tabs button.active) {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-primary);
+}
+
+[data-theme='dark'] .app-shell .analysis-actions :is(a, button) {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface);
+}
+
+[data-theme='dark'] .app-shell .analysis-actions :is(a, button):hover {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-primary);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell .state-panel-success {
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell .dropdown-menu :is(button:hover, button:focus-visible) {
+  color: var(--pa-color-text);
+  background: var(--pa-color-surface-muted);
+}
+
+/* Consolidated remediation for page-specific surfaces that predate semantic tokens. */
+[data-theme='dark'] :is(.app-shell, .homepage, .how-page, .reference-page, .page, .form-wrap) {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .app-header,
+    .metric,
+    .state-panel,
+    .analysis-hero,
+    .toolbar,
+    .form-panel,
+    .settings-section,
+    .detail-section,
+    .finding,
+    .lead-table,
+    .detail-hero,
+    .pitch,
+    .skeleton,
+    .lead-stat,
+    .opportunity-row,
+    .opportunity-summary .metric,
+    .analysis-stat,
+    .analysis-stat-card,
+    .analysis-table,
+    .billing-hero,
+    .billing-summary-card,
+    .billing-features,
+    .billing-help,
+    .billing-insight,
+    .pro-card,
+    .extension-hero,
+    .extension-feature-card,
+    .extension-help-card,
+    .research-hero-card,
+    .research-example-card,
+    .research-output-card,
+    .research-output-item,
+    .research-checklist,
+    .settings-nav,
+    .settings-nav-item,
+    .settings-form,
+    .research-url-form
+  ) {
+  color: var(--pa-color-card-foreground);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-card);
+  box-shadow: var(--pa-shadow-sm);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .app-header h1,
+    .app-header p,
+    .metric strong,
+    .metric-heading > span:first-child,
+    .metric-card-value,
+    .metric-card-title,
+    .analysis-stat strong,
+    .analysis-stat-card strong,
+    .analysis-head,
+    .analysis-row strong,
+    .analysis-table h2,
+    .opportunity-info h3,
+    .lead-stat strong,
+    .billing-plan-copy h2,
+    .billing-feature-column h2,
+    .billing-feature-column h3,
+    .billing-summary-card strong,
+    .billing-help-copy h3,
+    .extension-feature-card h3,
+    .extension-help-copy h2,
+    .research-example-copy strong,
+    .research-output-item strong,
+    .settings-nav-item strong
+  ) {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .app-header p,
+    .metric small,
+    .metric-card-copy small,
+    .breadcrumb,
+    .breadcrumb strong,
+    .analysis-stat span,
+    .analysis-stat small,
+    .analysis-stat-card span,
+    .analysis-stat-card small,
+    .analysis-row small,
+    .lead-empty p,
+    .analysis-filters label,
+    .opportunity-info small,
+    .opportunity-info p,
+    .lead-stat small,
+    .billing-eyebrow,
+    .billing-plan-copy p,
+    .billing-summary-card span,
+    .billing-summary-card small,
+    .billing-feature-column p,
+    .billing-help-copy p,
+    .extension-feature-card p,
+    .extension-help-copy p,
+    .extension-help-steps p,
+    .research-example-copy small,
+    .research-output-item p,
+    .settings-nav-item small
+  ) {
+  color: var(--pa-color-muted);
+}
+
+[data-theme='dark']
+  :is(.homepage, .how-page, .reference-page)
+  :is(
+    .faq-item,
+    .faq details,
+    .reference-faq-item,
+    .workflow li,
+    .how-step article,
+    .principle-grid article
+  ) {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background-color: var(--pa-color-surface);
+}
+
+[data-theme='dark'] .app-shell .analysis-filters div {
+  color: var(--pa-color-muted);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-input);
+}
+
+[data-theme='dark'] .app-shell .lead-empty {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-card);
+}
+
+[data-theme='dark'] .app-shell .lead-empty h2,
+[data-theme='dark'] .app-shell .lead-empty footer {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark'] .app-shell .lead-empty footer {
+  border-color: var(--pa-color-border);
+}
+
+[data-theme='dark'] .app-shell .lead-empty-icon {
+  color: var(--pa-color-primary);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell .research-url-form {
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-input);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .app-shell .research-url-input {
+  color: var(--pa-color-muted);
+}
+
+[data-theme='dark'] .app-shell .research-url-input::after {
+  background: var(--pa-color-border);
+}
+
+[data-theme='dark'] .app-shell .settings-form {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-card);
+}
+
+[data-theme='dark'] .app-shell .settings-form-heading :is(h2, p) {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark'] .app-shell .settings-form-heading p,
+[data-theme='dark'] .app-shell .settings-field > small {
+  color: var(--pa-color-muted);
+}
+
+[data-theme='dark'] .app-shell .settings-field,
+[data-theme='dark'] .app-shell .settings-field-label {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark']
+  :is(.homepage, .how-page, .reference-page)
+  :is(.reference-faq-item, .how-step article, .principle-grid article) {
+  box-shadow: var(--pa-shadow-sm);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .app-header,
+    .metric-card,
+    .metric,
+    .analysis-stat-icon,
+    .metric-card-icon,
+    .usage-circle,
+    .billing-plan-icon,
+    .billing-summary-icon,
+    .extension-feature-icon,
+    .extension-help-icon,
+    .research-benefit-icon,
+    .research-example-logo,
+    .opportunity-icon,
+    .lead-stat-icon
+  ) {
+  background: var(--pa-color-surface-muted);
+  border-color: var(--pa-color-border);
+}
+
+[data-theme='dark'] .app-shell .metric-card-icon {
+  color: color-mix(in srgb, var(--metric-icon-color) 40%, var(--pa-color-text));
+}
+
+[data-theme='dark'] .app-shell .analysis-stat-icon.blue {
+  color: var(--pa-color-blue);
+}
+
+[data-theme='dark'] .app-shell .analysis-stat-icon.green {
+  color: var(--pa-color-success);
+}
+
+[data-theme='dark'] .app-shell .analysis-stat-icon.red {
+  color: var(--pa-color-danger);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(.metric-card-value, .score-value, .analysis-stat-value, .usage-circle > span) {
+  color: var(--pa-color-ink);
+}
+
+[data-theme='dark'] .app-shell :is(.metric-card-title, .metric-card-copy small, .score small) {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .workspace-live-search input,
+    .research-url-input input,
+    .opportunity-toolbar input,
+    .opportunity-toolbar button,
+    .analysis-filters input,
+    .analysis-filters select,
+    .analysis-filters button,
+    .settings-control,
+    .settings-field input,
+    .settings-field select,
+    .settings-field textarea,
+    .detail-actions select,
+    .detail-section textarea,
+    .pitch textarea
+  ) {
+  color: var(--pa-color-input-foreground);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-input);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .workspace-live-search input,
+    .research-url-input input,
+    .opportunity-toolbar input,
+    .analysis-filters input,
+    .settings-field input,
+    .settings-field select,
+    .settings-field textarea
+  )::placeholder {
+  color: var(--pa-color-placeholder);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .button-secondary,
+    .opportunity-actions a,
+    .opportunity-actions button,
+    .analysis-actions a,
+    .billing-help-button,
+    .extension-store-button,
+    .extension-help-button,
+    .pagination button
+  ) {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(
+    .button-secondary:hover:not(:disabled),
+    .opportunity-actions a:hover,
+    .opportunity-actions button:hover,
+    .analysis-actions a:hover,
+    .billing-help-button:hover,
+    .extension-help-button:hover,
+    .pagination button:hover:not(:disabled),
+    .opportunity-row:hover,
+    .research-example-card:hover,
+    .lead-row:not(.lead-table-head):hover
+  ) {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-primary);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(.opportunity-row, .lead-row, .analysis-table-row, .analysis-row) {
+  border-color: var(--pa-color-border-soft);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(.opportunity-score, .tags span, .billing-active, .extension-nav[aria-current='page']) {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-border);
+  background: rgb(39 197 170 / 14%);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(.extension-nav-status, .research-connected, .billing-message, .extension-message) {
+  color: var(--pa-color-success);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(.score-progress, .score-track, .usage-circle-track, .progress-track) {
+  background: var(--pa-color-border);
+}
+
+[data-theme='dark'] .app-shell :is(.analysis-table-head, .lead-table-head) {
+  color: var(--pa-color-muted);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(.billing-hero, .billing-insight, .extension-hero, .extension-help-card, .research-hero-card) {
+  background: var(--pa-color-surface);
+}
+
+[data-theme='dark'] .app-shell :is(.billing-hero, .billing-insight) {
+  background-image: none;
+}
+
+[data-theme='dark']
+  .app-shell
+  :is(.billing-insight strong, .billing-active, .billing-plan-icon, .billing-help-icon) {
+  color: var(--pa-color-primary);
+}
+
+[data-theme='dark'] .app-shell :is(.pro-card, .extension-toast, .confidence, .pitch) {
+  color: var(--pa-color-card-foreground);
+  background: var(--pa-color-surface-muted);
+  border-color: var(--pa-color-border);
+}
+
+[data-theme='dark'] :is(.form-wrap, .auth-shell) {
+  background:
+    radial-gradient(circle at 80% 8%, rgb(39 197 170 / 10%), transparent 28%),
+    radial-gradient(circle at 16% 82%, rgb(105 174 247 / 9%), transparent 30%),
+    linear-gradient(145deg, #102027, var(--pa-color-canvas));
+}
+
+[data-theme='dark']
+  :is(.form-wrap, .auth-shell)
+  :is(.legal p, .form-panel > div > p, .field label, .field small) {
+  color: var(--pa-color-muted);
+}
+
+[data-theme='dark']
+  :is(.homepage, .how-page, .reference-page)
+  :is(
+    .home-section,
+    .workflow-section,
+    .intelligence-section,
+    .extension-section,
+    .pitch-section,
+    .audience-section,
+    .pricing-section,
+    .how-principles,
+    .feature,
+    .plan,
+    .faq-question-card,
+    .reference-feature-card,
+    .reference-plan,
+    .reference-resource-card,
+    .home-card,
+    .preview-card
+  ) {
+  color: var(--pa-color-card-foreground);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-card);
+}
+
+[data-theme='dark'] :is(.homepage, .how-page, .reference-page) :is(h1, h2, h3, h4, strong) {
+  color: var(--pa-color-ink);
+}
+
+[data-theme='dark']
+  :is(.homepage, .how-page, .reference-page)
+  :is(p, small, .muted, .home-section-heading p, .how-section-heading p) {
+  color: var(--pa-color-muted);
+}
+
+[data-theme='dark'] :is(.marketing-nav, .home-footer, .marketing-mobile-menu .mobile-menu-panel) {
+  border-color: var(--pa-color-border);
+}
+
+[data-theme='dark'] .mobile-navigation .drawer-panel {
+  width: min(340px, 88vw);
+  min-height: 100dvh;
+  max-height: 100dvh;
+  height: 100dvh;
+  overflow-y: auto;
+  background: var(--pa-color-surface-elevated);
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark'] .mobile-navigation .drawer-panel nav a {
+  color: var(--pa-color-muted);
+  background: transparent;
+}
+
+[data-theme='dark'] .mobile-navigation .drawer-panel nav a[aria-current='page'] {
+  color: var(--pa-color-text);
+  background: var(--pa-color-sidebar-active);
+  border: 1px solid var(--pa-color-border);
+}
+
+[data-theme='dark'] .mobile-navigation .drawer-panel nav a:hover,
+[data-theme='dark'] .mobile-navigation .drawer-panel nav a:focus-visible {
+  color: var(--pa-color-text);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] :is(.breadcrumb strong, .app-shell .breadcrumb strong) {
+  color: var(--pa-color-text);
+}
+
+/* Product mockups and icon tiles are UI, so they follow the active theme too. */
+[data-theme='dark']
+  .app-shell
+  :is(
+    .research-globe-icon,
+    .research-browser-card,
+    .research-browser-dots,
+    .research-browser-body,
+    .research-browser-globe,
+    .research-output-icon,
+    .research-benefit-icon,
+    .research-example-logo
+  ) {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell :is(.research-browser-copy i, .research-browser-lines i) {
+  background: var(--pa-color-border-strong);
+}
+
+[data-theme='dark'] .app-shell .research-browser-card {
+  color: var(--pa-color-text);
+  box-shadow: var(--pa-shadow-sm);
+}
+
+[data-theme='dark'] .app-shell .research-example-logo {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark'] .app-shell :is(.research-kicker, .research-checklist span) {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell .research-browser-dots i {
+  background: var(--pa-color-border-strong);
+}
+
+[data-theme='dark']
+  :is(.homepage, .how-page, .reference-page)
+  :is(
+    .hero-eyebrow,
+    .section-eyebrow,
+    .how-eyebrow,
+    .reference-eyebrow,
+    .reference-resources-eyebrow
+  ) {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+  box-shadow: none;
+}
+
+[data-theme='dark']
+  .homepage
+  :is(
+    .product-preview,
+    .preview-chrome,
+    .preview-rail,
+    .preview-main,
+    .preview-url,
+    .company-summary,
+    .preview-score,
+    .preview-opportunities,
+    .preview-services,
+    .pipeline-chip,
+    .value-band,
+    .value-card,
+    .reasoning-row,
+    .score-explainer,
+    .score-banner,
+    .score-card-large,
+    .audience-grid article,
+    .workflow-section .workflow li,
+    .home-faq-section .faq details
+  ) {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface);
+  box-shadow: var(--pa-shadow-sm);
+}
+
+[data-theme='dark']
+  .homepage
+  :is(
+    .preview-services > div,
+    .preview-opportunities > div,
+    .reasoning-row > span,
+    .preview-rail .rail-active,
+    .company-icon,
+    .opportunity-icon,
+    .home-icon,
+    .score-card-icon,
+    .audience-icon
+  ) {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark']
+  .homepage
+  :is(
+    .preview-chrome,
+    .preview-rail,
+    .preview-main,
+    .score-banner,
+    .home-faq-section .faq details
+  ) {
+  background-image: none;
+}
+
+[data-theme='dark']
+  .homepage
+  :is(
+    .preview-toolbar,
+    .preview-rail span,
+    .company-summary small,
+    .preview-score > small,
+    .preview-inline-link,
+    .value-card p,
+    .reasoning-row p,
+    .score-card-large > p,
+    .audience-grid p,
+    .workflow-section .workflow p,
+    .home-faq-section .faq details p
+  ) {
+  color: var(--pa-color-muted);
+}
+
+[data-theme='dark']
+  .homepage
+  :is(
+    .preview-brand,
+    .preview-rail strong,
+    .company-summary strong,
+    .preview-score strong,
+    .value-card h2,
+    .reasoning-row strong,
+    .score-card-heading strong,
+    .audience-grid h3,
+    .workflow-section .workflow h3,
+    .home-faq-section .faq summary
+  ) {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark'] .homepage .score-banner svg {
+  color: var(--pa-color-primary);
+}
+
+[data-theme='dark']
+  .how-page
+  :is(
+    .how-product-preview,
+    .how-preview-header,
+    .how-preview-header small,
+    .how-preview-body aside,
+    .how-preview-body aside > span,
+    .how-preview-content,
+    .how-preview-origin,
+    .opportunity-company,
+    .company-scan-icon,
+    .opportunity-strength,
+    .recommended-services > div,
+    .generate-pitch-preview,
+    .impact-chip,
+    .how-step-number,
+    .how-step-icon,
+    .principle-grid article
+  ) {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface);
+  box-shadow: none;
+}
+
+[data-theme='dark']
+  .how-page
+  :is(
+    .how-preview-body aside,
+    .how-preview-content,
+    .how-preview-header small,
+    .how-preview-body aside .is-active,
+    .how-preview-body aside .how-preview-origin,
+    .company-scan-icon,
+    .opportunity-strength,
+    .how-step-number,
+    .how-step-icon
+  ) {
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark']
+  .how-page
+  :is(
+    .how-preview-header small,
+    .how-preview-body aside > span,
+    .opportunity-company small,
+    .recommended-services small,
+    .how-step p,
+    .principle-grid article p
+  ) {
+  color: var(--pa-color-muted);
+}
+
+[data-theme='dark']
+  .how-page
+  :is(.how-preview-body aside .is-active, .how-step-number, .how-step-icon, .company-scan-icon) {
+  color: var(--pa-color-primary);
+}
+
+[data-theme='dark']
+  .reference-page
+  :is(
+    .signal-browser,
+    .signal-browser-company > svg,
+    .signal-row,
+    .signal-row > span,
+    .floating-tile,
+    .floating-chart,
+    .pricing-result-card,
+    .pricing-result-note,
+    .reference-popular,
+    .reference-faq-icon,
+    .reference-icon,
+    .reference-resource-arrow,
+    .reference-feature-card > a
+  ) {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface);
+  box-shadow: none;
+}
+
+[data-theme='dark']
+  .reference-page
+  :is(.signal-browser-bar, .signal-browser-company em, .reference-icon) {
+  color: var(--pa-color-primary-foreground);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .reference-page :is(.signal-browser-company b, .pricing-result-card b) {
+  background: var(--pa-color-border-strong);
+}
+
+[data-theme='dark']
+  .reference-page
+  :is(
+    .signal-browser-company > svg,
+    .signal-row > span,
+    .floating-tile,
+    .floating-chart,
+    .pricing-result-note,
+    .reference-popular,
+    .reference-faq-icon,
+    .reference-feature-card > a
+  ) {
+  color: var(--pa-color-primary);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .reference-page .signal-browser-company em {
+  color: var(--pa-color-primary-foreground);
+}
+
+[data-theme='dark']
+  .homepage
+  :is(
+    .service-rows > div,
+    .score-guidance,
+    .browser-frame,
+    .browser-bar,
+    .browser-bar > div,
+    .browser-page,
+    .extension-popover,
+    .extension-popover-icon,
+    .security-note,
+    .pitch-composer,
+    .composer-regenerate,
+    .home-plan,
+    .plan-icon,
+    .button-inverse
+  ) {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface);
+  box-shadow: none;
+}
+
+[data-theme='dark']
+  .homepage
+  :is(
+    .service-rows > div,
+    .score-guidance,
+    .browser-bar,
+    .browser-bar > div,
+    .extension-popover-icon,
+    .security-note,
+    .composer-regenerate,
+    .plan-icon
+  ) {
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .homepage :is(.browser-page, .pitch-composer) {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark'] .homepage :is(.browser-site-copy strong, .security-note strong) {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark'] .how-page :is(.recommended-services small, .how-final-cta) {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface);
+}
+
+[data-theme='dark'] .homepage .browser-bar > span {
+  background: var(--pa-color-border-strong);
+}
+
+[data-theme='dark'] .reference-page .signal-browser-bar i {
+  background: var(--pa-color-border-strong);
+}
+
+[data-theme='dark'] .reference-page :is(.visual-shape, .faq-question-card > span) {
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+  background-image: none;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .reference-page .faq-question-card b {
+  background: var(--pa-color-border-strong);
+}
+
+[data-theme='dark'] body .marketing-nav.marketing-nav {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-header);
+  box-shadow: var(--pa-shadow-sm);
+}
+
+[data-theme='dark'] .app-shell .lead-filter {
+  color: var(--pa-color-text);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-card);
+  background-image: none;
+}
+
+[data-theme='dark'] .app-shell .lead-filter-field + .lead-filter-field::before,
+[data-theme='dark'] .app-shell .lead-clear-filters::before {
+  background: var(--pa-color-border);
+}
+
+[data-theme='dark'] .reference-page .reference-resource-icon {
+  color: var(--pa-color-primary);
+  border: 1px solid var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .reference-page .reference-resource-icon svg {
+  filter: none;
+}
+
+[data-theme='dark'] .homepage .score-ring {
+  background-image: conic-gradient(var(--pa-color-warning) 62%, var(--pa-color-border-strong) 0);
+}
+
+[data-theme='dark'] .homepage .score-ring-green {
+  background-image: conic-gradient(var(--pa-color-primary) 87%, var(--pa-color-border-strong) 0);
+}
+
+[data-theme='dark'] .homepage .score-ring-large {
+  background-image: conic-gradient(
+    var(--pa-color-blue) calc(var(--score) * 1%),
+    var(--pa-color-border-strong) 0
+  );
+}
+
+[data-theme='dark'] .homepage .score-card-opportunity .score-ring-large {
+  background-image: conic-gradient(
+    var(--pa-color-primary) calc(var(--score) * 1%),
+    var(--pa-color-border-strong) 0
+  );
+}
+
+[data-theme='dark'] .homepage .score-ring::before,
+[data-theme='dark'] .homepage .score-ring-large::before,
+[data-theme='dark'] .app-shell .research-score-ring::before {
+  background: var(--pa-color-surface);
+}
+
+[data-theme='dark'] .app-shell .research-score-ring {
+  color: var(--pa-color-text);
+  background-image: conic-gradient(
+    var(--pa-color-primary) 0 94%,
+    var(--pa-color-border-strong) 94% 100%
+  );
+}

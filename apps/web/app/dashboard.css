@@ -48,6 +48,12 @@
   place-items: center;
   flex: 0 0 auto;
   border-radius: 12px;
+  color: var(--metric-icon-color, var(--pa-color-primary));
+  background-color: color-mix(
+    in srgb,
+    var(--metric-icon-color, var(--pa-color-primary)) 11%,
+    var(--pa-color-surface)
+  );
 }
 
 .mini-trend {
