@@ -750,6 +750,30 @@
   color: color-mix(in srgb, var(--metric-icon-color) 40%, var(--pa-color-text));
 }
 
+[data-theme='dark'] .app-shell .usage-circle {
+  color: var(--pa-color-text);
+  background: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell .usage-circle-track,
+[data-theme='dark'] .app-shell .usage-circle-progress {
+  fill: var(--pa-color-surface-muted);
+}
+
+[data-theme='dark'] .app-shell .usage-circle-track {
+  stroke: var(--pa-color-border-strong);
+}
+
+[data-theme='dark'] .app-shell .usage-circle > span {
+  color: var(--pa-color-text);
+}
+
+[data-theme='dark'] .app-shell .state-panel-icon {
+  color: var(--pa-color-primary);
+  border-color: var(--pa-color-border);
+  background: var(--pa-color-surface-muted);
+}
+
 [data-theme='dark'] .app-shell .analysis-stat-icon.blue {
   color: var(--pa-color-blue);
 }
