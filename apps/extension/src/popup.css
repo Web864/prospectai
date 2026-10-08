@@ -1131,6 +1131,7 @@ body {
   --popup-surface: #ffffff;
   --popup-surface-muted: #f0f5fb;
   --popup-ink: #182235;
+  --popup-heading: #10203c;
   --popup-muted: #627087;
   --popup-line: #dfe5ed;
   --popup-primary: #087a72;
@@ -1145,6 +1146,7 @@ body {
   --popup-surface: #14232b;
   --popup-surface-muted: #192c35;
   --popup-ink: #e0ecef;
+  --popup-heading: #f0f7f8;
   --popup-muted: #a6bac0;
   --popup-line: #29424d;
   --popup-primary: #27c5aa;
@@ -1164,8 +1166,31 @@ body {
 }
 
 [data-theme='dark']
-  :is(.detail, .domain, .value-detail, .connect-description, .value-footer, .security-note) {
+  :is(
+    .detail,
+    .domain,
+    .value-detail,
+    .connect-description,
+    .value-footer,
+    .security-note,
+    .privacy-note,
+    .trial-meter,
+    .guest-result > p,
+    .guest-result ul,
+    .conversion-panel ul,
+    .analysis-progress small,
+    .text-action
+  ) {
   color: var(--popup-muted);
+}
+
+[data-theme='dark'] :is(.value-brand strong, .value-card h1, .result-heading strong) {
+  color: var(--popup-heading);
+}
+
+[data-theme='dark']
+  :is(.value-footer span:last-child, .trial-meter strong, .opportunity-score strong) {
+  color: var(--popup-primary);
 }
 
 [data-theme='dark']

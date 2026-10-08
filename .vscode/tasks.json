@@ -1,16 +1,13 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "ProspectAI Web: Live Preview",
-			"type": "shell",
-			"command": "pnpm",
-			"args": [
-				"run",
-				"dev:web"
-			],
-			"isBackground": true,
-			"problemMatcher": []
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ProspectAI Web: Live Preview",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "dev:web"],
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
 }
