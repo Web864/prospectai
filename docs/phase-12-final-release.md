@@ -4,7 +4,7 @@
 
 The current repository was audited as the final release gate. The modular monolith, dedicated PostgreSQL-backed worker, Manifest V3 extension, Prisma database, guest-first onboarding, authentication/PKCE, usage, analysis, crawler, AI, billing, and theme foundations are present.
 
-All final local code, schema, test, build, dependency, and live HTTP runtime checks passed. One genuine dependency vulnerability was found and fixed: the root sharp override was upgraded from 0.35.4 to 0.35.5, including its lockfile graph. No Critical or High application-code defect was found.
+All final local code, schema, test, build, dependency, and live HTTP runtime checks passed. Two moderate Next.js advisories affecting 15.5.24 were found and fixed by upgrading the web application to the patched 15.5.27 Maintenance LTS release and regenerating the lockfile. No Critical or High application-code defect was found.
 
 Browser automation tooling was not available, so visual browser QA, browser-console inspection, responsive viewport inspection, and interactive OAuth/Stripe/Chrome Web Store verification remain manual.
 
@@ -19,7 +19,7 @@ Browser automation tooling was not available, so visual browser QA, browser-cons
 
 ## Web Application
 
-The required public, authentication, onboarding, and workspace routes loaded successfully from the live development server with HTTP 200 responses. The Next catch-all route compiled and served without missing chunks, webpack runtime errors, hydration errors, or React server errors.
+The required public, authentication, onboarding, and workspace routes loaded successfully from the live development server with HTTP 200 responses. After removing only the generated apps/web/.next directory, the Next catch-all route compiled and served without missing chunks, including ./1183.js, webpack runtime errors, hydration errors, or React server errors.
 
 Routes checked:
 
@@ -106,7 +106,7 @@ Final source and bundle scans found no credential-shaped secrets. No frontend se
 
 Manifest permissions are limited to activeTab, storage, and identity. CSP is local-only for extension pages. The structured logger redacts token, secret, password, authorization, cookie, and API-key fields.
 
-pnpm audit --prod initially found one High sharp vulnerability. It was fixed by upgrading the root sharp override and full lockfile dependency graph to 0.35.5. The final audit reported no known vulnerabilities.
+Dependency remediation: Next.js before 15.5.24; Next.js after 15.5.27; two moderate Next.js advisories resolved; final pnpm audit --prod reports no known vulnerabilities.
 
 ## Privacy
 
@@ -197,7 +197,7 @@ No other Critical or High application-code defect was identified during this aud
 - pnpm typecheck: PASS
 - pnpm format:check: PASS
 - pnpm test: PASS
-- pnpm audit --prod: PASS - no known vulnerabilities
+- pnpm audit --prod: PASS - no known vulnerabilities after Next.js 15.5.27 upgrade
 - git diff --check: PASS - CRLF normalization warnings only
 
 ## Builds
@@ -294,6 +294,6 @@ Production launch still requires external provider/infrastructure configuration 
 
 ## Final Decision
 
-PRODUCTION READY WITH EXTERNAL DEPENDENCIES
+PRODUCTION BLOCKED — BROWSER VERIFICATION REMAINS
 
 Browser automation was unavailable, so visual browser QA is explicitly pending and is not represented as a PASS.

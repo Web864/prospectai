@@ -4601,11 +4601,11 @@
 .app-shell.extension-management-shell .app-header,
 .app-shell.research-shell .app-header {
   margin: 12px 0 26px;
-  padding: 0 0 20px;
+  padding: 10px;
   border: 0;
   border-bottom: 1px solid var(--workspace-soft-line);
-  border-radius: 0;
-  background: transparent;
+  border-radius: 10px;
+  background: white;
   box-shadow: none;
 }
 

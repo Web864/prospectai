@@ -1,6 +1,7 @@
 import type { AnalysisJobStatus } from '@prospectai/types';
 
 export const extensionStates = [
+  'detecting_page',
   'first_use_guest',
   'guest_ready',
   'guest_disclosure',
@@ -19,6 +20,7 @@ export const extensionStates = [
   'backend_unavailable',
   'rate_limited',
   'analysis_failed',
+  'analysis_timed_out',
   'partial_result',
   'version_unsupported',
   'session_expired',
@@ -31,12 +33,16 @@ export const stateCopy: Record<
   ExtensionState,
   { title: string; detail: string; progress?: number }
 > = {
+  detecting_page: {
+    title: 'Checking this page',
+    detail: 'Confirming that the active page is ready for analysis.',
+  },
   first_use_guest: {
-    title: 'Current prospect detected',
-    detail: 'ProspectAI analyzes only the page you choose.',
+    title: 'Page ready to analyze',
+    detail: 'ProspectAI analyzes only the public page you choose.',
   },
   guest_ready: {
-    title: 'Current prospect detected',
+    title: 'Page ready to analyze',
     detail: 'Analyze this public business page for an evidence-backed opportunity.',
   },
   guest_disclosure: {
@@ -46,7 +52,6 @@ export const stateCopy: Record<
   guest_analyzing: {
     title: 'Analyzing this prospect',
     detail: 'Checking public signals and identifying a credible opportunity.',
-    progress: 35,
   },
   guest_result: {
     title: 'Opportunity found',
@@ -71,7 +76,6 @@ export const stateCopy: Record<
   registered_analyzing: {
     title: 'Analyzing this prospect',
     detail: 'Your analysis is running.',
-    progress: 35,
   },
   registered_result: {
     title: 'Analysis ready',
@@ -85,8 +89,8 @@ export const stateCopy: Record<
   },
   offline: { title: 'You are offline', detail: 'Reconnect to the internet and try again.' },
   backend_unavailable: {
-    title: 'ProspectAI is unavailable',
-    detail: 'The service could not be reached. Try again shortly.',
+    title: 'Could not connect to ProspectAI',
+    detail: 'The analysis service could not be reached. Check your connection and try again.',
   },
   rate_limited: {
     title: 'Please slow down',
@@ -95,6 +99,10 @@ export const stateCopy: Record<
   analysis_failed: {
     title: 'Analysis failed',
     detail: 'We could not produce a meaningful result. This attempt is released when eligible.',
+  },
+  analysis_timed_out: {
+    title: 'Analysis taking longer than expected',
+    detail: 'The job is not reporting healthy progress. Check again before retrying.',
   },
   partial_result: {
     title: 'Limited result ready',
@@ -131,6 +139,33 @@ export function stateFromTab(url?: string): ExtensionState {
       : 'unsupported_page';
   } catch {
     return 'unsupported_page';
+  }
+}
+
+export const analysisStageCount = 6;
+
+export function analysisStage(status: AnalysisJobStatus) {
+  switch (status) {
+    case 'queued':
+      return { index: 1, label: 'Queued for analysis' };
+    case 'validating':
+      return { index: 1, label: 'Preparing analysis' };
+    case 'fetching':
+    case 'rendering':
+      return { index: 2, label: 'Fetching website' };
+    case 'extracting':
+      return { index: 3, label: 'Collecting website evidence' };
+    case 'rule_analysis':
+      return { index: 4, label: 'Scoring website signals' };
+    case 'ai_processing':
+      return { index: 5, label: 'Generating insight' };
+    case 'opportunity_scoring':
+      return { index: 6, label: 'Preparing opportunity result' };
+    case 'retry_pending':
+    case 'retrying':
+      return { index: 1, label: 'Retrying analysis' };
+    default:
+      return { index: analysisStageCount, label: 'Preparing result' };
   }
 }
 

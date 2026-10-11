@@ -479,7 +479,7 @@ export function OpportunitiesView() {
                   <Link href={`/app/analysis/${encodeURIComponent(item.analysisId || item.id)}`}>
                     View evidence
                   </Link>
-                  <button>⋮</button>
+                  {/* <button>⋮</button> */}
                   {/* <span>›</span> */}
                 </div>
               </article>

@@ -11,6 +11,8 @@ import {
   stateFromApiStatus,
   stateFromJobStatus,
   stateFromTab,
+  analysisStage,
+  analysisStageCount,
 } from './state-model';
 
 const entitlement = (remaining: number) => ({ quotaReached: remaining === 0 });
@@ -19,9 +21,14 @@ describe('value-first extension states', () => {
   it('has user-facing copy for every required state', () =>
     expect(Object.keys(stateCopy)).toHaveLength(extensionStates.length));
 
+  it('shows a detection state before the active page and guest session are known', () => {
+    expect(stateCopy.detecting_page.title).toBe('Checking this page');
+    expect(stateCopy.detecting_page.detail).toContain('active page');
+  });
+
   it('opens a fresh install in guest mode instead of requiring an account', () => {
     expect(guestEntryState(entitlement(3), false)).toBe('first_use_guest');
-    expect(stateCopy.first_use_guest.title).toContain('prospect');
+    expect(stateCopy.first_use_guest.title).toBe('Page ready to analyze');
   });
 
   it('preserves ready guest state across extension reopen and browser storage reload', () => {
@@ -53,6 +60,9 @@ describe('value-first extension states', () => {
       'guestSessionId',
       'privacyAcknowledged',
       'currentGuestAnalysisId',
+      'activeAnalysisJobId',
+      'activeAnalysisMode',
+      'analysisStartedAt',
     ]);
     expect(guestStorageKeys).not.toContain('pageContent');
     expect(guestStorageKeys).not.toContain('browsingHistory');
@@ -73,6 +83,13 @@ describe('value-first extension states', () => {
     expect(stateFromJobStatus('cancelled', 'guest')).toBe('analysis_failed');
   });
 
+  it('exposes truthful analysis stages and timeout recovery state', () => {
+    expect(analysisStageCount).toBe(6);
+    expect(analysisStage('fetching')).toEqual({ index: 2, label: 'Fetching website' });
+    expect(analysisStage('ai_processing')).toEqual({ index: 5, label: 'Generating insight' });
+    expect(stateFromJobStatus('retry_pending', 'guest')).toBe('guest_analyzing');
+    expect(stateCopy.analysis_timed_out.detail).toContain('healthy progress');
+  });
   it('separates trial exhaustion from rate limiting and account-session errors', () => {
     expect(stateFromApiStatus(429, 'GUEST_TRIAL_EXHAUSTED')).toBe('guest_limit_reached');
     expect(stateFromApiStatus(429, 'RATE_LIMITED')).toBe('rate_limited');

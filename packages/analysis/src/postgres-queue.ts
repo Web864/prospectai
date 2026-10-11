@@ -440,7 +440,7 @@ export class PostgresAnalysisJobQueue {
         SELECT "id"
         FROM "AnalysisJob"
         WHERE "status" IN ('QUEUED'::"AnalysisJobStatus", 'RETRY_PENDING'::"AnalysisJobStatus")
-          AND "nextAttemptAt" <= CURRENT_TIMESTAMP
+          AND "nextAttemptAt" <= (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
           AND "lockedAt" IS NULL
           AND "attempt" < "maxAttempts"
         ORDER BY "nextAttemptAt" ASC, "createdAt" ASC
@@ -453,13 +453,13 @@ export class PostgresAnalysisJobQueue {
             ELSE 'RETRYING'::"AnalysisJobStatus"
           END,
           "attempt" = job."attempt" + 1,
-          "lockedAt" = CURRENT_TIMESTAMP,
+          "lockedAt" = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
           "lockedBy" = ${workerId},
-          "startedAt" = COALESCE(job."startedAt", CURRENT_TIMESTAMP),
+          "startedAt" = COALESCE(job."startedAt", (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')),
           "finishedAt" = NULL,
           "errorCode" = NULL,
           "errorMessage" = NULL,
-          "updatedAt" = CURRENT_TIMESTAMP
+          "updatedAt" = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
       FROM candidate
       WHERE job."id" = candidate."id"
       RETURNING job."id", job."organizationId", job."analysisId", job."idempotencyKey",
@@ -476,13 +476,13 @@ export class PostgresAnalysisJobQueue {
               WHEN "attempt" >= "maxAttempts" THEN 'FAILED'::"AnalysisJobStatus"
               ELSE 'RETRY_PENDING'::"AnalysisJobStatus"
             END,
-            "nextAttemptAt" = CURRENT_TIMESTAMP,
+            "nextAttemptAt" = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
             "lockedAt" = NULL,
             "lockedBy" = NULL,
-            "finishedAt" = CASE WHEN "attempt" >= "maxAttempts" THEN CURRENT_TIMESTAMP ELSE NULL END,
+            "finishedAt" = CASE WHEN "attempt" >= "maxAttempts" THEN (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') ELSE NULL END,
             "errorCode" = 'WORKER_LEASE_EXPIRED',
             "errorMessage" = 'The previous worker stopped updating its lease.',
-            "updatedAt" = CURRENT_TIMESTAMP
+            "updatedAt" = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
         WHERE "status" IN (
           'VALIDATING'::"AnalysisJobStatus",
           'FETCHING'::"AnalysisJobStatus",
@@ -493,7 +493,7 @@ export class PostgresAnalysisJobQueue {
           'OPPORTUNITY_SCORING'::"AnalysisJobStatus",
           'RETRYING'::"AnalysisJobStatus"
         )
-          AND "lockedAt" < ${staleBefore}
+          AND "lockedAt" < (${staleBefore} AT TIME ZONE 'UTC')
         RETURNING "id", "organizationId", "analysisId", "idempotencyKey", "usageFeature", "usageQuantity", "status"
       `);
 

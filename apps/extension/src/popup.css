@@ -1,10 +1,12 @@
 :root {
   font-family:
     Inter,
+    'Segoe UI Variable',
+    'Segoe UI',
     ui-sans-serif,
+    system-ui,
     -apple-system,
     BlinkMacSystemFont,
-    'Segoe UI',
     sans-serif;
   color: #182235;
   background: #f7f9fb;
@@ -815,11 +817,11 @@ body {
 
 /* Premium value-first popup visual refresh */
 .value-page {
-  --popup-ink: #10203c;
-  --popup-muted: #64758e;
-  --popup-line: #dce6ef;
-  --popup-teal: #078b7d;
-  --popup-teal-dark: #066f67;
+  --popup-ink: var(--pa-color-text);
+  --popup-muted: var(--pa-color-muted);
+  --popup-line: var(--pa-color-border);
+  --popup-teal: var(--pa-color-primary);
+  --popup-teal-dark: var(--pa-color-primary-dark);
   width: 460px;
   min-height: 580px;
   color: var(--popup-ink);
@@ -1126,6 +1128,17 @@ body {
 }
 /* Shared semantic theme layer for the extension popup. */
 :root {
+  --pa-font-sans:
+    Inter, 'Segoe UI Variable', 'Segoe UI', ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, sans-serif;
+  --pa-color-text: #13213a;
+  --pa-color-muted: #566885;
+  --pa-color-subtle: #8190a5;
+  --pa-color-primary: #079681;
+  --pa-color-primary-dark: #06776e;
+  --pa-color-border: #dce8ed;
+  --pa-color-surface: #ffffff;
+  --pa-color-surface-soft: #f5f9fb;
   color-scheme: light;
   --popup-bg: #f7f9fb;
   --popup-surface: #ffffff;
@@ -1153,6 +1166,14 @@ body {
   --popup-primary-foreground: #06221f;
   --popup-danger: #f27687;
   --popup-focus: rgba(105, 174, 247, 0.48);
+  --pa-color-text: #e0ecef;
+  --pa-color-muted: #a6bac0;
+  --pa-color-subtle: #80979f;
+  --pa-color-primary: #27c5aa;
+  --pa-color-primary-dark: #169b86;
+  --pa-color-border: #29424d;
+  --pa-color-surface: #14232b;
+  --pa-color-surface-soft: #192c35;
 }
 
 [data-theme='dark'] :is(html, body, #root, .popup, .value-page, .connect-page) {

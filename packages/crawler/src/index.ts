@@ -137,7 +137,6 @@ async function fetchPinned(url: URL, init: RequestInit, address: string): Promis
         method: init.method ?? 'GET',
         headers,
         ...(url.protocol === 'https:' ? { servername: url.hostname } : {}),
-        ...(init.signal ? { signal: init.signal } : {}),
       },
       (response) => {
         const responseHeaders = new Headers();
@@ -153,7 +152,17 @@ async function fetchPinned(url: URL, init: RequestInit, address: string): Promis
         );
       },
     );
+    const abortRequest = () => request.destroy(new DOMException('Aborted', 'AbortError'));
+    if (init.signal) {
+      if (init.signal.aborted) {
+        abortRequest();
+        return;
+      }
+      init.signal.addEventListener('abort', abortRequest, { once: true });
+      request.once('close', () => init.signal?.removeEventListener('abort', abortRequest));
+    }
     request.once('error', reject);
+    request.end();
   });
 }
 
@@ -346,6 +355,7 @@ export class HttpFirstCrawler implements Crawler {
         clearTimeout(timeout);
       }
       if (response.status >= 300 && response.status < 400) {
+        await boundedBody(response, maxBytes);
         const location = response.headers.get('location');
         if (!location)
           throw new AppError(

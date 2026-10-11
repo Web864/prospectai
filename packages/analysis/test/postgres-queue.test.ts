@@ -63,6 +63,7 @@ describe('PostgreSQL analysis queue policy', () => {
   it('claims with a row lock that skips work owned by another worker', async () => {
     const query = vi.fn(async (strings: TemplateStringsArray) => {
       expect(strings.join('?')).toContain('FOR UPDATE SKIP LOCKED');
+      expect(strings.join('?')).toContain('CURRENT_TIMESTAMP AT TIME ZONE');
       return [];
     });
     const queue = new PostgresAnalysisJobQueue({ $queryRaw: query } as never);
@@ -74,6 +75,7 @@ describe('PostgreSQL analysis queue policy', () => {
       $queryRaw: vi.fn(async (query: { strings: readonly string[] }) => {
         const sql = query.strings.join('?');
         expect(sql).toContain('"lockedAt" <');
+        expect(sql).toContain('AT TIME ZONE');
         expect(sql).toContain("'RETRY_PENDING'");
         expect(sql).toContain('"attempt" >= "maxAttempts"');
         return [];

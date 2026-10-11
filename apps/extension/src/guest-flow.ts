@@ -6,6 +6,9 @@ export const guestStorageKeys = [
   'guestSessionId',
   'privacyAcknowledged',
   'currentGuestAnalysisId',
+  'activeAnalysisJobId',
+  'activeAnalysisMode',
+  'analysisStartedAt',
 ] as const;
 
 export function guestEntryState(

@@ -55,6 +55,30 @@ describe('crawler safety and extraction', () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it('consumes redirect bodies before following the next URL', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response('redirect response', {
+          status: 302,
+          headers: { location: 'https://example.com/final' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response('<html><head><title>Final</title></head><body>Done</body></html>', {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        }),
+      );
+    const crawler = new HttpFirstCrawler({
+      fetcher: fetcher as typeof fetch,
+      resolver: publicResolver,
+    });
+
+    const result = await crawler.crawl(new URL('https://example.com'));
+    expect(result.page.title).toBe('Final');
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
   it('enforces declared response size limits', async () => {
     const fetcher = vi.fn(
       async () =>
