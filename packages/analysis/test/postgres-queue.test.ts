@@ -107,9 +107,13 @@ describe('PostgreSQL analysis queue policy', () => {
   it('holds a row lock while persisting results for the active lease', async () => {
     const transaction = {
       $queryRaw: vi.fn(async (query: { strings: readonly string[] }) => {
-        expect(query.strings.join('?')).toContain('FOR UPDATE');
-        expect(query.strings.join('?')).toContain('lockedBy');
-        expect(query.strings.join('?')).toContain('attempt');
+        const sql = query.strings.join('?');
+        expect(sql).toContain('FROM "AnalysisJob"');
+        expect(sql).toContain('"id" = ?');
+        expect(sql).toContain('"lockedBy" = ?');
+        expect(sql).toContain('"attempt" = ?');
+        expect(sql).toContain('"lockedAt" IS NOT NULL');
+        expect(sql).toContain('FOR UPDATE');
         return [{ id: 'job' }];
       }),
     };

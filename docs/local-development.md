@@ -60,6 +60,28 @@ pnpm dev:worker
 
 ## PostgreSQL analysis queue
 
+## Extension API connection
+
+Keep one web process on port 3000 and one worker running while testing the local extension.
+`pnpm --filter @prospectai/extension build` creates an explicitly local unpacked build.
+Load `apps/extension/dist` in Chrome's Developer mode. Its only API host permission is the
+origin derived from `VITE_API_BASE_URL` (default `http://localhost:3000/api/v1` locally).
+Click the toolbar extension action on a public page to grant `activeTab`; opening the popup
+programmatically alone does not grant that permission. Guest credentials stay in extension
+storage and are sent as `Authorization: Guest ...`, never cookies.
+
+For release, set `VITE_APP_URL` and `VITE_API_BASE_URL` to deployed HTTPS URLs and run
+`pnpm --filter @prospectai/extension build:production`. This command rejects missing URLs,
+localhost, loopback hosts, HTTP, and embedded credentials. Local `dist` is not a release artifact.
+Inspect the generated manifest before uploading it. Extension-origin requests use Chrome's
+scoped host permission; do not add wildcard CORS or `<all_urls>`.
+
+Use `pnpm dev` to supervise all local processes, or start `pnpm dev:web` and
+`pnpm dev:worker` in separate terminals. Running the web process alone can accept a job but
+cannot process it. Stopping the web process makes the local extension API unreachable.
+
+## PostgreSQL queue behavior
+
 The local and production V1 flow is:
 
 ```text

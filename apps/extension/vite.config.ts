@@ -2,12 +2,11 @@ import react from '@vitejs/plugin-react';
 import { crx } from '@crxjs/vite-plugin';
 import { defineConfig, loadEnv } from 'vite';
 import { createManifest } from './manifest.config';
+import { extensionEnvironment } from './src/build-environment';
 
 export default defineConfig(({ mode }) => {
   const environment = loadEnv(mode, '../..', 'VITE_');
-  const apiUrl = environment.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1';
-  if (mode !== 'development' && !environment.VITE_API_BASE_URL)
-    throw new Error('VITE_API_BASE_URL is required for production extension builds.');
+  const { apiUrl } = extensionEnvironment(mode, environment);
   const hostPermission = `${new URL(apiUrl).origin}/*`;
 
   return {

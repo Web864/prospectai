@@ -99,6 +99,6 @@ describe('value-first extension states', () => {
     expect(stateFromApiStatus(400, 'AUTH_HANDOFF_INVALID')).toBe('auth_failed');
     expect(stateCopy.auth_failed.detail).toContain('guest result is safe');
     expect(stateFromApiStatus(403)).toBe('session_revoked');
-    expect(stateFromApiStatus(503)).toBe('backend_unavailable');
+    expect(stateFromApiStatus(503)).toBe('api_server_error');
   });
 });

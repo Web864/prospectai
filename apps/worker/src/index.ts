@@ -135,7 +135,9 @@ async function processJob(
     let partial = true;
 
     await queue.updateProgress(lease, 'ai_processing', 75);
-    if (process.env.OPENAI_API_KEY) {
+    if (
+      process.env.AI_PROVIDER === 'gemini' ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY
+    ) {
       try {
         const environment = loadAiEnvironment();
         const provider = new OpenAiProvider({

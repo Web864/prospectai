@@ -1,6 +1,8 @@
-const developmentAppUrl = 'http://localhost:3000';
-if (!import.meta.env.DEV && (!import.meta.env.VITE_APP_URL || !import.meta.env.VITE_API_BASE_URL))
-  throw new Error('VITE_APP_URL and VITE_API_BASE_URL are required in production.');
+import { extensionEnvironment } from './build-environment';
 
-export const APP_URL = import.meta.env.VITE_APP_URL ?? developmentAppUrl;
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `${APP_URL}/api/v1`;
+const environment = extensionEnvironment(import.meta.env.MODE, {
+  VITE_APP_URL: import.meta.env.VITE_APP_URL,
+  VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+});
+export const APP_URL = environment.appUrl;
+export const API_BASE_URL = environment.apiUrl;

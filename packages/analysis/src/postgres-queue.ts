@@ -559,11 +559,11 @@ export class PostgresAnalysisJobQueue {
     return this.database.$transaction(async (transaction) => {
       const rows = await transaction.$queryRaw<Array<{ id: string }>>(Prisma.sql`
         SELECT id
-        FROM AnalysisJob
-        WHERE id = ${lease.id}
-          AND lockedBy = ${lease.lockedBy}
-          AND attempt = ${lease.attempt}
-          AND lockedAt IS NOT NULL
+        FROM "AnalysisJob"
+        WHERE "id" = ${lease.id}
+          AND "lockedBy" = ${lease.lockedBy}
+          AND "attempt" = ${lease.attempt}
+          AND "lockedAt" IS NOT NULL
         FOR UPDATE
       `);
       if (!rows[0])

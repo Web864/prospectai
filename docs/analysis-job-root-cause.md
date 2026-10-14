@@ -155,13 +155,13 @@ BLOCKED BY ENVIRONMENT
 
 The queued-state root cause is identified and fixed. Full end-to-end completion could not be declared because the controlled crawler request timed out in this environment and real Chrome automation was unavailable.
 
-## Successful End-to-End Verification
+## Prior End-to-End Attempt (2026-10-08)
 
 This section records the single permitted live analysis attempt. It was not successful because the crawler transport defect was discovered after the job had already exhausted its bounded retries.
 
 Job ID: cmuzfd7yb000adpqc7rpz97x2
 Target: https://www.iana.org/domains/example
-Worker: Dev-x-18720 during the recorded attempt; one healthy worker is running now as Dev-x-20864
+Worker: Dev-x-18720 during that historical attempt
 Start time: 2026-10-08T11:00:05.839Z
 Completion time: 2026-10-08T11:00:56.630Z
 
@@ -191,3 +191,92 @@ A second live analysis was intentionally not created because this verification r
 BLOCKED BY ENVIRONMENT
 
 The original queued-worker root cause and the crawler transport defect are fixed and verified in code. A successful persisted result and Chrome display could not be verified within the single-analysis constraint because the only live job failed before the crawler fix and browser automation was unavailable.
+
+## Successful End-to-End Verification
+
+The single live analysis required for the 2026-10-12 verification did not complete. It confirmed the crawler and scoring stages, then exposed a PostgreSQL identifier-quoting defect during lease-protected result persistence. That SQL defect has been fixed and covered by the queue regression test, but no second live analysis was submitted, so the fix has not been reverified end-to-end.
+
+Job ID: cmv4u6gog000adp2suhzbqnke
+Analysis ID: cmv4u6gnv0008dp2ssp45n0od
+Target: https://www.iana.org/
+Worker: Dev-x-21084 for the live job; exactly one worker runtime was active. The watch process restarted once after the SQL fix and reported ready as Dev-x-8980.
+Start time: 2026-10-12T05:53:32.598Z
+Completion time: 2026-10-12T05:53:45.581Z
+
+QUEUED: PASS (API accepted 202 with queued; PostgreSQL row observed at progress 0)
+VALIDATING: PASS (worker claimed the same job at attempt 1)
+FETCHING: PASS (crawler stage reached; API and PostgreSQL progress observed)
+EVIDENCE: PASS (page extraction reached; PostgreSQL recorded EXTRACTING)
+SCORING: PASS (worker advanced to OPPORTUNITY_SCORING at progress 90)
+AI: FAIL (configured, but worker logged AI_UNAVAILABLE on each attempt)
+RESULT PERSISTENCE: FAIL (lease query failed because unquoted AnalysisJob resolved as lowercase analysisjob; fix applied and queue tests pass, but not live-retested)
+API RESULT: FAIL (result endpoint returned the failed analysis state with no persisted score or evidence)
+EXTENSION RESULT: BLOCKED (no completed result was available, and the current build did not load into Chrome)
+
+Progress: PASS for real API stages, progress values, timestamps, and elapsed-time basis; no generic service-unavailable response was observed while the worker was healthy. The popup's visual progress was not verified.
+Popup close/reopen: BLOCKED (the ProspectAI extension was absent from Chrome's loaded extensions)
+Retry: PASS (the genuine persistence failure triggered bounded automatic retries on the same job; PostgreSQL contains exactly one job for this analysis, with no manual retry)
+Chrome: BLOCKED (production extension build passed, but Chrome did not load the unpacked build; popup/result display and close/reopen recovery were not testable)
+
+Crawler: PASS (www.iana.org resolved; direct crawler retrieval returned HTTP 200 HTML and extracted page text/headings)
+Worker health: PASS during the live job (worker_ready, job claim, three attempts, and terminal failure were logged). Web and worker were stopped after the run to release Prisma's Windows query-engine DLL for the requested Prisma generation check; PostgreSQL remains running.
+
+### Persistence fix found by the live run
+
+`withLease` used unquoted mixed-case PostgreSQL table and column identifiers. PostgreSQL folded `AnalysisJob` to `analysisjob`, producing error 42P01 before result persistence. The table and identifiers are now quoted, and the PostgreSQL queue test asserts the quoted SQL. All 17 analysis-package tests pass. The single-live-analysis limit was respected; the corrected path awaits a future authorized live verification.
+
+### Requested final checks
+
+- `pnpm lint`: PASS
+- `pnpm typecheck`: PASS
+- `pnpm format:check`: PASS
+- `pnpm test`: PASS (107 tests)
+- `pnpm prisma:generate`: PASS (after stopping the web and worker processes that held the Windows query-engine DLL)
+- `pnpm prisma:validate`: PASS
+- `pnpm prisma:migrate:status`: PASS (five migrations applied)
+- `pnpm --filter @prospectai/web build`: PASS
+- `pnpm --filter @prospectai/extension build`: PASS
+- `pnpm --filter @prospectai/worker build`: PASS
+- `pnpm audit --prod`: PASS (no known vulnerabilities)
+- `git diff --check`: PASS after the report update
+
+## Final End-to-End Decision (2026-10-12)
+
+ANALYSIS STILL REQUIRES FIXES
+
+The newly discovered persistence SQL bug is fixed and regression-tested, but the one live analysis failed before producing a result, the configured AI provider was unavailable, and Chrome did not load the extension. No second analysis or Phase 13 work was started.
+
+## Fresh Persistence Verification (2026-10-12)
+
+The corrected lease-protected persistence path was verified with one fresh analysis. No duplicate job or manual retry was created.
+
+Job ID: `cmv4v3sw6000adpi8b1cr7c00`
+Analysis ID: `cmv4v3svx0008dpi8yk9g5s7m`
+Target: `https://www.iana.org/domains/example`
+Worker: `Dev-x-17392`
+Start time: `2026-10-12T06:19:30.4202774Z`
+Completion time: `2026-10-12T06:19:35.704Z`
+
+QUEUED: PASS
+VALIDATING: PASS - worker claimed attempt 1 and acquired the lease
+FETCHING: PASS - reachable IANA page retrieved through the crawler
+EVIDENCE: PASS - four evidence-backed findings persisted
+SCORING: PASS - website score and opportunity scoring completed
+AI: PARTIAL - provider returned `AI_UNAVAILABLE`; no AI output was fabricated
+RESULT PERSISTENCE: PASS - the corrected quoted PostgreSQL identifiers allowed terminal result persistence
+API RESULT: PASS - guest result endpoint returned HTTP 200
+DATABASE/API PROJECTION MATCH: PASS - id, company name, domain, opportunity score, reasoning, key signals, next action, and status matched exactly
+EXTENSION RESULT: BLOCKED - Chrome loaded the page target, but no extension service-worker or popup target was exposed; browser automation is unavailable
+
+The worker reached terminal `PARTIAL` with progress 100, attempt 1, and no lock remaining. The persisted aggregate `WebsiteAnalysis.opportunityScore` was 84; the guest API intentionally exposes the highest persisted opportunity score, 98. The API value matched its corresponding persisted `Opportunity` record exactly, so this is an intentional projection rather than a persistence mismatch.
+
+Progress: PASS - real timestamps and terminal progress were persisted; no false percentage was used.
+Popup close/reopen recovery: BLOCKED - extension popup automation was unavailable.
+Retry: NOT TESTED - the job was healthy and was not retried.
+Chrome: BLOCKED - `BROWSER AUTOMATION UNAVAILABLE`; extension build passed, but popup/result verification could not be completed.
+
+## Current Decision
+
+ANALYSIS STILL REQUIRES FIXES
+
+The persistence defect is fixed and live-verified. Full end-to-end completion remains blocked by external AI provider availability and Chrome popup automation, not by the PostgreSQL queue or result persistence path.

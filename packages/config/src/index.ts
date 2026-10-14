@@ -94,8 +94,17 @@ export const loadGuestEnvironment = (environment: NodeJS.ProcessEnv = process.en
   guestSchema.parse(environment);
 export const loadBillingEnvironment = (environment: NodeJS.ProcessEnv = process.env) =>
   billingSchema.parse(environment);
-export const loadAiEnvironment = (environment: NodeJS.ProcessEnv = process.env) =>
-  aiSchema.parse(environment);
+export const loadAiEnvironment = (environment: NodeJS.ProcessEnv = process.env) => {
+  const provider = z.enum(['openai', 'gemini']).parse(environment.AI_PROVIDER ?? 'openai');
+  if (provider === 'gemini') {
+    return aiSchema.parse({
+      OPENAI_API_KEY: environment.GEMINI_API_KEY,
+      OPENAI_MODEL: environment.GEMINI_MODEL || 'gemini-3.8-flash',
+      OPENAI_BASE_URL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    });
+  }
+  return aiSchema.parse(environment);
+};
 export const loadEmailEnvironment = (environment: NodeJS.ProcessEnv = process.env) =>
   emailSchema.parse(environment);
 export const loadGoogleAuthEnvironment = (environment: NodeJS.ProcessEnv = process.env) =>

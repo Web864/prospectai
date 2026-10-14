@@ -19,6 +19,7 @@ import {
   analysisStageCount,
   stateCopy,
   stateFromApiStatus,
+  stateFromRequestError,
   stateFromJobStatus,
   stateFromTab,
   type ExtensionState,
@@ -156,13 +157,13 @@ export function PopupApp() {
           return;
         }
         const parsed = guestSessionResponseSchema.safeParse(await response.json());
-        if (!parsed.success) return setState('backend_unavailable');
+        if (!parsed.success) return setState('api_invalid_response');
         setGuest(parsed.data.data);
         await chrome.storage.local.set({ guestSessionId: parsed.data.data.sessionId });
         if (await resumeStoredJob('guest')) return;
         setState(guestEntryState(parsed.data.data, stored.privacyAcknowledged === true));
       })
-      .catch(() => setState(navigator.onLine ? 'backend_unavailable' : 'offline'));
+      .catch((error: unknown) => setState(stateFromRequestError(error, navigator.onLine)));
     const storageListener = (changes: Record<string, chrome.storage.StorageChange>) => {
       if (changes.accessToken?.newValue) {
         setState('auth_success');
@@ -212,7 +213,7 @@ export function PopupApp() {
       }
       const parsed = analysisJobProgressResponseSchema.safeParse(await response.json());
       if (!parsed.success) {
-        setState('backend_unavailable');
+        setState('api_invalid_response');
         return;
       }
       const job = parsed.data.data;
@@ -226,34 +227,43 @@ export function PopupApp() {
         nextState === 'registered_result' ||
         nextState === 'partial_result' ||
         nextState === 'analysis_failed';
-      if (terminal) {
+      const clearActiveJob = async () => {
         await chrome.storage.local.remove([
           'activeAnalysisJobId',
           'activeAnalysisMode',
           'analysisStartedAt',
         ]);
         setActiveJobId(undefined);
-      }
+      };
       if (['guest_result', 'registered_result', 'partial_result'].includes(nextState)) {
         const path =
           mode === 'guest'
             ? '/guest-analyses/' + encodeURIComponent(job.analysisId)
             : '/analyses/' + encodeURIComponent(job.analysisId);
         const detailResponse = await apiRequest(path);
+        if (!detailResponse.ok) {
+          setState(stateFromApiStatus(detailResponse.status, await errorCode(detailResponse)));
+          return;
+        }
         if (detailResponse.ok) {
           const body = await detailResponse.json();
           if (mode === 'guest') {
             const detail = guestAnalysisResultResponseSchema.safeParse(body);
-            if (detail.success) setGuestResult(detail.data.data);
-            await refreshGuest();
+            if (!detail.success) return setState('api_invalid_response');
+            setGuestResult(detail.data.data);
+            await clearActiveJob();
+            await refreshGuest().catch(() => undefined);
           } else {
             const detail = analysisDetailResponseSchema.safeParse(body);
-            if (detail.success) setRegisteredResult(detail.data.data);
+            if (!detail.success) return setState('api_invalid_response');
+            setRegisteredResult(detail.data.data);
+            await clearActiveJob();
           }
         }
         return;
       }
       if (nextState === 'analysis_failed') {
+        if (terminal) await clearActiveJob();
         if (mode === 'guest') await refreshGuest().catch(() => undefined);
         return;
       }
@@ -272,8 +282,8 @@ export function PopupApp() {
         () => void pollJob(jobId, mode, attempt + 1),
         pollIntervalMs,
       );
-    } catch {
-      setState(navigator.onLine ? 'backend_unavailable' : 'offline');
+    } catch (error) {
+      setState(stateFromRequestError(error, navigator.onLine));
     }
   };
   pollJobRef.current = pollJob;
@@ -298,7 +308,7 @@ export function PopupApp() {
       if (!response.ok)
         return setState(stateFromApiStatus(response.status, await errorCode(response)));
       const parsed = guestAnalysisAcceptedResponseSchema.safeParse(await response.json());
-      if (!parsed.success) return setState('backend_unavailable');
+      if (!parsed.success) return setState('api_invalid_response');
       setGuest(parsed.data.data.entitlement);
       await chrome.storage.local.set({
         currentGuestAnalysisId: parsed.data.data.analysisId,
@@ -308,8 +318,8 @@ export function PopupApp() {
       });
       setActiveJobId(parsed.data.data.jobId);
       await pollJob(parsed.data.data.jobId, 'guest');
-    } catch {
-      setState(navigator.onLine ? 'backend_unavailable' : 'offline');
+    } catch (error) {
+      setState(stateFromRequestError(error, navigator.onLine));
     } finally {
       operationRef.current = null;
     }
@@ -333,7 +343,7 @@ export function PopupApp() {
       if (!response.ok)
         return setState(stateFromApiStatus(response.status, await errorCode(response)));
       const parsed = analysisAcceptedResponseSchema.safeParse(await response.json());
-      if (!parsed.success) return setState('backend_unavailable');
+      if (!parsed.success) return setState('api_invalid_response');
       await chrome.storage.local.set({
         activeAnalysisJobId: parsed.data.data.jobId,
         activeAnalysisMode: 'registered',
@@ -341,8 +351,8 @@ export function PopupApp() {
       });
       setActiveJobId(parsed.data.data.jobId);
       await pollJob(parsed.data.data.jobId, 'registered');
-    } catch {
-      setState(navigator.onLine ? 'backend_unavailable' : 'offline');
+    } catch (error) {
+      setState(stateFromRequestError(error, navigator.onLine));
     } finally {
       operationRef.current = null;
     }
@@ -355,7 +365,14 @@ export function PopupApp() {
       if (
         activeJobId &&
         lastAnalysisModeRef.current &&
-        ['analysis_timed_out', 'backend_unavailable', 'offline'].includes(state)
+        [
+          'analysis_timed_out',
+          'backend_unavailable',
+          'offline',
+          'api_server_error',
+          'api_timeout',
+          'api_invalid_response',
+        ].includes(state)
       ) {
         const mode = lastAnalysisModeRef.current;
         setState(mode === 'guest' ? 'guest_analyzing' : 'registered_analyzing');
@@ -382,8 +399,8 @@ export function PopupApp() {
         return;
       }
       window.location.reload();
-    } catch {
-      setState(navigator.onLine ? 'backend_unavailable' : 'offline');
+    } catch (error) {
+      setState(stateFromRequestError(error, navigator.onLine));
     } finally {
       operationRef.current = null;
     }
@@ -676,6 +693,9 @@ export function PopupApp() {
           'rate_limited',
           'analysis_failed',
           'analysis_timed_out',
+          'api_server_error',
+          'api_timeout',
+          'api_invalid_response',
         ].includes(state) && (
           <button
             className="secondary-action"

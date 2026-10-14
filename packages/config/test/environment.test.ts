@@ -7,6 +7,19 @@ import {
 } from '../src/index';
 
 describe('process-scoped environment validation', () => {
+  it('selects Gemini credentials without falling back to OpenAI', () => {
+    expect(loadAiEnvironment({ AI_PROVIDER: 'gemini', GEMINI_API_KEY: 'test-only' })).toMatchObject(
+      {
+        OPENAI_API_KEY: 'test-only',
+        OPENAI_MODEL: 'gemini-3.8-flash',
+        OPENAI_BASE_URL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+      },
+    );
+    expect(() =>
+      loadAiEnvironment({ AI_PROVIDER: 'gemini', OPENAI_API_KEY: 'test-only' }),
+    ).toThrow();
+    expect(() => loadAiEnvironment({ AI_PROVIDER: 'unknown' })).toThrow();
+  });
   it('allows the base server runtime to boot without feature integrations', () => {
     expect(loadServerEnvironment({})).toEqual({ NODE_ENV: 'development', TRUST_PROXY: false });
   });

@@ -54,7 +54,7 @@ export class OpenAiProvider implements AIProvider {
 
   private async json(system: string, payload: unknown) {
     const response = await this.fetcher(
-      new URL('/v1/chat/completions', this.configuration.baseUrl),
+      new URL('chat/completions', `${this.configuration.baseUrl.replace(/\/$/, '')}/`),
       {
         method: 'POST',
         headers: {

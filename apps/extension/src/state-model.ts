@@ -1,4 +1,5 @@
 import type { AnalysisJobStatus } from '@prospectai/types';
+import { ExtensionApiError } from './api-errors';
 
 export const extensionStates = [
   'detecting_page',
@@ -26,6 +27,11 @@ export const extensionStates = [
   'session_expired',
   'session_revoked',
   'permission_error',
+  'api_not_found',
+  'api_server_error',
+  'api_invalid_response',
+  'api_timeout',
+  'api_rejected',
 ] as const;
 export type ExtensionState = (typeof extensionStates)[number];
 
@@ -119,6 +125,30 @@ export const stateCopy: Record<
     title: 'Permission needed',
     detail: 'ProspectAI could not read the active tab.',
   },
+  api_not_found: {
+    title: 'API endpoint not found',
+    detail:
+      'The configured ProspectAI API does not support this request. Check the extension configuration.',
+  },
+  api_server_error: {
+    title: 'ProspectAI request failed',
+    detail:
+      'The server received the request but could not process it. Try again after the service recovers.',
+  },
+  api_invalid_response: {
+    title: 'Unexpected API response',
+    detail:
+      'ProspectAI returned a response this extension could not read. Check the API and extension versions.',
+  },
+  api_timeout: {
+    title: 'API request timed out',
+    detail:
+      'The request did not finish in time. Check the current job before starting another analysis.',
+  },
+  api_rejected: {
+    title: 'Request not accepted',
+    detail: 'The API rejected this request. Check the page and extension configuration.',
+  },
 };
 
 export function stateFromTab(url?: string): ExtensionState {
@@ -180,11 +210,26 @@ export function stateFromJobStatus(
 }
 
 export function stateFromApiStatus(status: number, code?: string): ExtensionState {
+  if (code === 'ANALYSIS_TIMEOUT') return 'analysis_timed_out';
+  if (code === 'ANALYSIS_FAILED') return 'analysis_failed';
+  if (code === 'AI_UNAVAILABLE') return 'api_server_error';
   if (code === 'GUEST_TRIAL_EXHAUSTED') return 'guest_limit_reached';
   if (code === 'AUTH_HANDOFF_EXPIRED' || code === 'AUTH_HANDOFF_INVALID') return 'auth_failed';
   if (code === 'VERSION_UNSUPPORTED') return 'version_unsupported';
   if (status === 401) return code?.startsWith('GUEST_') ? 'first_use_guest' : 'session_expired';
   if (status === 403) return 'session_revoked';
   if (status === 429) return 'rate_limited';
-  return 'backend_unavailable';
+  if (status === 404) return 'api_not_found';
+  if (status >= 500) return 'api_server_error';
+  return 'api_rejected';
+}
+
+export function stateFromRequestError(error: unknown, online: boolean): ExtensionState {
+  if (!online) return 'offline';
+  if (error instanceof ExtensionApiError) {
+    if (error.category === 'API_TIMEOUT') return 'api_timeout';
+    if (error.category === 'API_INVALID_RESPONSE') return 'api_invalid_response';
+    if (error.category === 'NETWORK_UNREACHABLE') return 'backend_unavailable';
+  }
+  return 'api_invalid_response';
 }
