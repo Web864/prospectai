@@ -65,6 +65,37 @@ const analysis = {
 };
 
 describe('production detail integrations', () => {
+  it('resolves the pending research route to the analysis ID returned by its terminal job', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.includes('/analysis-jobs/'))
+        return json({
+          data: {
+            id: 'job-1',
+            analysisId: 'analysis-1',
+            status: 'partial',
+            progress: 100,
+            attempt: 1,
+            maxAttempts: 3,
+            nextAttemptAt: '2026-10-15T00:00:00.000Z',
+            startedAt: '2026-10-15T00:00:00.000Z',
+            finishedAt: '2026-10-15T00:00:01.000Z',
+            updatedAt: '2026-10-15T00:00:01.000Z',
+            errorCode: null,
+            errorMessage: null,
+          },
+        });
+      if (path.endsWith('/analyses/analysis-1')) return json(analysis);
+      return json({ error: { code: 'NOT_FOUND' } }, 404);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<AnalysisDetailView analysisId="pending" jobId="job-1" />);
+    expect(await screen.findByText('A software company.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Export PDF' })).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/analyses/analysis-1'))).toBe(
+      true,
+    );
+  });
   it('renders a lead returned by the API and protects archive', async () => {
     const fetchMock = vi
       .fn()

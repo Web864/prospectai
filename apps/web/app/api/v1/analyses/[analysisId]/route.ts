@@ -1,5 +1,6 @@
 import { apiError, requestId } from '@prospectai/api';
 import { prisma } from '@prospectai/database';
+import { unreadablePageText } from '@prospectai/crawler';
 import { AppError, analysisLimitations } from '@prospectai/shared';
 import type { AnalysisJobStatus } from '@prospectai/types';
 import { requireRequestActor } from '../../../../../lib/request-actor';
@@ -46,6 +47,7 @@ export async function GET(
       },
     });
     if (!analysis) throw new AppError('NOT_FOUND', 'Analysis not found.', 404);
+    if (unreadablePageText(analysis.extractedText ?? '')) throw new AppError('ANALYSIS_UNAVAILABLE', 'Stored page content is unreadable. Re-analyze this website.', 409);
     return Response.json(
       {
         data: {

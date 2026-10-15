@@ -499,7 +499,11 @@ export function PopupApp() {
           {domain ? `Page to analyze: ${domain}` : 'Opportunity intelligence'}
         </p>
         <h1>{copy.title}</h1>
-        <p className="value-detail">{copy.detail}</p>
+        <p className="value-detail">
+          {state === 'analysis_failed' && jobProgress?.errorMessage
+            ? jobProgress.errorMessage
+            : copy.detail}
+        </p>
         {state === 'detecting_page' && (
           <div className="auth-status" role="status">
             <span className="status-spinner" />

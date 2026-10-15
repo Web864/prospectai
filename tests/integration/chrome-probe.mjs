@@ -1,4 +1,5 @@
 // Local Chrome diagnostics. Expressions must return only non-sensitive evidence.
+import { mkdir, writeFile } from 'node:fs/promises';
 const [operation, ...args] = process.argv.slice(2);
 const targets = await fetch('http://127.0.0.1:9222/json/list').then((r) => r.json());
 if (operation === 'targets') {
@@ -22,7 +23,7 @@ const timer = setTimeout(() => {
   process.exit(1);
 }, 45000);
 const observations = [];
-socket.onmessage = ({ data }) => {
+socket.onmessage = async ({ data }) => {
   const message = JSON.parse(data);
   if (message.method === 'Network.responseReceived') {
     const response = message.params.response;
@@ -34,6 +35,13 @@ socket.onmessage = ({ data }) => {
     observations.push({ runtimeError: message.params.exceptionDetails.text });
   if (message.id !== 1) return;
   clearTimeout(timer);
+  if (operation === 'screenshot' && message.result?.data) {
+    await mkdir('test-results', { recursive: true });
+    await writeFile('test-results/pdf-preview.png', Buffer.from(message.result.data, 'base64'));
+    console.log('Saved test-results/pdf-preview.png');
+    socket.close();
+    return;
+  }
   console.log(JSON.stringify({ ...message, observations }));
   socket.close();
 };
@@ -53,15 +61,17 @@ socket.send(
               method: 'Extensions.triggerAction',
               params: { id: args[0], targetId: args[1] },
             }
-          : {
-              id: 1,
-              method: 'Runtime.evaluate',
-              params: {
-                expression: args.slice(1).join(' '),
-                awaitPromise: true,
-                returnByValue: true,
-                userGesture: true,
+          : operation === 'screenshot'
+            ? { id: 1, method: 'Page.captureScreenshot', params: { format: 'png' } }
+            : {
+                id: 1,
+                method: 'Runtime.evaluate',
+                params: {
+                  expression: args.slice(1).join(' '),
+                  awaitPromise: true,
+                  returnByValue: true,
+                  userGesture: true,
+                },
               },
-            },
   ),
 );

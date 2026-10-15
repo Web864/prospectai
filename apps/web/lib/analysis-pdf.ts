@@ -2,7 +2,9 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, rgb } from 'pdf-lib';
-import { AppError } from '@prospectai/shared';
+import { AppError, analysisLimitations } from '@prospectai/shared';
+import type { Prisma } from '@prospectai/database';
+import { unreadablePageText } from '@prospectai/crawler';
 
 export interface AnalysisPdfReport {
   domain: string;
@@ -29,6 +31,48 @@ export interface AnalysisPdfReport {
     opportunityScore: number;
     confidence: number;
   }>;
+}
+
+export function persistedPdfReport(
+  analysis: Prisma.WebsiteAnalysisGetPayload<{
+    include: { website: true; findings: true; opportunities: true };
+  }>,
+): AnalysisPdfReport {
+  if (unreadablePageText(analysis.extractedText ?? ''))
+    throw new AppError(
+      'CONFLICT',
+      'The stored page content is unreadable. Re-analyze this website before exporting.',
+      409,
+    );
+  if (analysis.status !== 'COMPLETED' && analysis.status !== 'PARTIAL')
+    throw new AppError('CONFLICT', 'A completed or partial report is required for export.', 409);
+  return {
+    domain: analysis.website.domain,
+    url: analysis.website.canonicalUrl,
+    analyzedAt: analysis.completedAt,
+    status: analysis.status,
+    websiteScore: analysis.websiteScore,
+    opportunityScore: analysis.opportunityScore,
+    confidence: analysis.confidence,
+    summary: analysis.businessSummary,
+    limitations: analysisLimitations(analysis.status, analysis.aiStatus),
+    findings: analysis.findings.map((finding) => ({
+      category: finding.category,
+      title: finding.title,
+      description: finding.description,
+      sourceUrl: finding.sourceUrl,
+      evidence:
+        typeof finding.evidence === 'string'
+          ? finding.evidence
+          : finding.evidence &&
+              typeof finding.evidence === 'object' &&
+              'observation' in finding.evidence &&
+              typeof finding.evidence.observation === 'string'
+            ? finding.evidence.observation
+            : '',
+    })),
+    opportunities: analysis.opportunities,
+  };
 }
 
 export function reportFilename(domain: string) {

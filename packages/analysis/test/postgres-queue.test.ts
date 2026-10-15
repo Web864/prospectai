@@ -7,6 +7,61 @@ import {
 } from '../src/index.js';
 
 describe('PostgreSQL analysis queue policy', () => {
+  it('keeps the canonical analysis state synchronized with fenced stage progress', async () => {
+    const transaction = {
+      analysisJob: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValue({ status: 'FETCHING', analysisId: 'analysis', organizationId: 'org' }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      websiteAnalysis: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    };
+    const queue = new PostgresAnalysisJobQueue({
+      $transaction: async (work: (transaction: object) => Promise<void>) => work(transaction),
+    } as never);
+    await queue.updateProgress({ id: 'job', lockedBy: 'worker', attempt: 1 }, 'extracting', 40);
+    expect(transaction.websiteAnalysis.updateMany).toHaveBeenCalledWith({
+      where: { id: 'analysis', organizationId: 'org' },
+      data: { status: 'EXTRACTING' },
+    });
+  });
+  it('completes and consumes usage inside an existing persistence transaction', async () => {
+    const transaction = {
+      analysisJob: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValue({
+            status: 'OPPORTUNITY_SCORING',
+            id: 'job',
+            analysisId: 'analysis',
+            organizationId: 'org',
+            usageFeature: 'analysis',
+            usageQuantity: 1,
+            idempotencyKey: 'request',
+          }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      websiteAnalysis: { updateMany: vi.fn() },
+      usageLedger: { upsert: vi.fn() },
+    };
+    const database = { $transaction: vi.fn() };
+    const queue = new PostgresAnalysisJobQueue(database as never);
+    await queue.complete(
+      { id: 'job', lockedBy: 'worker', attempt: 1 },
+      'partial',
+      transaction as never,
+    );
+    expect(database.$transaction).not.toHaveBeenCalled();
+    expect(transaction.analysisJob.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'PARTIAL', progress: 100, lockedBy: null }),
+      }),
+    );
+    expect(transaction.usageLedger.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ create: expect.objectContaining({ operation: 'CONSUMED' }) }),
+    );
+  });
   it('uses bounded exponential retry delays', () => {
     expect(retryDelayMs(1)).toBe(1_000);
     expect(retryDelayMs(2)).toBe(2_000);

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import {
   FileText,
   CheckCircle2,
@@ -55,6 +55,8 @@ import { useApiResource } from '../lib/use-api-resource';
 import { ApiClientError, webApiRequest } from '../lib/web-api';
 
 export function ResearchView() {
+  const operation = useRef(false);
+  const submission = useRef<{ url: string; key: string } | null>(null);
   const [status, setStatus] = useState<{ busy: boolean; message: string }>({
     busy: false,
     message: '',
@@ -63,13 +65,16 @@ export function ResearchView() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (status.busy) return;
+    if (operation.current) return;
     const submittedUrl = String(new FormData(event.currentTarget).get('url') ?? '');
+    operation.current = true;
+    if (submission.current?.url !== submittedUrl)
+      submission.current = { url: submittedUrl, key: crypto.randomUUID() };
     setStatus({ busy: true, message: '' });
     try {
       const result = await webApiRequest('/analyses', analysisAcceptedResponseSchema, {
         method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        headers: { 'Idempotency-Key': submission.current.key },
         body: JSON.stringify({ url: submittedUrl }),
       });
       window.location.assign(`/app/analysis/pending?job=${encodeURIComponent(result.data.jobId)}`);
@@ -78,6 +83,8 @@ export function ResearchView() {
         busy: false,
         message: error instanceof ApiClientError ? error.message : 'Analysis could not start.',
       });
+    } finally {
+      operation.current = false;
     }
   }
 

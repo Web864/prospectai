@@ -82,7 +82,7 @@ export async function processJob(
     void queue.heartbeat(lease).catch((error: unknown) =>
       logger.error('job_heartbeat_failed', {
         jobId: job.id,
-        error: error instanceof Error ? error.message : 'Unknown heartbeat failure',
+        error: error instanceof AppError ? error.code : 'BACKEND_UNAVAILABLE',
       }),
     );
   }, heartbeatIntervalMs);
@@ -295,6 +295,10 @@ export async function processJob(
       attempt: job.attempt,
       retryScheduled: result.retry,
       errorCode: error instanceof AppError ? error.code : 'ANALYSIS_FAILED',
+      reason:
+        error instanceof AppError && typeof error.details.reason === 'string'
+          ? error.details.reason
+          : undefined,
     });
   } finally {
     clearInterval(heartbeat);
@@ -349,7 +353,7 @@ export async function startWorker() {
 if (process.env.NODE_ENV !== 'test')
   startWorker().catch((error: unknown) => {
     logger.error('worker_start_failed', {
-      error: error instanceof Error ? error.message : 'Unknown worker startup error',
+      error: error instanceof AppError ? error.code : 'BACKEND_UNAVAILABLE',
     });
     process.exitCode = 1;
   });

@@ -1,15 +1,89 @@
 import { describe, expect, it, vi } from 'vitest';
+import { Readable } from 'node:stream';
+import { gzipSync, deflateSync, brotliCompressSync } from 'node:zlib';
 import {
   HttpFirstCrawler,
   extractPage,
   isBlockedAddress,
   normalizePublicUrl,
   validateNetworkTarget,
+  decodePinnedBody,
+  unreadablePageText,
 } from '../src/index.js';
 
 const publicResolver = async () => [{ address: '93.184.216.34', family: 4 }];
 
 describe('crawler safety and extraction', () => {
+  it('enforces the decoded byte limit on a compressed response', async () => {
+    const compressed = gzipSync(Buffer.from('<html><body>' + 'x'.repeat(4000) + '</body></html>'));
+    const crawler = new HttpFirstCrawler({
+      resolver: publicResolver,
+      maxBytes: 1000,
+      fetcher: async () =>
+        new Response(
+          Readable.toWeb(
+            decodePinnedBody(Readable.from([compressed]), 'gzip', 1000),
+          ) as ReadableStream,
+          { headers: { 'content-type': 'text/html' } },
+        ),
+    });
+    await expect(crawler.crawl(new URL('https://example.com'))).rejects.toMatchObject({
+      code: 'WEBSITE_BLOCKED_CRAWLER',
+    });
+  });
+  it('bounds DNS resolution independently of the HTTP request', async () => {
+    await expect(
+      validateNetworkTarget(new URL('https://example.com'), () => new Promise(() => undefined), 10),
+    ).rejects.toMatchObject({ code: 'ANALYSIS_TIMEOUT' });
+  });
+  it.each([
+    ['gzip', gzipSync],
+    ['deflate', deflateSync],
+    ['br', brotliCompressSync],
+  ] as const)('decodes %s before extracting evidence', async (encoding, compress) => {
+    const html =
+      '<html lang="en"><head><title>Real title</title><meta name="description" content="Real description"></head><body>Actual readable evidence.</body></html>';
+    const stream = decodePinnedBody(Readable.from([compress(Buffer.from(html))]), encoding);
+    const decoded = await new Response(Readable.toWeb(stream) as ReadableStream).text();
+    expect(decoded).toBe(html);
+    expect(unreadablePageText(decoded)).toBe(false);
+    expect(
+      extractPage(decoded, new URL('https://example.com'), {
+        status: 200,
+        contentType: 'text/html',
+        responseTimeMs: 1,
+      }).title,
+    ).toBe('Real title');
+  });
+  it('bounds compressed input and rejects binary text instead of creating findings', async () => {
+    const stream = decodePinnedBody(Readable.from([Buffer.alloc(100)]), 'identity', 10);
+    await expect(
+      new Response(Readable.toWeb(stream) as ReadableStream).text(),
+    ).rejects.toMatchObject({ code: 'WEBSITE_BLOCKED_CRAWLER' });
+    expect(unreadablePageText('\u001f\uFFFD compressed bytes')).toBe(true);
+    const crawler = new HttpFirstCrawler({
+      resolver: publicResolver,
+      fetcher: async () =>
+        new Response('\u001f\uFFFD compressed bytes', { headers: { 'content-type': 'text/html' } }),
+    });
+    await expect(crawler.crawl(new URL('https://example.com'))).rejects.toMatchObject({
+      code: 'WEBSITE_BLOCKED_CRAWLER',
+    });
+  });
+  it.each([
+    ['ENOTFOUND', false],
+    ['EAI_AGAIN', true],
+  ])(
+    'classifies DNS %s without repeating permanent resolution failures',
+    async (code, retryable) => {
+      const resolver = async () => {
+        throw Object.assign(new Error('DNS failure'), { code });
+      };
+      await expect(
+        validateNetworkTarget(new URL('https://example.com'), resolver),
+      ).rejects.toMatchObject({ details: { retryable } });
+    },
+  );
   it('keeps its timeout active while reading the response body', async () => {
     const crawler = new HttpFirstCrawler({
       resolver: publicResolver,

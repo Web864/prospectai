@@ -66,8 +66,10 @@ export function useJobProgress(jobId?: string) {
 
 function AnalysisRecord({ analysisId, jobId }: { analysisId: string; jobId?: string | undefined }) {
   const progress = useJobProgress(jobId);
+  const resultAnalysisId =
+    progress.status === 'success' ? progress.data.data.analysisId : analysisId;
   const { state, retry } = useApiResource(
-    `/analyses/${encodeURIComponent(analysisId)}`,
+    `/analyses/${encodeURIComponent(resultAnalysisId)}`,
     analysisDetailResponseSchema,
   );
   const jobStatus = progress.status === 'success' ? progress.data.data.status : undefined;
@@ -176,8 +178,18 @@ function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._
         credentials: 'same-origin',
         signal: AbortSignal.timeout(30_000),
       });
-      if (!response.ok || !response.headers.get('content-type')?.startsWith('application/pdf'))
-        throw new Error('The PDF could not be exported. Please try again.');
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: { message?: unknown };
+        } | null;
+        throw new Error(
+          typeof payload?.error?.message === 'string'
+            ? payload.error.message
+            : 'The PDF could not be exported. Please try again.',
+        );
+      }
+      if (!response.headers.get('content-type')?.startsWith('application/pdf'))
+        throw new Error('The server returned an invalid PDF response.');
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement('a');
       link.href = url;
@@ -189,8 +201,11 @@ function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       notify('PDF downloaded');
-    } catch {
-      notify('The PDF could not be exported. Please try again.', 'danger');
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : 'The PDF could not be exported. Please try again.',
+        'danger',
+      );
     } finally {
       setExporting(false);
     }

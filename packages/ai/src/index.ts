@@ -94,15 +94,28 @@ export class OpenAiProvider implements AIProvider {
         providerStatus: response.status,
       });
     }
-    const body = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = body.choices?.[0]?.message?.content;
-    if (!content) throw new AppError('AI_UNAVAILABLE', 'The AI provider returned no output.', 503);
+    let body: { choices?: Array<{ message?: { content?: string } }> } | null;
+    try {
+      body = await response.json();
+    } catch (error) {
+      throw new AppError('AI_UNAVAILABLE', 'The AI provider response could not be read.', 502, {
+        reason:
+          error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)
+            ? 'timeout'
+            : 'invalid_output',
+      });
+    }
+    const content = body?.choices?.[0]?.message?.content;
+    if (typeof content !== 'string' || !content.trim())
+      throw new AppError('AI_UNAVAILABLE', 'The AI provider returned no output.', 503, {
+        reason: 'invalid_output',
+      });
     try {
       return JSON.parse(content) as unknown;
     } catch {
-      throw new AppError('AI_UNAVAILABLE', 'The AI provider returned malformed output.', 502);
+      throw new AppError('AI_UNAVAILABLE', 'The AI provider returned malformed output.', 502, {
+        reason: 'invalid_output',
+      });
     }
   }
 

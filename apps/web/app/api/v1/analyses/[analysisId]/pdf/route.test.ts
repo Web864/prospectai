@@ -45,6 +45,11 @@ beforeEach(() => {
   mocks.generate.mockResolvedValue(new TextEncoder().encode('%PDF-test'));
 });
 describe('PDF export authorization boundary', () => {
+  it('blocks legacy results derived from unreadable encoded page data', async () => {
+    mocks.find.mockResolvedValue({ ...record, extractedText: '\u001f\uFFFD compressed data' });
+    expect((await request()).status).toBe(409);
+    expect(mocks.generate).not.toHaveBeenCalled();
+  });
   it.each(['COMPLETED', 'PARTIAL'])('exports authorized %s persisted results', async (status) => {
     mocks.find.mockResolvedValue({ ...record, status });
     const response = await request();

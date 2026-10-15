@@ -1,7 +1,8 @@
 import { lookup } from 'node:dns/promises';
 import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
-import { Readable } from 'node:stream';
+import { Readable, Transform } from 'node:stream';
+import { createGunzip, createInflate, createBrotliDecompress } from 'node:zlib';
 import { isIP } from 'node:net';
 import * as cheerio from 'cheerio';
 import { AppError } from '@prospectai/shared';
@@ -104,12 +105,23 @@ const defaultResolver: DnsResolver = (hostname) => lookup(hostname, { all: true,
 export async function validateNetworkTarget(
   url: URL,
   resolver: DnsResolver = defaultResolver,
+  timeoutMs = defaultTimeoutMs,
 ): Promise<string[]> {
   let records: Array<{ address: string; family: number }>;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    records = await resolver(url.hostname);
-  } catch {
-    throw new AppError('WEBSITE_UNREACHABLE', 'The website hostname could not be resolved.', 422);
+    records = await Promise.race([resolver(url.hostname), new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => reject(new AppError('ANALYSIS_TIMEOUT', 'Website DNS resolution took too long.', 504)), timeoutMs);
+    })]);
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    const code = error instanceof Error && 'code' in error ? String(error.code) : 'DNS_ERROR';
+    throw new AppError('WEBSITE_UNREACHABLE', 'The website hostname could not be resolved.', 422, {
+      retryable: code !== 'ENOTFOUND',
+      reason: code === 'ENOTFOUND' ? 'dns_not_found' : 'dns_temporary',
+    });
+  } finally {
+    clearTimeout(timer);
   }
   const addresses = records.map((record) => record.address);
   if (addresses.length === 0)
@@ -123,7 +135,70 @@ export async function validateNetworkTarget(
   return addresses;
 }
 
-async function fetchPinned(url: URL, init: RequestInit, address: string): Promise<Response> {
+export function unreadablePageText(text: string) {
+  if (!text.length) return false;
+  const replacementCount = [...text].filter((character) => character === '\uFFFD').length;
+  return (
+    text.includes('\u001f') ||
+    replacementCount / text.length > 0.02 ||
+    /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(text)
+  );
+}
+
+export function decodePinnedBody(
+  source: Readable,
+  encoding: string,
+  maxBytes = defaultMaxBytes,
+): Readable {
+  const normalized = encoding.toLowerCase().trim();
+  const decoder =
+    normalized === 'gzip'
+      ? createGunzip()
+      : normalized === 'deflate'
+        ? createInflate()
+        : normalized === 'br'
+          ? createBrotliDecompress()
+          : null;
+  if (normalized && normalized !== 'identity' && !decoder) {
+    source.destroy();
+    throw new AppError(
+      'WEBSITE_BLOCKED_CRAWLER',
+      'The website returned unsupported content encoding.',
+      422,
+    );
+  }
+  let received = 0;
+  const limit = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      received += chunk.length;
+      callback(
+        received > maxBytes
+          ? new AppError('WEBSITE_BLOCKED_CRAWLER', 'The website response is too large.', 422)
+          : null,
+        chunk,
+      );
+    },
+  });
+  source.on('error', (error) => limit.destroy(error));
+  const bounded = source.pipe(limit);
+  if (!decoder) {
+    bounded.once('close', () => source.destroy());
+    return bounded;
+  }
+  bounded.on('error', (error) => decoder.destroy(error));
+  decoder.once('close', () => {
+    bounded.destroy();
+    source.destroy();
+  });
+  return bounded.pipe(decoder);
+}
+
+async function fetchPinned(
+  url: URL,
+  init: RequestInit,
+  address: string,
+  maxBytes: number,
+): Promise<Response> {
   const transport = url.protocol === 'https:' ? httpsRequest : httpRequest;
   const headers = Object.fromEntries(new Headers(init.headers).entries());
   headers.host = url.host;
@@ -144,12 +219,23 @@ async function fetchPinned(url: URL, init: RequestInit, address: string): Promis
           if (value !== undefined)
             responseHeaders.set(key, Array.isArray(value) ? value.join(', ') : value);
         }
-        resolve(
-          new Response(Readable.toWeb(response) as unknown as ReadableStream, {
-            status: response.statusCode ?? 502,
-            headers: responseHeaders,
-          }),
-        );
+        try {
+          const body = decodePinnedBody(
+            response,
+            responseHeaders.get('content-encoding') ?? '',
+            maxBytes,
+          );
+          responseHeaders.delete('content-encoding');
+          responseHeaders.delete('content-length');
+          resolve(
+            new Response(Readable.toWeb(body) as unknown as ReadableStream, {
+              status: response.statusCode ?? 502,
+              headers: responseHeaders,
+            }),
+          );
+        } catch (error) {
+          reject(error);
+        }
       },
     );
     const abortRequest = () => request.destroy(new DOMException('Aborted', 'AbortError'));
@@ -318,7 +404,7 @@ export class HttpFirstCrawler implements Crawler {
     let current = normalizePublicUrl(input.toString());
 
     for (let redirect = 0; redirect <= maxRedirects; redirect += 1) {
-      const addresses = await validateNetworkTarget(current, resolver);
+      const addresses = await validateNetworkTarget(current, resolver, timeoutMs);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       const startedAt = performance.now();
@@ -345,6 +431,7 @@ export class HttpFirstCrawler implements Crawler {
                   },
                 },
                 addresses[0]!,
+                maxBytes,
               );
         } catch (error) {
           if (controller.signal.aborted)
@@ -397,6 +484,12 @@ export class HttpFirstCrawler implements Crawler {
             422,
           );
         const html = await boundedBody(response, maxBytes);
+        if (unreadablePageText(html))
+          throw new AppError(
+            'WEBSITE_BLOCKED_CRAWLER',
+            'The website returned unreadable page content; no findings were generated.',
+            422,
+          );
         const page = extractPage(html, current, {
           status: response.status,
           contentType,
