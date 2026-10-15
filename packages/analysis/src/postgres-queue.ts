@@ -123,8 +123,22 @@ export function retryDelayMs(attempt: number, baseDelayMs = 1_000, capMs = 60_00
   return Math.min(capMs, baseDelayMs * 2 ** Math.max(0, attempt - 1));
 }
 
-export function shouldRetry(attempt: number, maxAttempts: number) {
-  return attempt < maxAttempts;
+export function shouldRetry(
+  attempt: number,
+  maxAttempts: number,
+  error?: { code: string; retryable?: boolean },
+) {
+  if (attempt >= maxAttempts) return false;
+  if (error?.retryable !== undefined) return error.retryable;
+  return (
+    !error ||
+    [
+      'WEBSITE_UNREACHABLE',
+      'ANALYSIS_TIMEOUT',
+      'BACKEND_UNAVAILABLE',
+      'WORKER_LEASE_EXPIRED',
+    ].includes(error.code)
+  );
 }
 
 export function calculateReservedUsage(
@@ -453,6 +467,7 @@ export class PostgresAnalysisJobQueue {
             ELSE 'RETRYING'::"AnalysisJobStatus"
           END,
           "attempt" = job."attempt" + 1,
+          "progress" = 0,
           "lockedAt" = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
           "lockedBy" = ${workerId},
           "startedAt" = COALESCE(job."startedAt", (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')),
@@ -527,7 +542,7 @@ export class PostgresAnalysisJobQueue {
     await this.database.$transaction(async (transaction) => {
       const current = await transaction.analysisJob.findFirst({
         where: leaseWhere(lease),
-        select: { status: true },
+        select: { status: true, analysisId: true, organizationId: true },
       });
       if (!current)
         throw new AppError('CONFLICT', 'The worker no longer owns this job lease.', 409);
@@ -543,6 +558,10 @@ export class PostgresAnalysisJobQueue {
       });
       if (updated.count !== 1)
         throw new AppError('CONFLICT', 'The worker no longer owns this job lease.', 409);
+      await transaction.websiteAnalysis.updateMany({
+        where: { id: current.analysisId, organizationId: current.organizationId },
+        data: { status: statusToDatabase[status] },
+      });
     });
   }
 
@@ -556,8 +575,9 @@ export class PostgresAnalysisJobQueue {
   }
 
   async withLease<T>(lease: JobLease, work: (transaction: Transaction) => Promise<T>) {
-    return this.database.$transaction(async (transaction) => {
-      const rows = await transaction.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    return this.database.$transaction(
+      async (transaction) => {
+        const rows = await transaction.$queryRaw<Array<{ id: string }>>(Prisma.sql`
         SELECT id
         FROM "AnalysisJob"
         WHERE "id" = ${lease.id}
@@ -566,14 +586,16 @@ export class PostgresAnalysisJobQueue {
           AND "lockedAt" IS NOT NULL
         FOR UPDATE
       `);
-      if (!rows[0])
-        throw new AppError('CONFLICT', 'The worker no longer owns this job lease.', 409);
-      return work(transaction);
-    });
+        if (!rows[0])
+          throw new AppError('CONFLICT', 'The worker no longer owns this job lease.', 409);
+        return work(transaction);
+      },
+      { timeout: 30_000 },
+    );
   }
 
-  async complete(lease: JobLease, outcome: 'completed' | 'partial') {
-    await this.database.$transaction(async (transaction) => {
+  async complete(lease: JobLease, outcome: 'completed' | 'partial', transaction?: Transaction) {
+    const complete = async (transaction: Transaction) => {
       const job = await transaction.analysisJob.findFirst({ where: leaseWhere(lease) });
       if (!job) throw new AppError('CONFLICT', 'The worker no longer owns this job lease.', 409);
       assertJobTransition(statusFromDatabase[job.status], outcome);
@@ -602,19 +624,22 @@ export class PostgresAnalysisJobQueue {
         quantity: job.usageQuantity,
         jobId: job.id,
       });
-    });
+    };
+    if (transaction) await complete(transaction);
+    else await this.database.$transaction(complete);
   }
 
-  async fail(lease: JobLease, error: { code: string; message: string }) {
+  async fail(lease: JobLease, error: { code: string; message: string; retryable?: boolean }) {
     return this.database.$transaction(async (transaction) => {
       const job = await transaction.analysisJob.findFirst({ where: leaseWhere(lease) });
       if (!job) throw new AppError('CONFLICT', 'The worker no longer owns this job lease.', 409);
-      const retry = shouldRetry(job.attempt, job.maxAttempts);
+      const retry = shouldRetry(job.attempt, job.maxAttempts, error);
       const status: DatabaseJobStatus = retry ? 'RETRY_PENDING' : 'FAILED';
       const updated = await transaction.analysisJob.updateMany({
         where: leaseWhere(lease),
         data: {
           status,
+          ...(retry ? { progress: 0 } : {}),
           nextAttemptAt: retry
             ? new Date(Date.now() + retryDelayMs(job.attempt))
             : job.nextAttemptAt,

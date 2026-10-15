@@ -10,6 +10,7 @@ import {
   usageResponseSchema,
 } from '@prospectai/validation';
 import { apiRequest } from './api-client';
+import { analysisSubmissionKey } from './analysis-submission';
 import { APP_URL } from './config';
 import { createOpaqueToken, createPkcePair } from './pkce';
 import { guestEntryState, guestRemainingLabel } from './guest-flow';
@@ -27,7 +28,6 @@ import {
 import './popup.css';
 
 const pollIntervalMs = 1_500;
-const workerStaleTimeoutMs = 5 * 60_000;
 type GuestSession = typeof guestSessionResponseSchema._output.data;
 type GuestResult = typeof guestAnalysisResultResponseSchema._output.data;
 type RegisteredResult = typeof analysisDetailResponseSchema._output.data;
@@ -267,17 +267,6 @@ export function PopupApp() {
         if (mode === 'guest') await refreshGuest().catch(() => undefined);
         return;
       }
-      const activityAt = Date.parse(job.updatedAt);
-      const startedAt = Date.parse(job.startedAt ?? analysisStartedAt ?? job.updatedAt);
-      const stale =
-        Number.isFinite(activityAt) &&
-        Number.isFinite(startedAt) &&
-        Date.now() - activityAt >= workerStaleTimeoutMs &&
-        Date.now() - startedAt >= workerStaleTimeoutMs;
-      if (stale) {
-        setState('analysis_timed_out');
-        return;
-      }
       pollingTimer.current = setTimeout(
         () => void pollJob(jobId, mode, attempt + 1),
         pollIntervalMs,
@@ -302,7 +291,7 @@ export function PopupApp() {
     try {
       const response = await apiRequest('/guest-analyses', {
         method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        headers: { 'Idempotency-Key': await analysisSubmissionKey('guest', url) },
         body: JSON.stringify({ url }),
       });
       if (!response.ok)
@@ -317,6 +306,7 @@ export function PopupApp() {
         analysisStartedAt: startedAt,
       });
       setActiveJobId(parsed.data.data.jobId);
+      await chrome.storage.local.remove('pendingAnalysisSubmission');
       await pollJob(parsed.data.data.jobId, 'guest');
     } catch (error) {
       setState(stateFromRequestError(error, navigator.onLine));
@@ -337,7 +327,7 @@ export function PopupApp() {
     try {
       const response = await apiRequest('/analyses', {
         method: 'POST',
-        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        headers: { 'Idempotency-Key': await analysisSubmissionKey('registered', url) },
         body: JSON.stringify({ url }),
       });
       if (!response.ok)
@@ -350,6 +340,7 @@ export function PopupApp() {
         analysisStartedAt: startedAt,
       });
       setActiveJobId(parsed.data.data.jobId);
+      await chrome.storage.local.remove('pendingAnalysisSubmission');
       await pollJob(parsed.data.data.jobId, 'registered');
     } catch (error) {
       setState(stateFromRequestError(error, navigator.onLine));
@@ -553,6 +544,11 @@ export function PopupApp() {
             </div>
             <strong>{stage.label}</strong>
             <small>Elapsed {elapsedLabel}</small>
+            {jobProgress && jobProgress.attempt > 0 && (
+              <small>
+                Attempt {jobProgress.attempt} of {jobProgress.maxAttempts}
+              </small>
+            )}
             {longWait && (
               <small>
                 We are taking a little longer than usual. The worker is still being checked.
@@ -573,6 +569,9 @@ export function PopupApp() {
               </div>
             </div>
             {guestResult.reasoning && <p>{guestResult.reasoning}</p>}
+            {guestResult.limitations.map((limitation) => (
+              <p key={limitation}>{limitation}</p>
+            ))}
             {guestResult.keySignals.length > 0 && (
               <div>
                 <h2>Key signals</h2>
@@ -653,6 +652,9 @@ export function PopupApp() {
         )}
         {isRegisteredResult && registeredResult && (
           <div className="guest-result">
+            {registeredResult.limitations.map((limitation) => (
+              <p key={limitation}>{limitation}</p>
+            ))}
             <div className="result-heading">
               <div>
                 <small>Prospect</small>

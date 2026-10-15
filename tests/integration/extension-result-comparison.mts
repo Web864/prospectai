@@ -2,16 +2,21 @@ import { execFileSync } from 'node:child_process';
 import { deepStrictEqual } from 'node:assert';
 import { fileURLToPath } from 'node:url';
 import { prisma } from '../../packages/database/src/index.ts';
+import { analysisLimitations } from '../../packages/shared/src/analysis-limitations.ts';
 
 // Read-only comparison of real Chrome results and their persisted guest projection.
 const [popupTarget, ...analysisIds] = process.argv.slice(2);
 if (!popupTarget || !analysisIds.length) throw new Error('Provide popup target and analysis IDs.');
 const probe = fileURLToPath(new URL('./chrome-probe.mjs', import.meta.url));
+const apiBase =
+  process.env.PROSPECTAI_INTEGRATION_URL ??
+  process.env.VITE_API_BASE_URL ??
+  'http://localhost:3000/api/v1';
 try {
   for (const id of analysisIds) {
     const expression = `(async()=>{
       const stored=await chrome.storage.local.get('guestToken');
-      const response=await fetch('http://localhost:3000/api/v1/guest-analyses/'+${JSON.stringify(id)}, {
+      const response=await fetch(${JSON.stringify(apiBase)}+'/guest-analyses/'+${JSON.stringify(id)}, {
         headers:{Authorization:'Guest '+stored.guestToken}, signal:AbortSignal.timeout(20000)
       });
       return {status:response.status,data:(await response.json()).data};
@@ -41,6 +46,8 @@ try {
       opportunityScore: opportunity?.opportunityScore ?? null,
       reasoning: opportunity?.summary ?? analysis.businessSummary,
       keySignals: analysis.findings.map((finding) => finding.title),
+      limitations: analysisLimitations(analysis.status, analysis.aiStatus),
+      aiStatus: analysis.aiStatus,
       recommendedNextAction:
         opportunity?.pitchAngle ??
         (opportunity ? `Explore a ${opportunity.serviceCategory} conversation.` : null),

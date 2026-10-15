@@ -1,6 +1,14 @@
 'use client';
 
-import { AlertTriangle, Bookmark, FileSearch, Globe2, RefreshCw, Sparkles } from 'lucide-react';
+import {
+  AlertTriangle,
+  Bookmark,
+  Download,
+  FileSearch,
+  Globe2,
+  RefreshCw,
+  Sparkles,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   actionResponseSchema,
@@ -16,7 +24,7 @@ import { ApiClientError, webApiRequest } from '../lib/web-api';
 
 const terminalStatuses = ['completed', 'partial', 'failed', 'cancelled'] as const;
 
-function useJobProgress(jobId?: string) {
+export function useJobProgress(jobId?: string) {
   const [state, setState] = useState<
     ResourceState<typeof analysisJobProgressResponseSchema._output>
   >(
@@ -28,7 +36,6 @@ function useJobProgress(jobId?: string) {
     if (!jobId) return;
     let stopped = false;
     let timer: number | undefined;
-    let attempts = 0;
     async function poll() {
       try {
         const data = await webApiRequest(
@@ -37,10 +44,7 @@ function useJobProgress(jobId?: string) {
         );
         if (stopped) return;
         setState({ status: 'success', data });
-        if (
-          !terminalStatuses.includes(data.data.status as (typeof terminalStatuses)[number]) &&
-          attempts++ < 120
-        )
+        if (!terminalStatuses.includes(data.data.status as (typeof terminalStatuses)[number]))
           timer = window.setTimeout(() => void poll(), 1500);
       } catch (error) {
         if (stopped) return;
@@ -66,6 +70,20 @@ function AnalysisRecord({ analysisId, jobId }: { analysisId: string; jobId?: str
     `/analyses/${encodeURIComponent(analysisId)}`,
     analysisDetailResponseSchema,
   );
+  const jobStatus = progress.status === 'success' ? progress.data.data.status : undefined;
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (jobStatus === 'completed' || jobStatus === 'partial') retry();
+  }, [jobStatus, retry]);
+  useEffect(() => {
+    if (
+      !jobId ||
+      (jobStatus && terminalStatuses.includes(jobStatus as (typeof terminalStatuses)[number]))
+    )
+      return;
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [jobId, jobStatus]);
   if (jobId && progress.status === 'loading')
     return <StatePanel title="Analysis queued">Loading current job progress...</StatePanel>;
   if (jobId && progress.status === 'error')
@@ -89,7 +107,11 @@ function AnalysisRecord({ analysisId, jobId }: { analysisId: string; jobId?: str
           <span style={{ width: `${job.progress}%` }} />
         </div>
         <p className="muted">
-          Attempt {job.attempt + 1} of {job.maxAttempts}
+          {job.attempt > 0
+            ? `Attempt ${job.attempt} of ${job.maxAttempts}`
+            : 'Waiting for a worker'}
+          {job.startedAt &&
+            ` - Elapsed ${Math.max(0, Math.floor((clock - Date.parse(job.startedAt)) / 1000))}s`}
         </p>
       </section>
     );
@@ -145,6 +167,34 @@ function PitchEditor({
 function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._output.data }) {
   const notify = useToast();
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  async function exportPdf() {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const response = await fetch(`/api/v1/analyses/${encodeURIComponent(data.id)}/pdf`, {
+        credentials: 'same-origin',
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!response.ok || !response.headers.get('content-type')?.startsWith('application/pdf'))
+        throw new Error('The PDF could not be exported. Please try again.');
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download =
+        response.headers.get('content-disposition')?.match(/filename="([^"]+)"/)?.[1] ??
+        'ProspectAI-analysis.pdf';
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      notify('PDF downloaded');
+    } catch {
+      notify('The PDF could not be exported. Please try again.', 'danger');
+    } finally {
+      setExporting(false);
+    }
+  }
   async function action(path: string, body?: object, method: 'POST' | 'PATCH' = 'POST') {
     if (busy) return;
     setBusy(true);
@@ -274,6 +324,16 @@ function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._
   return (
     <>
       <div className="actions detail-toolbar">
+        {['completed', 'partial'].includes(data.status) && (
+          <Button
+            className="button-secondary"
+            disabled={exporting}
+            onClick={() => void exportPdf()}
+          >
+            <Download size={16} aria-hidden="true" />
+            {exporting ? 'Exporting...' : 'Export PDF'}
+          </Button>
+        )}
         <Button className="button-secondary" disabled={busy} onClick={() => void reanalyze()}>
           <RefreshCw size={16} aria-hidden="true" />
           {busy ? 'Working...' : 'Re-analyze'}
@@ -297,6 +357,9 @@ function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._
               <span>Some analysis stages did not complete</span>. Only evidence returned by the API
               is shown.
             </p>
+            {data.limitations.map((limitation) => (
+              <p key={limitation}>{limitation}</p>
+            ))}
           </div>
         </div>
       )}

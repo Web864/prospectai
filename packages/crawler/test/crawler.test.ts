@@ -10,6 +10,40 @@ import {
 const publicResolver = async () => [{ address: '93.184.216.34', family: 4 }];
 
 describe('crawler safety and extraction', () => {
+  it('keeps its timeout active while reading the response body', async () => {
+    const crawler = new HttpFirstCrawler({
+      resolver: publicResolver,
+      timeoutMs: 10,
+      fetcher: async (_input, init) =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              init?.signal?.addEventListener(
+                'abort',
+                () => controller.error(new Error('Aborted body')),
+                { once: true },
+              );
+            },
+          }),
+          { headers: { 'content-type': 'text/html' } },
+        ),
+    });
+    await expect(crawler.crawl(new URL('https://example.com'))).rejects.toMatchObject({
+      code: 'ANALYSIS_TIMEOUT',
+    });
+  });
+  it.each([
+    [404, false],
+    [503, true],
+  ])('classifies HTTP %i retryability', async (status, retryable) => {
+    const crawler = new HttpFirstCrawler({
+      resolver: publicResolver,
+      fetcher: async () => new Response('', { status }),
+    });
+    await expect(crawler.crawl(new URL('https://example.com'))).rejects.toMatchObject({
+      details: { retryable },
+    });
+  });
   it('normalizes a public hostname without truncating it', () => {
     expect(normalizePublicUrl('https://Example.COM./path#section').toString()).toBe(
       'https://example.com/path',

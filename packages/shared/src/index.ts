@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+export { analysisLimitations } from './analysis-limitations';
 
 export const errorCodes = [
   'UNAUTHENTICATED',

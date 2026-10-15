@@ -1,6 +1,6 @@
 ﻿import { apiError, requestId } from '@prospectai/api';
 import { prisma } from '@prospectai/database';
-import { AppError } from '@prospectai/shared';
+import { AppError, analysisLimitations } from '@prospectai/shared';
 import type { AnalysisJobStatus } from '@prospectai/types';
 import { requireGuestSession } from '../../../../../lib/guest-session';
 
@@ -57,6 +57,8 @@ export async function GET(
           opportunityScore: opportunity?.opportunityScore ?? null,
           reasoning: opportunity?.summary ?? analysis.businessSummary,
           keySignals: analysis.findings.map((finding) => finding.title),
+          aiStatus: analysis.aiStatus,
+          limitations: analysisLimitations(analysis.status, analysis.aiStatus),
           recommendedNextAction:
             opportunity?.pitchAngle ??
             (opportunity ? `Explore a ${opportunity.serviceCategory} conversation.` : null),

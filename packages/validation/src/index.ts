@@ -276,6 +276,9 @@ export const analysisDetailResponseSchema = z.object({
     opportunityScore: z.number().int().min(0).max(100).nullable(),
     confidence: z.number().min(0).max(1).nullable(),
     businessSummary: z.string().nullable(),
+    aiStatus: z.string().nullable().optional(),
+    limitations: z.array(z.string()).default([]),
+    sourceUrl: z.string().url().optional(),
     findings: z.array(
       z.object({
         id: z.string(),
@@ -415,6 +418,8 @@ export const guestAnalysisResultResponseSchema = z.object({
     opportunityScore: z.number().int().min(0).max(100).nullable(),
     reasoning: z.string().nullable(),
     keySignals: z.array(z.string()).max(8),
+    limitations: z.array(z.string()).default([]),
+    aiStatus: z.string().nullable().optional(),
     recommendedNextAction: z.string().nullable(),
     status: analysisJobStatusSchema,
   }),

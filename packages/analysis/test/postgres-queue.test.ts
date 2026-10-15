@@ -17,6 +17,23 @@ describe('PostgreSQL analysis queue policy', () => {
     expect(shouldRetry(1, 3)).toBe(true);
     expect(shouldRetry(3, 3)).toBe(false);
   });
+  it.each([
+    'INVALID_URL',
+    'UNSUPPORTED_URL',
+    'PRIVATE_NETWORK_BLOCKED',
+    'NOT_FOUND',
+    'FORBIDDEN',
+    'AI_UNAVAILABLE',
+    'VALIDATION_ERROR',
+  ])('does not retry permanent %s failures', (code) => {
+    expect(shouldRetry(1, 3, { code })).toBe(false);
+  });
+  it('honors transient failure classification without exceeding the attempt bound', () => {
+    expect(shouldRetry(1, 3, { code: 'ANALYSIS_TIMEOUT' })).toBe(true);
+    expect(shouldRetry(1, 3, { code: 'WEBSITE_UNREACHABLE', retryable: false })).toBe(false);
+    expect(shouldRetry(1, 3, { code: 'ANALYSIS_FAILED', retryable: true })).toBe(true);
+    expect(shouldRetry(3, 3, { code: 'ANALYSIS_FAILED', retryable: true })).toBe(false);
+  });
 
   it('holds reservations until they are released or reversed', () => {
     expect(

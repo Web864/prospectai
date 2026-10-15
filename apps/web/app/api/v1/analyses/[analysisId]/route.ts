@@ -1,6 +1,6 @@
 import { apiError, requestId } from '@prospectai/api';
 import { prisma } from '@prospectai/database';
-import { AppError } from '@prospectai/shared';
+import { AppError, analysisLimitations } from '@prospectai/shared';
 import type { AnalysisJobStatus } from '@prospectai/types';
 import { requireRequestActor } from '../../../../../lib/request-actor';
 
@@ -58,6 +58,9 @@ export async function GET(
           opportunityScore: analysis.opportunityScore,
           confidence: analysis.confidence,
           businessSummary: analysis.businessSummary,
+          aiStatus: analysis.aiStatus,
+          limitations: analysisLimitations(analysis.status, analysis.aiStatus),
+          sourceUrl: analysis.website.canonicalUrl,
           findings: analysis.findings.map((finding) => ({
             id: finding.id,
             category: finding.category,

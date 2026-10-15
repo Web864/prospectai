@@ -60,12 +60,24 @@ function scoringInput(finding: DeterministicFinding) {
   };
 }
 
-async function processJob(
+export async function processJob(
   queue: PostgresAnalysisJobQueue,
   job: ClaimedAnalysisJob,
   heartbeatIntervalMs: number,
 ) {
   const lease = leaseFor(job);
+  const reportProgress = async (
+    status: Parameters<typeof queue.updateProgress>[1],
+    progress: number,
+  ) => {
+    await queue.updateProgress(lease, status, progress);
+    logger.info('analysis_job_stage', {
+      jobId: job.id,
+      stage: status,
+      progress,
+      attempt: job.attempt,
+    });
+  };
   const heartbeat = setInterval(() => {
     void queue.heartbeat(lease).catch((error: unknown) =>
       logger.error('job_heartbeat_failed', {
@@ -75,7 +87,7 @@ async function processJob(
     );
   }, heartbeatIntervalMs);
   try {
-    await queue.updateProgress(lease, 'validating', Math.max(job.progress, 5));
+    await reportProgress('validating', 5);
     const analysis = await prisma.websiteAnalysis.findFirst({
       where: { id: job.analysisId, organizationId: job.organizationId },
       include: {
@@ -101,15 +113,15 @@ async function processJob(
       maxAttempts: job.maxAttempts,
     });
 
-    await queue.updateProgress(lease, 'fetching', 15);
+    await reportProgress('fetching', 15);
     const crawler = new HttpFirstCrawler();
     const crawl = await crawler.crawl(new URL(analysis.website.canonicalUrl));
 
-    await queue.updateProgress(lease, 'extracting', 40);
+    await reportProgress('extracting', 40);
     const findings = analyzePageEvidence(crawl.page);
     const findingInputs = findings.map(scoringInput);
 
-    await queue.updateProgress(lease, 'rule_analysis', 60);
+    await reportProgress('rule_analysis', 60);
     const websiteScore = calculateWebsiteScore(findingInputs);
     const componentScores = calculateWebsiteComponents(findingInputs);
     const profile = analysis.organization.memberships[0]?.user.profile;
@@ -131,10 +143,10 @@ async function processJob(
               findings.reduce((total, finding) => total + finding.confidence, 0) / findings.length
             ).toFixed(2),
           );
-    let aiStatus = 'unavailable';
+    let aiStatus = 'unavailable_not_configured';
     let partial = true;
 
-    await queue.updateProgress(lease, 'ai_processing', 75);
+    await reportProgress('ai_processing', 75);
     if (
       process.env.AI_PROVIDER === 'gemini' ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY
     ) {
@@ -157,15 +169,20 @@ async function processJob(
         aiStatus = 'completed';
         partial = false;
       } catch (error) {
-        aiStatus = 'unavailable';
+        const reason =
+          error instanceof AppError && typeof error.details.reason === 'string'
+            ? error.details.reason
+            : 'provider';
+        aiStatus = `unavailable_${reason}`;
         logger.warn('analysis_ai_partial', {
           jobId: job.id,
           error: error instanceof AppError ? error.code : 'AI_UNAVAILABLE',
+          reason,
         });
       }
     }
 
-    await queue.updateProgress(lease, 'opportunity_scoring', 90);
+    await reportProgress('opportunity_scoring', 90);
     const guestEnvironment = loadGuestEnvironment();
     const rawContentExpiresAt = new Date(
       Date.now() + guestEnvironment.GUEST_RESULT_RETENTION_DAYS * 24 * 60 * 60_000,
@@ -236,8 +253,8 @@ async function processJob(
         where: { id: analysis.websiteId },
         data: { canonicalUrl: crawl.finalUrl },
       });
+      await queue.complete(lease, partial ? 'partial' : 'completed', transaction);
     });
-    await queue.complete(lease, partial ? 'partial' : 'completed');
     logger.info('analysis_job_completed', {
       jobId: job.id,
       outcome: partial ? 'partial' : 'completed',
@@ -252,7 +269,26 @@ async function processJob(
     }
     const result = await queue.fail(lease, {
       code: error instanceof AppError ? error.code : 'ANALYSIS_FAILED',
-      message: error instanceof Error ? error.message : 'Unknown analysis worker failure',
+      message:
+        error instanceof AppError
+          ? error.message
+          : 'The analysis worker could not finish this attempt.',
+      ...(error instanceof AppError && typeof error.details.retryable === 'boolean'
+        ? { retryable: error.details.retryable }
+        : error instanceof Error &&
+            'code' in error &&
+            [
+              'P1001',
+              'P1002',
+              'P1008',
+              'P1017',
+              'P2028',
+              'P2034',
+              'ECONNRESET',
+              'ETIMEDOUT',
+            ].includes(String(error.code))
+          ? { retryable: true }
+          : {}),
     });
     logger.error('analysis_job_failed', {
       jobId: job.id,

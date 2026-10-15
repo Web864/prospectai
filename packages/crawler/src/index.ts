@@ -324,86 +324,98 @@ export class HttpFirstCrawler implements Crawler {
       const startedAt = performance.now();
       let response: Response;
       try {
-        response = this.options.fetcher
-          ? await fetcher(current, {
-              redirect: 'manual',
-              signal: controller.signal,
-              headers: {
-                Accept: 'text/html,application/xhtml+xml;q=0.9,text/plain;q=0.5',
-                'User-Agent': 'ProspectAI/1.0 (+https://prospectai.local/crawler)',
-              },
-            })
-          : await fetchPinned(
-              current,
-              {
+        try {
+          response = this.options.fetcher
+            ? await fetcher(current, {
                 redirect: 'manual',
                 signal: controller.signal,
                 headers: {
                   Accept: 'text/html,application/xhtml+xml;q=0.9,text/plain;q=0.5',
                   'User-Agent': 'ProspectAI/1.0 (+https://prospectai.local/crawler)',
                 },
-              },
-              addresses[0]!,
+              })
+            : await fetchPinned(
+                current,
+                {
+                  redirect: 'manual',
+                  signal: controller.signal,
+                  headers: {
+                    Accept: 'text/html,application/xhtml+xml;q=0.9,text/plain;q=0.5',
+                    'User-Agent': 'ProspectAI/1.0 (+https://prospectai.local/crawler)',
+                  },
+                },
+                addresses[0]!,
+              );
+        } catch (error) {
+          if (controller.signal.aborted)
+            throw new AppError('ANALYSIS_TIMEOUT', 'The website took too long to respond.', 504);
+          throw new AppError('WEBSITE_UNREACHABLE', 'The website could not be reached.', 422, {
+            cause: error instanceof Error ? error.name : 'network_error',
+            retryable: !(
+              error instanceof Error &&
+              'code' in error &&
+              /CERT|TLS|SSL|ENOTFOUND/.test(String(error.code))
+            ),
+          });
+        }
+        if (response.status >= 300 && response.status < 400) {
+          await boundedBody(response, maxBytes);
+          const location = response.headers.get('location');
+          if (!location)
+            throw new AppError(
+              'WEBSITE_UNREACHABLE',
+              'The website returned an invalid redirect.',
+              422,
             );
+          if (redirect === maxRedirects)
+            throw new AppError(
+              'WEBSITE_BLOCKED_CRAWLER',
+              'The website redirected too many times.',
+              422,
+            );
+          current = normalizePublicUrl(new URL(location, current).toString());
+          continue;
+        }
+        if (response.status === 401 || response.status === 403 || response.status === 429)
+          throw new AppError(
+            'WEBSITE_BLOCKED_CRAWLER',
+            'The website blocked automated analysis.',
+            422,
+          );
+        if (!response.ok)
+          throw new AppError(
+            'WEBSITE_UNREACHABLE',
+            `The website returned HTTP ${response.status}.`,
+            422,
+            { retryable: response.status >= 500 || response.status === 408 },
+          );
+        const contentType = response.headers.get('content-type')?.split(';')[0]?.trim() ?? '';
+        if (!['text/html', 'application/xhtml+xml', 'text/plain'].includes(contentType))
+          throw new AppError(
+            'UNSUPPORTED_URL',
+            'The website did not return supported page content.',
+            422,
+          );
+        const html = await boundedBody(response, maxBytes);
+        const page = extractPage(html, current, {
+          status: response.status,
+          contentType,
+          responseTimeMs: Math.round(performance.now() - startedAt),
+        });
+        return {
+          finalUrl: current.toString(),
+          title: page.title,
+          text: page.text,
+          contentType,
+          page,
+        };
       } catch (error) {
         if (controller.signal.aborted)
           throw new AppError('ANALYSIS_TIMEOUT', 'The website took too long to respond.', 504);
-        throw new AppError('WEBSITE_UNREACHABLE', 'The website could not be reached.', 422, {
-          cause: error instanceof Error ? error.name : 'network_error',
-        });
+        throw error;
       } finally {
         clearTimeout(timeout);
       }
-      if (response.status >= 300 && response.status < 400) {
-        await boundedBody(response, maxBytes);
-        const location = response.headers.get('location');
-        if (!location)
-          throw new AppError(
-            'WEBSITE_UNREACHABLE',
-            'The website returned an invalid redirect.',
-            422,
-          );
-        if (redirect === maxRedirects)
-          throw new AppError(
-            'WEBSITE_BLOCKED_CRAWLER',
-            'The website redirected too many times.',
-            422,
-          );
-        current = normalizePublicUrl(new URL(location, current).toString());
-        continue;
-      }
-      if (response.status === 401 || response.status === 403 || response.status === 429)
-        throw new AppError(
-          'WEBSITE_BLOCKED_CRAWLER',
-          'The website blocked automated analysis.',
-          422,
-        );
-      if (!response.ok)
-        throw new AppError(
-          'WEBSITE_UNREACHABLE',
-          `The website returned HTTP ${response.status}.`,
-          422,
-        );
-      const contentType = response.headers.get('content-type')?.split(';')[0]?.trim() ?? '';
-      if (!['text/html', 'application/xhtml+xml', 'text/plain'].includes(contentType))
-        throw new AppError(
-          'UNSUPPORTED_URL',
-          'The website did not return supported page content.',
-          422,
-        );
-      const html = await boundedBody(response, maxBytes);
-      const page = extractPage(html, current, {
-        status: response.status,
-        contentType,
-        responseTimeMs: Math.round(performance.now() - startedAt),
-      });
-      return {
-        finalUrl: current.toString(),
-        title: page.title,
-        text: page.text,
-        contentType,
-        page,
-      };
     }
     throw new AppError('WEBSITE_BLOCKED_CRAWLER', 'The website redirected too many times.', 422);
   }

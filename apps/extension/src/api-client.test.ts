@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiRequest } from './api-client';
+import { API_BASE_URL } from './config';
 import { ExtensionApiError } from './api-errors';
 import { stateFromApiStatus, stateFromRequestError } from './state-model';
 
@@ -23,7 +24,7 @@ describe('extension API boundary', () => {
       Response.json({ data: { sessionId: 'test-session' } }, { status: 201 }),
     );
     const response = await apiRequest('/guest-sessions', { method: 'POST' });
-    expect(fetcher.mock.calls[0]?.[0]).toBe('http://localhost:3000/api/v1/guest-sessions');
+    expect(fetcher.mock.calls[0]?.[0]).toBe(`${API_BASE_URL}/guest-sessions`);
     expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).get('Authorization')).toBe(
       'Guest test-guest-token',
     );

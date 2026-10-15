@@ -153,6 +153,8 @@ export interface GuestAnalysisResult {
   keySignals: string[];
   recommendedNextAction: string | null;
   status: AnalysisJobStatus;
+  limitations?: string[];
+  aiStatus?: string | null;
 }
 
 export interface GuestConversion {
