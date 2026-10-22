@@ -29,17 +29,15 @@ describe('PostgreSQL analysis queue policy', () => {
   it('completes and consumes usage inside an existing persistence transaction', async () => {
     const transaction = {
       analysisJob: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValue({
-            status: 'OPPORTUNITY_SCORING',
-            id: 'job',
-            analysisId: 'analysis',
-            organizationId: 'org',
-            usageFeature: 'analysis',
-            usageQuantity: 1,
-            idempotencyKey: 'request',
-          }),
+        findFirst: vi.fn().mockResolvedValue({
+          status: 'OPPORTUNITY_SCORING',
+          id: 'job',
+          analysisId: 'analysis',
+          organizationId: 'org',
+          usageFeature: 'analysis',
+          usageQuantity: 1,
+          idempotencyKey: 'request',
+        }),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       websiteAnalysis: { updateMany: vi.fn() },

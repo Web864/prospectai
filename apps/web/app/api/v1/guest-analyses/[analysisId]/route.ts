@@ -48,7 +48,12 @@ export async function GET(
       },
     });
     if (!analysis) throw new AppError('NOT_FOUND', 'Guest analysis not found.', 404);
-    if (unreadablePageText(analysis.extractedText ?? '')) throw new AppError('ANALYSIS_UNAVAILABLE', 'Stored page content is unreadable. Re-analyze this website.', 409);
+    if (unreadablePageText(analysis.extractedText ?? ''))
+      throw new AppError(
+        'ANALYSIS_UNAVAILABLE',
+        'Stored page content is unreadable. Re-analyze this website.',
+        409,
+      );
     const opportunity = analysis.opportunities[0];
     return Response.json(
       {

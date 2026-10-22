@@ -562,7 +562,7 @@
 .app-shell .analysis-hero p {
   margin: 4px 0;
   color: var(--workspace-muted);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
@@ -747,14 +747,14 @@
 }
 
 .app-shell .evidence-chain strong {
-  color: #203652;
-  font-size: 11px;
+  color: #59677b;
+  font-size: 18px;
 }
 
 .app-shell .evidence-chain p {
   margin: 7px 0 0;
-  color: #5c6d86;
-  font-size: 12px;
+  color: #677181;
+  font-size: 15px;
 }
 
 .app-shell .detail-section {

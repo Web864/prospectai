@@ -110,9 +110,16 @@ export async function validateNetworkTarget(
   let records: Array<{ address: string; family: number }>;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    records = await Promise.race([resolver(url.hostname), new Promise<never>((_resolve, reject) => {
-      timer = setTimeout(() => reject(new AppError('ANALYSIS_TIMEOUT', 'Website DNS resolution took too long.', 504)), timeoutMs);
-    })]);
+    records = await Promise.race([
+      resolver(url.hostname),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () =>
+            reject(new AppError('ANALYSIS_TIMEOUT', 'Website DNS resolution took too long.', 504)),
+          timeoutMs,
+        );
+      }),
+    ]);
   } catch (error) {
     if (error instanceof AppError) throw error;
     const code = error instanceof Error && 'code' in error ? String(error.code) : 'DNS_ERROR';
