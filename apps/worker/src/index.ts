@@ -2,17 +2,18 @@ import { hostname } from 'node:os';
 import { OpenAiProvider, analyzeBusiness } from '@prospectai/ai';
 import {
   PostgresAnalysisJobQueue,
-  analyzePageEvidence,
+  analyzeSiteEvidence,
   type ClaimedAnalysisJob,
   type DeterministicFinding,
 } from '@prospectai/analysis';
 import { loadAiEnvironment, loadGuestEnvironment, loadWorkerEnvironment } from '@prospectai/config';
-import { HttpFirstCrawler } from '@prospectai/crawler';
+import { crawlSite } from '@prospectai/crawler';
 import { prisma } from '@prospectai/database';
 import {
   aggregateOpportunityScore,
   calculateWebsiteComponents,
   calculateWebsiteScore,
+  calculateAnalysisConfidence,
   opportunityScoringVersion,
   recommendServices,
   scoringVersion,
@@ -114,12 +115,15 @@ export async function processJob(
     });
 
     await reportProgress('fetching', 15);
-    const crawler = new HttpFirstCrawler();
-    const crawl = await crawler.crawl(new URL(analysis.website.canonicalUrl));
+    const site = await crawlSite(new URL(analysis.website.canonicalUrl));
+    const crawl = site.pages[0]!;
 
     await reportProgress('extracting', 40);
-    const findings = analyzePageEvidence(crawl.page);
-    const findingInputs = findings.map(scoringInput);
+    const findings = analyzeSiteEvidence(site.pages.map((result) => result.page));
+    const distinctFindings = [
+      ...new Map(findings.map((finding) => [finding.code, finding])).values(),
+    ];
+    const findingInputs = distinctFindings.map(scoringInput);
 
     await reportProgress('rule_analysis', 60);
     const websiteScore = calculateWebsiteScore(findingInputs);
@@ -162,7 +166,10 @@ export async function processJob(
           title: crawl.page.title,
           description: crawl.page.description,
           headings: crawl.page.headings,
-          boundedText: crawl.page.text,
+          boundedText: site.pages
+            .map((result) => `Source: ${result.finalUrl}\n${result.page.text}`)
+            .join('\n')
+            .slice(0, 120_000),
         });
         businessSummary = business.summary;
         confidence = business.confidence;
@@ -183,6 +190,12 @@ export async function processJob(
     }
 
     await reportProgress('opportunity_scoring', 90);
+    confidence = calculateAnalysisConfidence(
+      confidence,
+      site.pages.length,
+      aiStatus === 'completed',
+      site.skipped.length,
+    );
     const guestEnvironment = loadGuestEnvironment();
     const rawContentExpiresAt = new Date(
       Date.now() + guestEnvironment.GUEST_RESULT_RETENTION_DAYS * 24 * 60 * 60_000,
@@ -213,7 +226,10 @@ export async function processJob(
       }
       for (const recommendation of recommendations) {
         const findingIds = recommendation.findingIndexes
-          .map((index) => persistedFindings[index]?.id)
+          .map((index) => {
+            const matched = findings.indexOf(distinctFindings[index]!);
+            return persistedFindings[matched]?.id;
+          })
           .filter((value): value is string => Boolean(value));
         await transaction.opportunity.create({
           data: {
@@ -239,6 +255,20 @@ export async function processJob(
         data: {
           websiteScore,
           componentScores,
+          auditSnapshot: {
+            version: 'website-intelligence-v1',
+            discovered: site.discovered,
+            analyzed: site.pages.length,
+            skipped: site.skipped,
+            limitations: site.limitations,
+            pages: site.pages.map((result) => ({
+              url: result.finalUrl,
+              title: result.page.title,
+              status: result.page.status,
+              responseTimeMs: result.page.responseTimeMs,
+              audit: result.page.audit ?? {},
+            })),
+          },
           scoringVersion,
           opportunityScore,
           opportunityScoringVersion,

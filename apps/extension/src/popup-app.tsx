@@ -477,7 +477,7 @@ export function PopupApp() {
             Prospect<span>AI</span>
           </strong>
         </div>
-        <span className="mode-pill">{guest ? 'Guest mode' : 'ProspectAI'}</span>
+        {/* <span className="mode-pill">{guest ? 'Guest mode' : 'ProspectAI'}</span> */}
         <button
           className="theme-toggle"
           type="button"

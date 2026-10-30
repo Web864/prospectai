@@ -260,6 +260,8 @@ function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._
               <FileSearch size={17} />
             </span>
             <Badge>{finding.category}</Badge>
+            {finding.severity && <Badge>{finding.severity}</Badge>}
+            {finding.detectionType && <Badge>{finding.detectionType}</Badge>}
             <h3>{finding.title}</h3>
           </div>
           <div className="evidence-chain">
@@ -271,7 +273,18 @@ function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._
               <strong>Interpretation</strong>
               <p>{finding.interpretation ?? 'Interpretation was not available.'}</p>
             </div>
+            {finding.recommendation && (
+              <div>
+                <strong>Recommendation</strong>
+                <p>{finding.recommendation}</p>
+              </div>
+            )}
           </div>
+          {finding.sourceUrl && (
+            <a href={finding.sourceUrl} target="_blank" rel="noopener noreferrer">
+              Evidence source
+            </a>
+          )}
         </article>
       ))}
     </div>
@@ -391,6 +404,12 @@ function AnalysisContent({ data }: { data: typeof analysisDetailResponseSchema._
               {data.analyzedAt ? ` | ${new Date(data.analyzedAt).toISOString()}` : ''}
             </p>
             <p>{data.businessSummary ?? 'Business summary unavailable.'}</p>
+            {data.coverage && (
+              <p>
+                Pages discovered: {data.coverage.discovered} | Analyzed: {data.coverage.analyzed} |
+                Skipped: {data.coverage.skipped}
+              </p>
+            )}
           </div>
         </div>
         <div className="scores">

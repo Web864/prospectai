@@ -12,7 +12,8 @@ describe('scoring', () => {
       title: 'Missing title',
       evidence: 'No title element.',
     };
-    expect(calculateWebsiteScore([finding])).toBe(97);
+    // V2 caps the aggregate by the strongest evidence-weighted penalty.
+    expect(calculateWebsiteScore([finding])).toBe(87);
     expect(calculateOpportunityScore(finding, 0.9)).toBe(77);
   });
 });

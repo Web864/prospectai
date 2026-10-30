@@ -6,6 +6,7 @@ import { createGunzip, createInflate, createBrotliDecompress } from 'node:zlib';
 import { isIP } from 'node:net';
 import * as cheerio from 'cheerio';
 import { AppError } from '@prospectai/shared';
+export { crawlSite, type SiteCrawl } from './site';
 
 const allowedPorts = new Set(['', '80', '443']);
 const metadataHosts = new Set([
@@ -35,6 +36,8 @@ function isPrivateIpv4(address: string) {
     (a === 169 && b === 254) ||
     (a === 172 && b >= 16 && b <= 31) ||
     (a === 192 && b === 168) ||
+    (a === 192 && b === 0) ||
+    (a === 198 && (b === 18 || b === 19)) ||
     a >= 224
   );
 }
@@ -52,6 +55,14 @@ function isPrivateIpv6(addressInput: string) {
   )
     return true;
   if (address.startsWith('ff')) return true;
+  const canonical = new URL(`http://[${address}]/`).hostname.slice(1, -1);
+  const mappedHex = canonical.match(/^::ffff:([\da-f]+):([\da-f]+)$/);
+  if (mappedHex) {
+    const high = parseInt(mappedHex[1]!, 16);
+    const low = parseInt(mappedHex[2]!, 16);
+    return isPrivateIpv4(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
+  }
+  if (/^(?:2001:db8:|2001::|64:ff9b:|100:)/.test(canonical)) return true;
   const mapped = address.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/)?.[1];
   return mapped ? isPrivateIpv4(mapped) : false;
 }
@@ -277,6 +288,26 @@ export interface ExtractedPage {
   status: number;
   contentType: string;
   responseTimeMs: number;
+  audit?: {
+    canonical: string | null;
+    robots: string | null;
+    h1Count: number;
+    headingSkips: number;
+    unlabeledInputs: number;
+    unnamedButtons: number;
+    emptyLinks: number;
+    missingAlt: number;
+    invalidAria: number;
+    hasMain: boolean;
+    placeholderText: boolean;
+    repeatedDescriptions: number;
+    homeCtas: number;
+    ctaDestinations: Array<{ label: string; url: string }>;
+    emails: string[];
+    phones: string[];
+    securityHeaders: Record<string, string>;
+    responseBytes: number;
+  };
 }
 
 export interface CrawlResult {
@@ -302,9 +333,56 @@ export function extractPage(
     status: number;
     contentType: string;
     responseTimeMs: number;
+    securityHeaders?: Record<string, string>;
+    responseBytes?: number;
   },
 ): ExtractedPage {
   const $ = cheerio.load(html);
+  const named = (element: Parameters<typeof $>[0]) => {
+    const node = $(element);
+    const labelledBy = node.attr('aria-labelledby')?.split(/\s+/).filter(Boolean) ?? [];
+    return Boolean(
+      cleanText(node.text() || node.attr('aria-label') || node.attr('title') || '') ||
+        labelledBy.some((id) =>
+          cleanText(
+            $('[id]')
+              .filter((_, el) => $(el).attr('id') === id)
+              .text(),
+          ),
+        ),
+    );
+  };
+  const inputElements = $(
+    'input:not([type="hidden"]):not([type="submit"]):not([type="button"]),select,textarea',
+  );
+  const unlabeledInputs = inputElements.filter((_, element) => {
+    const node = $(element);
+    const id = node.attr('id');
+    return (
+      !named(element) &&
+      !node.closest('label').length &&
+      !(id && $('label[for]').filter((_, label) => $(label).attr('for') === id).length)
+    );
+  }).length;
+  const levels = $('h1,h2,h3,h4,h5,h6')
+    .toArray()
+    .map((element) => Number(element.tagName.slice(1)));
+  const descriptions = $('article p, section p')
+    .toArray()
+    .map((element) => cleanText($(element).text(), 500))
+    .filter((value) => value.length > 60);
+  const ctaDestinations = $('a[href]')
+    .toArray()
+    .flatMap((element) => {
+      const label = cleanText($(element).text(), 100);
+      if (!/contact|book|start|buy|demo|quote|sign up/i.test(label)) return [];
+      try {
+        return [{ label, url: new URL($(element).attr('href')!, url).toString() }];
+      } catch {
+        return [];
+      }
+    })
+    .slice(0, 30);
   const headings = $('h1, h2, h3')
     .map((_, element) => cleanText($(element).text(), 300))
     .get()
@@ -362,6 +440,41 @@ export function extractPage(
     openGraph,
     structuredData,
     text,
+    audit: {
+      canonical: $('link[rel="canonical"]').attr('href') ?? null,
+      robots:
+        $('meta[name="robots"]').attr('content') ??
+        metadata.securityHeaders?.['x-robots-tag'] ??
+        null,
+      h1Count: $('h1').length,
+      headingSkips: levels.filter((level, index) => index > 0 && level > levels[index - 1]! + 1)
+        .length,
+      unlabeledInputs,
+      unnamedButtons: $('button').filter((_, element) => !named(element)).length,
+      emptyLinks: $('a').filter(
+        (_, element) => !named(element) && !$(element).find('img[alt]').length,
+      ).length,
+      missingAlt: $('img:not([alt])').length,
+      invalidAria: $('[aria-hidden]').filter(
+        (_, element) => !['true', 'false'].includes($(element).attr('aria-hidden') ?? ''),
+      ).length,
+      hasMain: $('main,[role="main"]').length > 0,
+      placeholderText:
+        /lorem ipsum|your (?:company|business) name|insert (?:text|content) here/i.test(text),
+      repeatedDescriptions: descriptions.length - new Set(descriptions).size,
+      homeCtas: ctaDestinations.filter((cta) => {
+        const target = new URL(cta.url);
+        return target.origin === url.origin && target.pathname === '/' && !target.hash;
+      }).length,
+      ctaDestinations,
+      emails: [...new Set(text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) ?? [])].slice(
+        0,
+        10,
+      ),
+      phones: [...new Set(text.match(/\+\d[\d ()-]{7,20}\d/g) ?? [])].slice(0, 10),
+      securityHeaders: metadata.securityHeaders ?? {},
+      responseBytes: metadata.responseBytes ?? Buffer.byteLength(html),
+    },
     ...metadata,
   };
 }
@@ -400,6 +513,7 @@ export class HttpFirstCrawler implements Crawler {
       resolver?: DnsResolver;
       timeoutMs?: number;
       maxBytes?: number;
+      allowedOrigin?: string;
     } = {},
   ) {}
 
@@ -411,6 +525,12 @@ export class HttpFirstCrawler implements Crawler {
     let current = normalizePublicUrl(input.toString());
 
     for (let redirect = 0; redirect <= maxRedirects; redirect += 1) {
+      if (this.options.allowedOrigin && current.origin !== this.options.allowedOrigin)
+        throw new AppError(
+          'UNSUPPORTED_URL',
+          'The redirect leaves the permitted website scope.',
+          422,
+        );
       const addresses = await validateNetworkTarget(current, resolver, timeoutMs);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -501,6 +621,18 @@ export class HttpFirstCrawler implements Crawler {
           status: response.status,
           contentType,
           responseTimeMs: Math.round(performance.now() - startedAt),
+          responseBytes: Buffer.byteLength(html),
+          securityHeaders: Object.fromEntries(
+            [
+              'strict-transport-security',
+              'content-security-policy',
+              'x-content-type-options',
+              'x-robots-tag',
+            ].flatMap((key) => {
+              const value = response.headers.get(key);
+              return value ? [[key, value.slice(0, 1000)]] : [];
+            }),
+          ),
         });
         return {
           finalUrl: current.toString(),

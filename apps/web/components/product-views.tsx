@@ -1,8 +1,9 @@
 ﻿'use client';
 
-import { Activity, PlugZap } from 'lucide-react';
+import { Activity, ArrowRight, PlugZap } from 'lucide-react';
 import Link from 'next/link';
 import { dashboardResponseSchema } from '@prospectai/validation';
+import { V3Panel } from './workspace-v3';
 import { Badge, StatePanel } from './design-system';
 import DashboardStats from './dashboard/DashboardStats';
 import { ResourceFeedback } from './resource-feedback';
@@ -29,7 +30,39 @@ export function DashboardView() {
             meetings={data.meetings}
             wonClients={data.wonClients}
           />
-          <section className="split dashboard-panels">
+          <div className="v3-split">
+            <V3Panel padded>
+              <div className="v3-subhead">
+                <h2>Start with a business website</h2>
+                <span className="v3-state">Next action</span>
+              </div>
+              <p>
+                Research a website, review evidence, identify a relevant opportunity, and save a
+                prospect.
+              </p>
+              <div className="v3-research-action">
+                <Link className="v3-btn" href="/app/research">
+                  Start website research <ArrowRight size={17} />
+                </Link>
+              </div>
+            </V3Panel>
+            <V3Panel padded>
+              <h2>Workflow</h2>
+              <div className="v3-stack v3-workflow">
+                {[
+                  ['01', 'Research', '/app/research'],
+                  ['02', 'Review opportunities', '/app/opportunities'],
+                  ['03', 'Save leads', '/app/leads'],
+                  ['04', 'Create pitches', '/app/pitches'],
+                ].map(([step, label, href]) => (
+                  <Link className="v3-setting" key={step} href={href!}>
+                    {step} · {label}
+                  </Link>
+                ))}
+              </div>
+            </V3Panel>
+          </div>
+          <section className="v3-split">
             <StatePanel
               title={data.extensionConnected ? 'Extension connected' : 'Connect Chrome Extension'}
               tone={data.extensionConnected ? 'success' : 'default'}
@@ -44,7 +77,7 @@ export function DashboardView() {
             >
               {data.extensionConnected
                 ? 'ProspectAI is ready to analyze supported business websites.'
-                : 'Connect the extension to start evidence-backed website research.'}
+                : 'Research here, or connect the extension to associate browser research with your workspace.'}
             </StatePanel>
             {data.recentActivity.length === 0 ? (
               <StatePanel title="No recent activity" icon={<Activity size={22} />}>

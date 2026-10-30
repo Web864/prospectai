@@ -10,6 +10,14 @@ describe('Prisma migration chain', () => {
   const guestSessions = migration('20260917000000_value_first_guest_sessions');
   const phaseSix = migration('20260918000000_phase_6_backend');
   const phaseSeven = migration('20261005000000_database_hardening');
+  it('adds nullable audit coverage without rewriting existing results', () => {
+    expect(migration('20261022000000_website_audit_snapshot')).toContain(
+      'ADD COLUMN "auditSnapshot" JSONB',
+    );
+    expect(migration('20261022000000_website_audit_snapshot')).not.toMatch(
+      /DROP|TRUNCATE|DELETE|UPDATE/,
+    );
+  });
 
   it('keeps SQL statements outside line comments', () => {
     for (const sql of [initial, postgresQueue, guestSessions, phaseSix, phaseSeven]) {

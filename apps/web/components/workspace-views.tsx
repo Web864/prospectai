@@ -4,22 +4,12 @@ import Link from 'next/link';
 import { useRef, useState, type FormEvent } from 'react';
 import {
   FileText,
-  CheckCircle2,
-  Clock3,
-  AlertTriangle,
-  Search,
-  Eye,
-  Plus,
   CalendarDays,
-  Crown,
-  Zap,
   BarChart3,
   Package,
   PieChart,
   Download,
   Settings,
-  ExternalLink,
-  HelpCircle,
   UserRound,
   CreditCard,
   SlidersHorizontal,
@@ -30,14 +20,8 @@ import {
   Tag,
   FileText as FieldFileText,
   Save,
-  Database,
-  Globe2,
   ArrowRight,
   Target,
-  Lightbulb,
-  Mail,
-  Check,
-  type LucideIcon,
 } from 'lucide-react';
 import {
   actionResponseSchema,
@@ -49,7 +33,9 @@ import {
   subscriptionResponseSchema,
   usageResponseSchema,
 } from '@prospectai/validation';
-import { Badge, Button, Metric, StatePanel } from './design-system';
+import { V3Stat, V3Panel, V3Empty, V3Features } from './workspace-v3';
+import { AnalysisCollection } from './analysis-collection';
+import { Badge, Button } from './design-system';
 import { ResourceFeedback } from './resource-feedback';
 import { useApiResource } from '../lib/use-api-resource';
 import { ApiClientError, webApiRequest } from '../lib/web-api';
@@ -89,223 +75,77 @@ export function ResearchView() {
   }
 
   const examples = [
-    { name: 'Apple', url: 'https://www.apple.com', mark: '', className: 'apple' },
-    { name: 'Stripe', url: 'https://stripe.com', mark: 'S', className: 'stripe' },
-    { name: 'Notion', url: 'https://www.notion.so', mark: 'N', className: 'notion' },
-    { name: 'HubSpot', url: 'https://www.hubspot.com', mark: '⌘', className: 'hubspot' },
+    { name: 'Apple', url: 'https://www.apple.com' },
+    { name: 'Stripe', url: 'https://stripe.com' },
+    { name: 'Notion', url: 'https://www.notion.so' },
+    { name: 'HubSpot', url: 'https://www.hubspot.com' },
   ];
-
   return (
-    <div className="research-page">
-      <section className="research-hero-card">
-        <div className="research-hero-copy">
-          <div className="research-heading-row">
-            <span className="research-globe-icon" aria-hidden="true">
-              <Globe2 size={29} strokeWidth={2.1} />
-            </span>
-            <div>
-              <span className="research-kicker">Website analysis</span>
-              <h2>Enter a company website</h2>
-              <p>
-                Get AI-powered insights, find opportunities, and generate outreach ideas in seconds.
-              </p>
-            </div>
-          </div>
-
-          <form className="research-url-form" onSubmit={(event) => void submit(event)}>
-            <div className="research-url-input">
-              <Link2 size={21} strokeWidth={2} aria-hidden="true" />
-              <input
-                name="url"
-                type="url"
-                inputMode="url"
-                required
-                value={url}
-                onChange={(event) => setUrl(event.target.value)}
-                placeholder="https://company.com"
-                aria-label="Company website"
-              />
-            </div>
-            <Button type="submit" className="research-analyze-button" disabled={status.busy}>
-              <Search size={20} strokeWidth={2.1} aria-hidden="true" />
-              <span>{status.busy ? 'Starting analysis...' : 'Analyze website'}</span>
-              <ArrowRight size={20} strokeWidth={2} aria-hidden="true" />
-            </Button>
-          </form>
-
-          {status.message && (
-            <p className="form-message form-message-error research-error" role="alert">
-              {status.message}
-            </p>
-          )}
-
-          <div className="research-benefits" aria-label="Analysis benefits">
-            <div>
-              <span className="research-benefit-icon">
-                <Shield size={19} fill="currentColor" />
-              </span>
-              <span>
-                <strong>Secure &amp; private</strong>
-                <small>We only analyze the page you choose</small>
-              </span>
-            </div>
-            <div>
-              <span className="research-benefit-icon">
-                <Zap size={20} fill="currentColor" />
-              </span>
-              <span>
-                <strong>AI-powered insights</strong>
-                <small>Find real opportunities</small>
-              </span>
-            </div>
-            <div>
-              <span className="research-benefit-icon">
-                <BarChart3 size={20} />
-              </span>
-              <span>
-                <strong>Actionable results</strong>
-                <small>Turn insights into outreach</small>
-              </span>
-            </div>
-          </div>
+    <>
+      <V3Panel padded>
+        <div className="v3-subhead">
+          <h2>Analyze a website</h2>
+          <span className="v3-state">Core workflow</span>
         </div>
-
-        <div className="research-visual" aria-hidden="true">
-          <div className="research-browser-card">
-            <div className="research-browser-dots">
-              <i />
-              <i />
-              <i />
-            </div>
-            <div className="research-browser-body">
-              <span className="research-browser-globe">
-                <Globe2 size={25} />
-              </span>
-              <div className="research-browser-copy">
-                <i />
-                <i />
-                <i />
-                <i />
-              </div>
-              <div className="research-score-ring">
-                <strong>94</strong>
-              </div>
-              <div className="research-browser-lines">
-                <i />
-                <i />
-                <i />
-                <i />
-              </div>
-            </div>
-          </div>
-          <div className="research-checklist">
-            {['Website analysis', 'Opportunity insights', 'Outreach recommendations'].map(
-              (item) => (
-                <div key={item}>
-                  <span>
-                    <Check size={14} strokeWidth={3} />
-                  </span>
-                  {item}
-                </div>
-              ),
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="research-examples-section">
-        <div className="research-section-heading">
-          <h2>Try an example</h2>
-        </div>
-        <div className="research-example-grid">
+        <p>Enter a business website to begin your research.</p>
+        <form className="v3-research-form" onSubmit={(event) => void submit(event)}>
+          <input
+            className="v3-field"
+            name="url"
+            type="url"
+            inputMode="url"
+            required
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            placeholder="https://example-business.com"
+            aria-label="Company website"
+          />
+          <Button className="v3-btn" type="submit" disabled={status.busy}>
+            {status.busy ? 'Starting analysis...' : 'Analyze website'}
+            <ArrowRight size={17} aria-hidden="true" />
+          </Button>
+        </form>
+        {status.message && (
+          <p className="v3-research-feedback" role="alert">
+            {status.message}
+          </p>
+        )}
+      </V3Panel>
+      <div className="v3-features">
+        {[
+          ['01', 'Find the signals', 'Gather relevant public website evidence.'],
+          ['02', 'Interpret the context', 'Separate observations from possible business needs.'],
+          ['03', 'Explore opportunities', 'Review suggestions before saving or creating outreach.'],
+        ].map(([step, title, text]) => (
+          <section className="v3-feature" key={step}>
+            <span className="v3-state">{step}</span>
+            <b>{title}</b>
+            <p>{text}</p>
+          </section>
+        ))}
+      </div>
+      <V3Panel padded>
+        <h2>Try an example</h2>
+        <div className="v3-research-example-grid">
           {examples.map((example) => (
             <button
+              className="v3-btn v3-secondary"
               type="button"
-              className="research-example-card"
               key={example.name}
               onClick={() => setUrl(example.url)}
             >
-              <span className={`research-example-logo ${example.className}`}>{example.mark}</span>
-              <span className="research-example-copy">
-                <strong>{example.name}</strong>
-                <small>{example.url}</small>
-              </span>
-              <ArrowRight size={18} />
+              {example.name}
+              <ArrowRight size={16} aria-hidden="true" />
             </button>
           ))}
         </div>
-      </section>
-
-      <section className="research-output-card">
-        <h2>What you’ll get</h2>
-        <div className="research-output-grid">
-          <div className="research-output-item">
-            <span className="research-output-icon green">
-              <FileText size={25} />
-            </span>
-            <div>
-              <strong>Website analysis</strong>
-              <p>
-                Technical, SEO, content, UX,
-                <br />
-                and more
-              </p>
-            </div>
-          </div>
-          <div className="research-output-item">
-            <span className="research-output-icon purple">
-              <Target size={25} />
-            </span>
-            <div>
-              <strong>Opportunity scoring</strong>
-              <p>
-                Identify real business
-                <br />
-                opportunities
-              </p>
-            </div>
-          </div>
-          <div className="research-output-item">
-            <span className="research-output-icon amber">
-              <Lightbulb size={26} />
-            </span>
-            <div>
-              <strong>AI insights</strong>
-              <p>
-                Evidence-based
-                <br />
-                recommendations
-              </p>
-            </div>
-          </div>
-          <div className="research-output-item">
-            <span className="research-output-icon pink">
-              <Mail size={25} />
-            </span>
-            <div>
-              <strong>Outreach ideas</strong>
-              <p>
-                Turn insights into personalized
-                <br />
-                pitches
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+      </V3Panel>
+    </>
   );
 }
 
 export function AnalysesView() {
   const { state, retry } = useApiResource('/analyses', analysisListResponseSchema);
-
-  const cards: Array<[string, string, string, LucideIcon, string]> = [
-    ['Total analyses', '4', 'This billing period', FileText, 'blue'],
-    ['Completed', '3', '75% success rate', CheckCircle2, 'green'],
-    ['In progress', '1', 'Currently running', Clock3, 'blue'],
-    ['Failed', '0', '0% failure rate', AlertTriangle, 'red'],
-  ];
 
   return (
     <ResourceFeedback
@@ -313,97 +153,13 @@ export function AnalysesView() {
       retry={retry}
       notFoundTitle="Analysis history API is not available yet"
     >
-      {({ data }) => (
-        <>
-          <div className="analysis-top-action">
-            <Link className="button" href="/app/research">
-              <Plus size={16} /> New analysis
-            </Link>
-          </div>
-
-          <div className="analysis-stat-grid">
-            {cards.map(([title, value, sub, Icon, tone]) => {
-              return (
-                <div className="analysis-stat" key={title}>
-                  <div className={`analysis-stat-icon ${tone}`}>
-                    <Icon size={24} />
-                  </div>
-                  <div>
-                    <span>{title}</span>
-                    <strong>{value}</strong>
-                    <small>{sub}</small>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="analysis-toolbar">
-            <div className="analysis-tabs">
-              <b>All analyses</b>
-              <span>Completed</span>
-              <span>In progress</span>
-              <span>Failed</span>
-            </div>
-            <div className="analysis-filters">
-              <div>
-                <Search size={16} /> Search websites, companies...
-              </div>
-              <button>All statuses</button>
-              <button>Newest first</button>
-            </div>
-          </div>
-
-          <section className="analysis-table">
-            <div className="analysis-head">
-              <span>Website</span>
-              <span>Company</span>
-              <span>Status</span>
-              <span>Website score</span>
-              <span>Opportunity score</span>
-              <span>Analyzed at</span>
-              <span>Actions</span>
-            </div>
-            {(data.length ? data : []).map((item) => (
-              <div className="analysis-row" key={item.id}>
-                <div>
-                  <strong>{item.domain}</strong>
-                  <small>https://{item.domain}</small>
-                </div>
-                <span>{item.domain}</span>
-                <Badge tone="positive">{item.status.replaceAll('_', ' ')}</Badge>
-                <div className="score">
-                  <b>{item.websiteScore ?? '--'}</b>
-                  <i />
-                </div>
-                <div className="score">
-                  <b>{item.opportunityScore ?? '--'}</b>
-                  <i />
-                </div>
-                <span>{new Date(item.createdAt).toISOString().slice(0, 16)}</span>
-                <div className="analysis-actions">
-                  <Link href={`/app/analysis/${encodeURIComponent(item.id)}`}>
-                    <Eye size={16} /> View
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </section>
-        </>
-      )}
+      {({ data }) => <AnalysisCollection analyses={data} />}
     </ResourceFeedback>
   );
 }
 
 export function OpportunitiesView() {
   const { state, retry } = useApiResource('/opportunities', opportunityListResponseSchema);
-
-  const icons = [
-    { icon: '📈', color: 'green' },
-    { icon: '🔍', color: 'blue' },
-    { icon: '◈', color: 'purple' },
-    { icon: '💡', color: 'pink' },
-  ];
 
   return (
     <ResourceFeedback
@@ -413,19 +169,22 @@ export function OpportunitiesView() {
     >
       {({ data }) => (
         <>
-          <div className="opportunity-summary">
-            <Metric
-              label="Total opportunities"
+          <div className="v3-stats">
+            <V3Stat
+              icon={Target}
+              title="Total opportunities"
               value={String(data.length)}
               note="Loaded from workspace"
             />
-            <Metric
-              label="High priority"
+            <V3Stat
+              icon={Target}
+              title="High priority"
               value={String(data.filter((item) => item.opportunityScore >= 70).length)}
               note="Score 70+"
             />
-            <Metric
-              label="Average score"
+            <V3Stat
+              icon={Target}
+              title="Average score"
               value={
                 data.length
                   ? String(
@@ -437,64 +196,73 @@ export function OpportunitiesView() {
               }
               note="Across loaded opportunities"
             />
-            <Metric
-              label="Categories"
+            <V3Stat
+              icon={Target}
+              title="Categories"
               value={String(new Set(data.map((item) => item.serviceCategory)).size)}
               note="Recommended services"
             />
           </div>
 
-          <div className="opportunity-toolbar">
-            <input
-              aria-label="Search opportunities"
-              placeholder="Search opportunities..."
-              disabled
-              title="Filtering is not available until the opportunities query contract supports it"
-            />
-            <span className="muted">Opportunity filtering is not available yet.</span>
-          </div>
+          <section className="v3-surface">
+            <div className="v3-toolrow">
+              <input
+                className="v3-field v3-search"
+                aria-label="Search opportunities"
+                placeholder="Search opportunities..."
+                disabled
+                title="Filtering is not available until the opportunities query contract supports it"
+              />
+              <span className="muted">Opportunity filtering is not available yet.</span>
+            </div>
 
-          <div className="opportunity-list">
-            {data.map((item, index) => (
-              <article className="opportunity-row" key={item.id}>
-                <div className={`opportunity-icon ${icons[index % icons.length]!.color}`}>
-                  {icons[index % icons.length]!.icon}
-                </div>
-
-                <div className="opportunity-info">
-                  <h3>{item.title}</h3>
-                  <small>{item.domain}</small>
-                  <p>
-                    Improve calls-to-action, forms, and key landing pages to increase conversion
-                    rate.
-                  </p>
-                  <div className="tags">
-                    <span>Conversion</span>
-                    <span>UX</span>
-                    <span>Growth</span>
+            <div>
+              {data.map((item) => (
+                <article className="v3-opportunity-row" key={item.id}>
+                  <div className="opportunity-icon green">
+                    <Target size={22} aria-hidden="true" />
                   </div>
-                </div>
 
-                <div className="opportunity-score">
-                  <strong>{item.opportunityScore || 70}</strong>
-                  <small>High</small>
-                </div>
+                  <div className="v3-opportunity-copy">
+                    <h3>{item.title}</h3>
+                    <small>{item.domain}</small>
+                    <p>{item.serviceCategory}</p>
+                    <small>Confidence: {Math.round(item.confidence * 100)}%</small>
+                  </div>
 
-                <Badge tone="warning">🔥 High priority</Badge>
+                  <div className="v3-score">
+                    <strong className="v3-score-value">{item.opportunityScore}</strong>
+                    <small>Opportunity score</small>
+                  </div>
 
-                <div className="opportunity-actions">
-                  <Link href={`/app/analysis/${encodeURIComponent(item.analysisId || item.id)}`}>
-                    View evidence
-                  </Link>
-                  {/* <button>⋮</button> */}
-                  {/* <span>›</span> */}
-                </div>
-              </article>
-            ))}
-            {data.length === 0 && (
-              <p className="empty-state">No opportunities have been found yet.</p>
-            )}
-          </div>
+                  <Badge tone={item.opportunityScore >= 70 ? 'positive' : 'neutral'}>
+                    {item.opportunityScore >= 70 ? 'High priority' : 'Review opportunity'}
+                  </Badge>
+
+                  <div className="opportunity-actions">
+                    <Link href={`/app/analysis/${encodeURIComponent(item.analysisId)}`}>
+                      View evidence
+                    </Link>
+                    {/* <button>⋮</button> */}
+                    {/* <span>›</span> */}
+                  </div>
+                </article>
+              ))}
+              {data.length === 0 && (
+                <V3Empty
+                  icon={Target}
+                  title="No opportunities yet"
+                  action={
+                    <Link className="v3-btn" href="/app/research">
+                      Analyze a website
+                    </Link>
+                  }
+                >
+                  Complete an analysis to begin evaluating evidence-backed opportunities.
+                </V3Empty>
+              )}
+            </div>
+          </section>
         </>
       )}
     </ResourceFeedback>
@@ -503,70 +271,64 @@ export function OpportunitiesView() {
 
 export function PitchesView() {
   const { state, retry } = useApiResource('/pitches', pitchListResponseSchema);
-
   return (
     <ResourceFeedback state={state} retry={retry} notFoundTitle="Pitch API is not available yet">
-      {({ data }) =>
-        data.length ? (
-          <div className="pitch-list">
-            {data.map((pitch) => (
-              <article className="pitch-card" key={pitch.id}>
-                <div className="pitch-card-icon">
-                  <FileText size={24} />
-                </div>
-                <div className="pitch-card-content">
-                  <Badge>{pitch.format}</Badge>
-                  <p>{pitch.content}</p>
+      {({ data }) => (
+        <>
+          {data.length ? (
+            <div className="v3-stack">
+              {data.map((pitch) => (
+                <V3Panel key={pitch.id} padded>
+                  <div className="v3-subhead">
+                    <h2>{pitch.format} pitch</h2>
+                    <time className="v3-caption" dateTime={pitch.updatedAt}>
+                      {pitch.updatedAt.slice(0, 10)}
+                    </time>
+                  </div>
+                  <p className="v3-pitch-body">{pitch.content}</p>
                   {pitch.analysisId && (
-                    <Link href={`/app/analysis/${encodeURIComponent(pitch.analysisId)}`}>
+                    <Link
+                      className="v3-btn v3-secondary"
+                      href={`/app/analysis/${encodeURIComponent(pitch.analysisId)}`}
+                    >
                       View evidence
                     </Link>
                   )}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <section className="pitch-empty-panel">
-            <div className="pitch-empty-art">
-              <FileText size={54} />
+                </V3Panel>
+              ))}
             </div>
-            <h2>No generated pitches</h2>
-            <p>Pitches grounded in your analyses and opportunities will appear here.</p>
-            <div className="pitch-empty-actions">
-              <Link className="button" href="/app/opportunities">
-                <Plus size={18} /> Create your first pitch
-              </Link>
-              <Link className="button button-secondary" href="/app/opportunities">
-                <Search size={18} /> View opportunities
-              </Link>
-            </div>
-            <div className="pitch-benefits">
-              <div>
-                <FileText />
-                <span>
-                  <strong>Personalized outreach</strong>
-                  <small>AI-powered pitches tailored to each business</small>
-                </span>
-              </div>
-              <div>
-                <Eye />
-                <span>
-                  <strong>Higher response rates</strong>
-                  <small>Evidence-based messaging that resonates</small>
-                </span>
-              </div>
-              <div>
-                <CheckCircle2 />
-                <span>
-                  <strong>Track performance</strong>
-                  <small>See views, replies, and client conversions</small>
-                </span>
-              </div>
-            </div>
-          </section>
-        )
-      }
+          ) : (
+            <V3Panel>
+              <V3Empty
+                icon={FileText}
+                title="No generated pitches"
+                action={
+                  <div className="v3-empty-actions">
+                    <Link className="v3-btn" href="/app/opportunities">
+                      Create your first pitch
+                    </Link>
+                    <Link className="v3-btn v3-secondary" href="/app/opportunities">
+                      View opportunities
+                    </Link>
+                  </div>
+                }
+              >
+                Use a researched opportunity as the starting point for personalized outreach.
+              </V3Empty>
+            </V3Panel>
+          )}
+          <V3Features
+            items={[
+              {
+                title: 'Evidence-led context',
+                text: 'Keep source facts distinct from sales assumptions.',
+              },
+              { title: 'Editable messaging', text: 'Review and refine before contacting anyone.' },
+              { title: 'Connected journey', text: 'Move from research to prospect to outreach.' },
+            ]}
+          />
+        </>
+      )}
     </ResourceFeedback>
   );
 }
@@ -577,141 +339,85 @@ export function UsageView() {
     <ResourceFeedback state={state} retry={retry} notFoundTitle="Usage API is not available yet">
       {({ data }) => (
         <>
-          <div className="usage-summary-grid">
-            <section className="usage-card">
-              <div className="usage-icon green">
-                <Package size={24} />
-              </div>
-              <div>
-                <span>Plan</span>
-                <h2>{data.plan}</h2>
-                <p>Current entitlement</p>
-              </div>
-              <Link className="button button-secondary" href="/app/billing">
-                <Crown size={15} /> Upgrade
-              </Link>
-            </section>
-            <section className="usage-card">
-              <div className="usage-icon blue">
-                <BarChart3 size={24} />
-              </div>
-              <div>
-                <span>Used analyses</span>
-                <h2>{data.used}</h2>
-                <p>This billing period</p>
-              </div>
-            </section>
-            <section className="usage-card">
-              <div className="usage-icon teal">
-                <PieChart size={24} />
-              </div>
-              <div>
-                <span>Remaining</span>
-                <h2>{data.remaining ?? '0'}</h2>
-                <p>Server-authoritative</p>
-              </div>
-              <div className="usage-progress">
-                <small>10 total</small>
-                <div>
-                  <i style={{ width: '10%' }} />
-                </div>
-                <small>10% used</small>
-              </div>
-            </section>
-          </div>
-
-          <section className="billing-period-card">
-            <div className="usage-icon purple">
-              <CalendarDays size={24} />
-            </div>
-            <div>
-              <span>Billing period</span>
-              <h2>
-                {new Date(data.periodStart).toLocaleDateString()} –{' '}
-                {new Date(data.periodEnd).toLocaleDateString()}
-              </h2>
-              <p>Current billing period (UTC)</p>
-            </div>
-            <div className="reset-box">
-              <span>Resets in</span>
-              <strong>13 days</strong>
-            </div>
+          <section className="v3-stats" aria-label="Usage metrics">
+            <V3Stat
+              title="Current plan"
+              value={data.plan}
+              note="Current entitlement"
+              icon={Package}
+            />
+            <V3Stat
+              title="Used analyses"
+              value={data.used}
+              note="This billing period"
+              icon={BarChart3}
+            />
+            <V3Stat
+              title="Remaining"
+              value={data.remaining ?? 'Uncapped'}
+              note="Server-authoritative"
+              icon={PieChart}
+            />
+            <V3Stat
+              title="Billing period"
+              value={data.periodEnd.slice(5, 10)}
+              note="Period ends (UTC)"
+              icon={CalendarDays}
+            />
           </section>
-
-          <div className="usage-tabs">
-            <strong>Usage history</strong>
-            <span>Plan limits</span>
-          </div>
-
-          <section className="recent-usage-card">
-            <div className="section-heading">
-              <div>
-                <h2>Recent usage</h2>
-                {/* <p>Your most recent analyses and usage activity.</p> */}
+          <V3Panel padded>
+            <h2>Analysis allowance</h2>
+            <p>
+              {data.remaining === null
+                ? 'No fixed analysis limit.'
+                : `${data.remaining} remaining of ${data.limit} total`}
+            </p>
+            {data.limit !== null && (
+              <div
+                className="v3-progress"
+                role="progressbar"
+                aria-label="Analysis allowance used"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={
+                  data.limit === 0 ? 100 : Math.min(100, Math.round((data.used / data.limit) * 100))
+                }
+              >
+                <span
+                  style={{
+                    width: `${data.limit === 0 ? 100 : Math.min(100, (data.used / data.limit) * 100)}%`,
+                  }}
+                />
               </div>
+            )}
+            <p className="v3-caption">
+              {data.limit === null
+                ? 'Uncapped entitlement'
+                : `${data.limit === 0 ? 100 : Math.round((data.used / data.limit) * 100)}% used`}
+            </p>
+            <p className="v3-caption">
+              {data.limit === null ? 'No fixed limit' : `${data.limit} total`}
+            </p>
+            <div className="v3-note">
+              {data.periodStart.slice(0, 10)} - {data.periodEnd.slice(0, 10)} (UTC)
             </div>
-            <StatePanel title="Usage history is not available in this response">
-              Current usage and entitlement values above are authoritative. Detailed history will
-              appear when the usage history API is enabled.
-            </StatePanel>
-            <div className="upgrade-banner">
-              <Zap size={25} />
-              <div>
-                <h3>Need more analyses?</h3>
-                <p>
-                  Upgrade to a paid plan for higher limits, advanced features, and priority
-                  processing.
-                </p>
-              </div>
-              <Link className="button" href="/app/billing">
-                View plans →
+            {data.quotaReached && <p role="status">Your analysis allowance has been reached.</p>}
+            <div className="v3-allowance-actions">
+              <Link className="v3-btn v3-secondary" href="/app/billing">
+                View plans
               </Link>
             </div>
-          </section>
+          </V3Panel>
+          <V3Panel padded>
+            <h2>Recent usage</h2>
+            <p>Usage history is not available in this response</p>
+            <p className="v3-caption">
+              Current usage and entitlement values above are authoritative.
+            </p>
+          </V3Panel>
         </>
       )}
     </ResourceFeedback>
-  );
-}
-
-function BillingHeroArt() {
-  return (
-    <svg className="billing-hero-svg" viewBox="0 0 300 170" aria-hidden="true">
-      <path
-        d="M0 92C46 30 95 28 137 43c38 14 72 19 111 2 20-9 36-24 52-45v170H0Z"
-        fill="rgba(218,249,241,.72)"
-      />
-      <path d="M42 134h184" stroke="#8ddfd0" strokeWidth="2" strokeLinecap="round" />
-      <rect x="57" y="92" width="38" height="42" rx="8" fill="#9fe4d7" />
-      <rect x="107" y="68" width="38" height="66" rx="8" fill="#7fd7ca" />
-      <rect x="157" y="31" width="38" height="103" rx="8" fill="#78cfc3" />
-      <path
-        d="M74 75l6-10 6 10-6 10-6-10Zm55-32 6-10 6 10-6 10-6-10Zm52-20 6-10 6 10-6 10-6-10Z"
-        fill="#91e0d4"
-      />
-      <circle cx="218" cy="57" r="5" fill="#a7e9de" />
-    </svg>
-  );
-}
-
-function BillingPlanIcon() {
-  return (
-    <svg viewBox="0 0 48 48" aria-hidden="true">
-      <path
-        d="M24 5 39 13.5v21L24 43 9 34.5v-21L24 5Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.4"
-        strokeLinejoin="round"
-      />
-      <path
-        d="m9.5 13.8 14.5 8.5 14.5-8.5M24 22.3V43"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.4"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 
@@ -735,158 +441,79 @@ export function BillingView() {
       setBusy(false);
     }
   }
-  const freeFeatures = [
-    '10 analyses per month',
-    'Basic website intelligence',
-    'Core opportunity insights',
-    'Standard support',
-  ];
-  const proFeatures = [
-    'Higher monthly limits',
-    'Advanced opportunity scoring',
-    'AI-powered pitch generation',
-    'Export data & reports',
-    'Priority support',
-  ];
 
   return (
     <ResourceFeedback state={state} retry={retry} notFoundTitle="Billing API is not available yet">
       {({ data }) => (
-        <div className="billing-page">
-          <section className="billing-hero">
-            <div className="billing-hero-main">
-              <div className="billing-plan-icon">
-                <BillingPlanIcon />
-              </div>
-              <div className="billing-plan-copy">
-                <span className="billing-eyebrow">Current plan</span>
-                <h2>{data.plan}</h2>
-                <p>ProspectAI for individuals and small projects.</p>
-                <div className="billing-actions">
-                  <Button
-                    className="button-primary billing-upgrade-button"
-                    disabled={busy}
-                    onClick={() => void billingAction('upgrade')}
-                  >
-                    <Crown size={16} fill="currentColor" /> Upgrade to Pro
-                  </Button>
-                  <Button
-                    className="button-secondary billing-outline-button"
-                    disabled
-                    title="Invoice download is not available yet"
-                  >
-                    <Download size={17} /> Download invoice
-                  </Button>
-                  <Button
-                    className="button-secondary billing-outline-button"
-                    disabled
-                    title="Plan management is not available yet"
-                  >
-                    <Settings size={17} /> Manage plan
-                  </Button>
-                </div>
-              </div>
-            </div>
-            <span className="billing-active">
-              <span /> Active
-            </span>
-            <BillingHeroArt />
-            <div className="billing-insight">
-              <strong>Unlock more insights</strong>
-              <p>Upgrade to get higher limits, advanced features, and priority processing.</p>
-            </div>
-          </section>
-
-          <div className="billing-summary-grid">
-            <article className="billing-summary-card">
-              <div className="billing-summary-icon billing-blue">
-                <BarChart3 size={28} />
-              </div>
+        <>
+          <section className="v3-billing">
+            <div className="v3-subhead">
               <div>
-                <span>Used analyses</span>
-                <strong>1</strong>
-                <small>This billing period</small>
+                <div className="v3-caption">CURRENT PLAN</div>
+                <h2 className="v3-plan-name">{data.plan}</h2>
+                <p>Your workspace subscription</p>
               </div>
-            </article>
-            <article className="billing-summary-card">
-              <div className="billing-summary-icon billing-green">
-                <PieChart size={29} />
-              </div>
-              <div>
-                <span>Remaining</span>
-                <strong>9</strong>
-                <small>of 10 included</small>
-              </div>
-            </article>
-            <article className="billing-summary-card">
-              <div className="billing-summary-icon billing-purple">
-                <CalendarDays size={28} />
-              </div>
-              <div>
-                <span>Billing period</span>
-                <strong className="billing-period-value">Sep 1, 2026 – Oct 1, 2026</strong>
-                <small>UTC timezone</small>
-              </div>
-            </article>
-          </div>
-
-          <section className="billing-features">
-            <div className="billing-feature-column billing-free-column">
-              <h2>Plan features</h2>
-              <h3>Included in Free</h3>
-              {freeFeatures.map((x) => (
-                <p key={x}>
-                  <span className="feature-check">✓</span>
-                  {x}
-                </p>
-              ))}
+              <span className="v3-state">{data.status.replaceAll('_', ' ')}</span>
             </div>
-            <div className="billing-feature-column billing-pro-column">
-              <h3>
-                <Crown size={18} fill="currentColor" /> Get more with Pro
-              </h3>
-              {proFeatures.map((x) => (
-                <p key={x}>
-                  <span className="feature-check">✓</span>
-                  {x}
-                </p>
-              ))}
-            </div>
-            <div className="pro-card">
-              <div className="pro-card-icon">
-                <Zap size={22} fill="currentColor" />
-              </div>
-              <h3>Ready to do more?</h3>
-              <p>Upgrade to Pro and unlock the full potential of ProspectAI.</p>
+            <p>Manage plan details, invoices, and upgrades in one place.</p>
+            {data.currentPeriodEnd && (
+              <p className="v3-caption">
+                Current period ends {data.currentPeriodEnd.slice(0, 10)} (UTC)
+                {data.cancelAtPeriodEnd ? '. Cancellation scheduled.' : ''}
+              </p>
+            )}
+            <div className="v3-allowance-actions">
               <Button
-                className="button-primary pro-card-button"
+                className="v3-btn v3-secondary"
                 disabled={busy}
                 onClick={() => void billingAction('upgrade')}
               >
-                <Crown size={16} fill="currentColor" /> Upgrade to Pro
+                {busy ? 'Opening billing...' : 'Explore plan options'}
+              </Button>
+              <Button
+                className="v3-btn v3-secondary"
+                disabled
+                title="Invoice download is not available yet"
+              >
+                <Download size={17} />
+                Download invoice
+              </Button>
+              <Button
+                className="v3-btn v3-secondary"
+                disabled
+                title="Plan management is not available yet"
+              >
+                <Settings size={17} />
+                Manage plan
               </Button>
             </div>
           </section>
-
-          <section className="billing-help">
-            <div className="billing-help-icon">
-              <HelpCircle size={28} />
-            </div>
-            <div className="billing-help-copy">
-              <h3>Need help with billing?</h3>
-              <p>Visit our help center or contact our support team.</p>
-            </div>
-            <Link className="button button-secondary billing-help-button" href="/faq">
-              <span>View help center</span>
-              <ExternalLink size={15} />
-            </Link>
-          </section>
+          <div className="v3-features">
+            <section className="v3-feature">
+              <h3>Plan allowances</h3>
+              <p>Review current consumption and remaining analyses.</p>
+              <Link className="v3-caption" href="/app/usage">
+                View usage and allowances
+              </Link>
+            </section>
+            <section className="v3-feature">
+              <h3>Billing history</h3>
+              <p>Invoice download is not available in this workspace.</p>
+            </section>
+            <section className="v3-feature">
+              <h3>Account management</h3>
+              <p>Review your plan options through the billing provider.</p>
+              <Link className="v3-caption" href="/faq">
+                Billing help
+              </Link>
+            </section>
+          </div>
           {message && (
-            <p role="status" className="billing-message">
+            <p className="v3-note" role="status">
               {message}
             </p>
           )}
-        </div>
+        </>
       )}
     </ResourceFeedback>
   );
@@ -948,188 +575,75 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
         retry={retry}
         notFoundTitle="Settings API is not available yet"
       >
-        {({ data }) => {
-          const connected = data.extension.connected;
-
-          return (
-            <div className="extension-management-page">
-              <section className={`extension-hero${connected ? ' is-connected' : ''}`}>
-                <div className="extension-hero-copy">
-                  <div className="extension-brand-row">
-                    <span className="extension-chrome-icon" aria-hidden="true">
-                      <span className="extension-chrome-logo">
-                        <span />
-                      </span>
-                    </span>
-                    <div>
-                      <div className="extension-title-row">
-                        <h2>Chrome Extension</h2>
-                        <span className={`extension-status${connected ? ' is-connected' : ''}`}>
-                          <span aria-hidden="true" />
-                          {connected ? 'Connected' : 'Disconnected'}
-                        </span>
-                      </div>
-                      <p>
-                        The ProspectAI extension is active and ready to analyze websites,
-                        <br className="extension-desktop-break" />
-                        find opportunities, and capture prospects.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="extension-actions">
-                    {connected ? (
-                      <Button
-                        className="button-primary extension-primary-button"
-                        disabled={busy}
-                        onClick={() => void disconnect()}
-                      >
-                        <Link2 size={20} strokeWidth={2.2} aria-hidden="true" />
-                        Disconnect
-                      </Button>
-                    ) : (
-                      <Link
-                        className="button button-primary extension-primary-button"
-                        href="/extension/connect"
-                      >
-                        <Link2 size={20} strokeWidth={2.2} aria-hidden="true" />
-                        Reconnect
-                      </Link>
-                    )}
-                    <button
-                      className="button button-secondary extension-store-button"
-                      type="button"
-                      disabled
-                      title="The Chrome Web Store listing is not available yet"
-                    >
-                      <ExternalLink size={20} strokeWidth={1.9} aria-hidden="true" />
-                      View in Chrome Web Store
-                    </button>
-                  </div>
-                </div>
-
-                <div className="extension-illustration" aria-hidden="true">
-                  <div className="extension-glow" />
-                  <span className="extension-spark extension-spark-one">✦</span>
-                  <span className="extension-spark extension-spark-two">✦</span>
-                  <span className="extension-spark extension-spark-three">✦</span>
-                  <div className="extension-browser">
-                    <div className="extension-browser-bar">
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                    <div className="extension-browser-body">
-                      <span className="extension-logo-tile">
-                        <img src="/brand-mark.png" alt="" />
-                      </span>
-                    </div>
-                  </div>
-                  <div className="extension-toast">
-                    <span className="extension-toast-check">
-                      <CheckCircle2 size={20} strokeWidth={2.4} />
-                    </span>
-                    <span>
-                      <strong>Extension active</strong>
-                      <small>Ready to analyze websites</small>
-                    </span>
-                  </div>
-                </div>
-              </section>
-
-              <section className="extension-feature-grid" aria-label="Extension capabilities">
-                <article className="extension-feature-card">
-                  <span
-                    className="extension-feature-icon extension-feature-icon-teal"
-                    aria-hidden="true"
-                  >
-                    <Zap size={29} strokeWidth={2.3} />
-                  </span>
-                  <div>
-                    <h3>Analyze websites</h3>
-                    <p>
-                      Get instant opportunity insights
-                      <br />
-                      while browsing.
-                    </p>
-                  </div>
-                </article>
-
-                <article className="extension-feature-card">
-                  <span
-                    className="extension-feature-icon extension-feature-icon-blue"
-                    aria-hidden="true"
-                  >
-                    <UserRound size={29} strokeWidth={1.9} />
-                  </span>
-                  <div>
-                    <h3>Capture prospects</h3>
-                    <p>
-                      Save companies and contacts
-                      <br />
-                      directly to your workspace.
-                    </p>
-                  </div>
-                </article>
-
-                <article className="extension-feature-card">
-                  <span
-                    className="extension-feature-icon extension-feature-icon-purple"
-                    aria-hidden="true"
-                  >
-                    <Database size={29} strokeWidth={1.9} />
-                  </span>
-                  <div>
-                    <h3>Sync automatically</h3>
-                    <p>
-                      All activity syncs to your account
-                      <br />
-                      in real time.
-                    </p>
-                  </div>
-                </article>
-              </section>
-
-              <section className="extension-help-card">
-                <div className="extension-help-copy">
-                  <span className="extension-help-icon" aria-hidden="true">
-                    <HelpCircle size={30} strokeWidth={1.9} />
-                  </span>
-                  <div>
-                    <h2>Having issues?</h2>
-                    <p>Try these steps or visit our help center.</p>
-                  </div>
-                </div>
-
-                <Link className="button button-secondary extension-help-button" href="/faq">
-                  View help center
-                  <ExternalLink size={17} strokeWidth={1.9} aria-hidden="true" />
+        {({ data }) => (
+          <>
+            <V3Panel padded>
+              <div className="v3-subhead">
+                <h2>Chrome extension</h2>
+                <span className={`v3-state${data.extension.connected ? '' : ' v3-grey'}`}>
+                  {data.extension.connected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+              <p>
+                {data.extension.connected
+                  ? 'The extension is connected to this workspace.'
+                  : 'No extension session is connected to this workspace. Guest research remains available in the extension.'}
+              </p>
+              <p className="v3-caption v3-integration-state">
+                Session status: {data.extension.status}
+              </p>
+              <div className="v3-allowance-actions">
+                {data.extension.connected ? (
+                  <Button className="v3-btn" disabled={busy} onClick={() => void disconnect()}>
+                    <Link2 size={17} />
+                    {busy ? 'Disconnecting...' : 'Disconnect'}
+                  </Button>
+                ) : (
+                  <Link className="v3-btn" href="/extension/connect">
+                    <Link2 size={17} />
+                    Reconnect
+                  </Link>
+                )}
+                <button
+                  className="v3-btn v3-secondary"
+                  type="button"
+                  disabled
+                  title="The Chrome Web Store listing is not available yet"
+                >
+                  View in Chrome Web Store
+                </button>
+                <Link className="v3-btn v3-secondary" href="/faq">
+                  View installation instructions
                 </Link>
-
-                <ol className="extension-help-steps">
-                  <li>
-                    <span>1</span>
-                    <p>Make sure the extension is enabled in Chrome</p>
-                  </li>
-                  <li>
-                    <span>2</span>
-                    <p>Refresh your browser and try again</p>
-                  </li>
-                  <li>
-                    <span>3</span>
-                    <p>Contact support if the issue persists</p>
-                  </li>
-                </ol>
-              </section>
-
-              {message && (
-                <p className="extension-message" role="status">
-                  {message}
-                </p>
-              )}
-            </div>
-          );
-        }}
+              </div>
+            </V3Panel>
+            <V3Features
+              items={[
+                { title: 'Analyze websites', text: 'Research business websites while browsing.' },
+                {
+                  title: 'Capture prospects',
+                  text: 'Save researched businesses to your workspace.',
+                },
+                { title: 'Check sync status', text: 'Confirm the workspace connection above.' },
+              ]}
+            />
+            <V3Panel padded>
+              <h2>Having issues?</h2>
+              <p>
+                Make sure the extension is enabled in Chrome, then refresh your browser and try
+                again.
+              </p>
+              <Link className="v3-caption" href="/faq">
+                View help center
+              </Link>
+            </V3Panel>
+            {message && (
+              <p className="v3-note" role="status">
+                {message}
+              </p>
+            )}
+          </>
+        )}
       </ResourceFeedback>
     );
   }
@@ -1146,21 +660,23 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
   return (
     <ResourceFeedback state={state} retry={retry} notFoundTitle="Settings API is not available yet">
       {({ data }) => (
-        <div className="settings-page">
-          <aside className="settings-nav" aria-label="Settings sections">
+        <div className="v3-split">
+          <aside className="v3-surface v3-surfacepad" aria-label="Settings sections">
+            <h2>Settings categories</h2>
+            <div className="v3-settings-categories" />
             {settingNav.map(({ label, description, icon: Icon }, index) => (
               <button
-                className={`settings-nav-item${index === 0 ? ' is-active' : ''}`}
+                className={`v3-setting v3-setting-button${index === 0 ? ' v3-current-setting' : ''}`}
                 key={label}
                 type="button"
                 aria-current={index === 0 ? 'page' : undefined}
                 disabled={index !== 0}
                 title={index !== 0 ? `${label} settings are not available yet` : undefined}
               >
-                <span className="settings-nav-icon" aria-hidden="true">
+                <span className="v3-setting-icon" aria-hidden="true">
                   <Icon size={22} strokeWidth={1.8} />
                 </span>
-                <span className="settings-nav-copy">
+                <span className="v3-setting-copy">
                   <strong>{label}</strong>
                   <small>{description}</small>
                 </span>
@@ -1168,26 +684,50 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
             ))}
           </aside>
 
-          <form className="settings-form" onSubmit={(event) => void submit(event)}>
-            <div className="settings-form-heading">
+          <form
+            className="v3-surface v3-surfacepad v3-settings-form"
+            onSubmit={(event) => void submit(event)}
+          >
+            <div className="v3-form-heading">
               <h2>Profile information</h2>
               <p>Update your profile details and how ProspectAI personalizes your experience.</p>
             </div>
 
-            <label className="settings-field">
-              <span className="settings-field-label">Display name</span>
-              <span className="settings-control">
+            <label className="v3-form-field">
+              <span className="v3-field-label" id="settings-display-name-label">
+                Display name
+              </span>
+              <span className="v3-control">
                 <UserRound size={19} strokeWidth={1.8} aria-hidden="true" />
-                <input name="displayName" defaultValue={data.displayName ?? ''} />
+                <input
+                  aria-labelledby="settings-display-name-label"
+                  name="displayName"
+                  defaultValue={data.displayName ?? ''}
+                />
               </span>
               <small>This name will be shown in your workspace.</small>
             </label>
 
-            <label className="settings-field">
-              <span className="settings-field-label">Role</span>
-              <span className="settings-control">
+            <label className="v3-form-field">
+              <span className="v3-field-label" id="settings-role-label">
+                Role
+              </span>
+              <span className="v3-control">
                 <BriefcaseBusiness size={19} strokeWidth={1.8} aria-hidden="true" />
-                <select name="role" defaultValue={data.role ?? ''}>
+                <select
+                  aria-labelledby="settings-role-label"
+                  name="role"
+                  defaultValue={data.role ?? ''}
+                >
+                  {data.role &&
+                    ![
+                      'Freelancer',
+                      'Agency owner',
+                      'Consultant',
+                      'Sales',
+                      'Marketing',
+                      'Other',
+                    ].includes(data.role) && <option value={data.role}>{data.role}</option>}
                   <option value="">Select a role</option>
                   <option value="Freelancer">Freelancer</option>
                   <option value="Agency owner">Agency owner</option>
@@ -1200,20 +740,29 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
               <small>Your role helps us tailor recommendations.</small>
             </label>
 
-            <label className="settings-field">
-              <span className="settings-field-label">Services</span>
-              <span className="settings-control">
+            <label className="v3-form-field">
+              <span className="v3-field-label" id="settings-services-label">
+                Services
+              </span>
+              <span className="v3-control">
                 <Tag size={19} strokeWidth={1.8} aria-hidden="true" />
-                <input name="services" defaultValue={data.services.join(', ')} />
+                <input
+                  aria-labelledby="settings-services-label"
+                  name="services"
+                  defaultValue={data.services.join(', ')}
+                />
               </span>
               <small>List the services you offer (e.g., web design, SEO, marketing).</small>
             </label>
 
-            <label className="settings-field">
-              <span className="settings-field-label">Outreach preferences</span>
-              <span className="settings-control settings-control-textarea">
+            <label className="v3-form-field">
+              <span className="v3-field-label" id="settings-outreach-label">
+                Outreach preferences
+              </span>
+              <span className="v3-control">
                 <FieldFileText size={19} strokeWidth={1.8} aria-hidden="true" />
                 <textarea
+                  aria-labelledby="settings-outreach-label"
                   name="outreachPreferences"
                   rows={2}
                   placeholder="Tell us about your preferred outreach style, industries, or any specific notes..."
@@ -1224,12 +773,12 @@ export function SettingsView({ extensionOnly = false }: { extensionOnly?: boolea
             </label>
 
             {message && (
-              <p className="settings-message" role="status">
+              <p className="v3-note" role="status">
                 {message}
               </p>
             )}
 
-            <Button className="button-primary settings-save-button" type="submit" disabled={busy}>
+            <Button className="v3-btn" type="submit" disabled={busy}>
               <Save size={19} strokeWidth={2} aria-hidden="true" />
               {busy ? 'Saving...' : 'Save settings'}
             </Button>

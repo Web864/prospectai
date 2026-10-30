@@ -1,4 +1,4 @@
-export { analyzePageEvidence, evidenceEngineVersion } from './evidence';
+export { analyzePageEvidence, analyzeSiteEvidence, evidenceEngineVersion } from './evidence';
 export type { DeterministicFinding, EvidenceSeverity } from './evidence';
 export { assertJobTransition } from './transitions';
 export {

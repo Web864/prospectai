@@ -1,6 +1,6 @@
 import type { FindingInput } from '@prospectai/types';
 
-export const scoringVersion = 'website-v1';
+export const scoringVersion = 'website-v2';
 export const opportunityScoringVersion = 'opportunity-v1';
 
 const severityWeight = [0, 4, 9, 16, 25, 36] as const;
@@ -45,12 +45,38 @@ export function calculateWebsiteComponents(findings: readonly FindingInput[]) {
 
 export function calculateWebsiteScore(findings: readonly FindingInput[]) {
   const components = calculateWebsiteComponents(findings);
-  return Math.round(
+  const weighted = Math.round(
     Object.entries(componentWeights).reduce(
       (total, [category, weight]) =>
         total + components[category as keyof typeof components] * weight,
       0,
     ),
+  );
+  const strongestPenalty = Math.max(
+    0,
+    ...findings.map(
+      (finding) =>
+        (severityWeight[Math.max(0, Math.min(5, Math.round(finding.severity)))] ?? 0) *
+        finding.confidence,
+    ),
+  );
+  return Math.min(weighted, Math.round(100 - strongestPenalty));
+}
+
+export function calculateAnalysisConfidence(
+  evidenceConfidence: number,
+  pages: number,
+  aiAvailable: boolean,
+  skipped: number,
+) {
+  const coverageCap = pages < 2 ? 0.65 : pages < 4 ? 0.8 : 0.9;
+  const completeness = aiAvailable ? 1 : 0.85;
+  return Number(
+    (
+      Math.max(0, Math.min(evidenceConfidence, coverageCap)) *
+      completeness *
+      (skipped > 0 ? 0.9 : 1)
+    ).toFixed(2),
   );
 }
 

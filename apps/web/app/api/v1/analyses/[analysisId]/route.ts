@@ -1,7 +1,7 @@
 import { apiError, requestId } from '@prospectai/api';
 import { prisma } from '@prospectai/database';
 import { unreadablePageText } from '@prospectai/crawler';
-import { AppError, analysisLimitations } from '@prospectai/shared';
+import { AppError, analysisLimitations, auditCoverage } from '@prospectai/shared';
 import type { AnalysisJobStatus } from '@prospectai/types';
 import { requireRequestActor } from '../../../../../lib/request-actor';
 
@@ -66,11 +66,26 @@ export async function GET(
           confidence: analysis.confidence,
           businessSummary: analysis.businessSummary,
           aiStatus: analysis.aiStatus,
-          limitations: analysisLimitations(analysis.status, analysis.aiStatus),
+          limitations: [
+            ...analysisLimitations(analysis.status, analysis.aiStatus),
+            ...(auditCoverage(analysis.auditSnapshot)?.limitations ?? []),
+          ],
+          coverage: auditCoverage(analysis.auditSnapshot),
           sourceUrl: analysis.website.canonicalUrl,
           findings: analysis.findings.map((finding) => ({
             id: finding.id,
             category: finding.category,
+            severity: finding.severity,
+            confidence: finding.confidence,
+            sourceUrl: finding.sourceUrl,
+            ...(finding.evidence &&
+            typeof finding.evidence === 'object' &&
+            !Array.isArray(finding.evidence)
+              ? {
+                  recommendation: finding.evidence.recommendation,
+                  detectionType: finding.evidence.detectionType,
+                }
+              : {}),
             title: finding.title,
             evidence: evidenceText(finding.evidence),
             interpretation: finding.description,

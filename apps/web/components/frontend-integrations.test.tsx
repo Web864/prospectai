@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthForm } from './auth-form';
@@ -67,7 +67,14 @@ describe('Phase 5 frontend flows', () => {
     );
     render(<UsageView />);
     expect(await screen.findByText('Remaining')).toBeTruthy();
-    expect(screen.getByRole('heading', { name: '0' })).toBeTruthy();
+    const remaining = screen.getByText('Remaining').closest('article')!;
+    expect(within(remaining).getByText('0')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('progressbar', { name: 'Analysis allowance used' })
+        .getAttribute('aria-valuenow'),
+    ).toBe('100');
+    expect(screen.getByRole('status').textContent).toContain('allowance has been reached');
     expect(screen.getByRole('link', { name: /View plans/ })).toBeTruthy();
   });
 });

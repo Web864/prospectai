@@ -138,7 +138,7 @@ export function FormPage({
     <main className="form-wrap">
       <div className="form-page-top">
         <BrandLink />
-        <ThemeToggle />
+        {/* <ThemeToggle /> */}
       </div>
       <section className="form-panel">
         <div>

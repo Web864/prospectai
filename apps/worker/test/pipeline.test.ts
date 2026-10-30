@@ -9,8 +9,9 @@ vi.mock('@prospectai/ai', async (original) => ({
 }));
 vi.mock('@prospectai/crawler', async (original) => ({
   ...(await original<object>()),
-  HttpFirstCrawler: class {
-    crawl = mocks.crawl;
+  crawlSite: async (...args: unknown[]) => {
+    const result = await mocks.crawl(...args);
+    return { pages: [result], discovered: 1, skipped: [], limitations: ['Single-page test'] };
   },
 }));
 import { processJob } from '../src/index';

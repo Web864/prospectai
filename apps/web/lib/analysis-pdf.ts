@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, rgb } from 'pdf-lib';
-import { AppError, analysisLimitations } from '@prospectai/shared';
+import { AppError, analysisLimitations, auditCoverage } from '@prospectai/shared';
 import type { Prisma } from '@prospectai/database';
 import { unreadablePageText } from '@prospectai/crawler';
 
@@ -16,12 +16,16 @@ export interface AnalysisPdfReport {
   confidence: number | null;
   summary: string | null;
   limitations: string[];
+  coverage?: ReturnType<typeof auditCoverage>;
   findings: Array<{
     category: string;
     title: string;
     description: string | null;
     evidence: string;
     sourceUrl: string | null;
+    severity?: string;
+    recommendation?: string | undefined;
+    detectionType?: string | undefined;
   }>;
   opportunities: Array<{
     title: string;
@@ -55,9 +59,28 @@ export function persistedPdfReport(
     opportunityScore: analysis.opportunityScore,
     confidence: analysis.confidence,
     summary: analysis.businessSummary,
-    limitations: analysisLimitations(analysis.status, analysis.aiStatus),
+    limitations: [
+      ...analysisLimitations(analysis.status, analysis.aiStatus),
+      ...(auditCoverage(analysis.auditSnapshot)?.limitations ?? []),
+    ],
+    coverage: auditCoverage(analysis.auditSnapshot),
     findings: analysis.findings.map((finding) => ({
       category: finding.category,
+      severity: finding.severity,
+      ...(finding.evidence &&
+      typeof finding.evidence === 'object' &&
+      !Array.isArray(finding.evidence)
+        ? {
+            recommendation:
+              typeof finding.evidence.recommendation === 'string'
+                ? finding.evidence.recommendation
+                : undefined,
+            detectionType:
+              typeof finding.evidence.detectionType === 'string'
+                ? finding.evidence.detectionType
+                : undefined,
+          }
+        : {}),
       title: finding.title,
       description: finding.description,
       sourceUrl: finding.sourceUrl,
@@ -174,14 +197,21 @@ export async function generateAnalysisPdf(report: AnalysisPdfReport, generatedAt
   section('Prospect overview');
   text(`Website: ${report.domain}`);
   text(`Source URL: ${report.url}`);
+  if (report.coverage)
+    text(
+      `Pages discovered: ${report.coverage.discovered}; analyzed: ${report.coverage.analyzed}; skipped: ${report.coverage.skipped}`,
+    );
   section('Findings and evidence');
   if (!report.findings.length)
     text('No findings were recorded. This does not establish that the website is free of issues.');
   for (const finding of report.findings) {
     if (y < 140) newPage();
     text(`${finding.category} - ${finding.title}`, 11, teal);
+    if (finding.severity)
+      text(`Severity: ${finding.severity}; detection: ${finding.detectionType ?? 'Not recorded'}`);
     text(`Evidence: ${finding.evidence || 'No evidence text recorded.'}`);
     if (finding.description) text(`Interpretation: ${finding.description}`);
+    if (finding.recommendation) text(`Recommendation: ${finding.recommendation}`);
     if (finding.sourceUrl) text(`Source: ${finding.sourceUrl}`);
     y -= 8;
   }

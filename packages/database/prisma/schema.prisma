@@ -331,6 +331,7 @@ model WebsiteAnalysis {
   status                    AnalysisJobStatus
   websiteScore              Int?
   componentScores           Json?
+  auditSnapshot             Json?
   scoringVersion            String?
   opportunityScore          Int?
   opportunityScoringVersion String?

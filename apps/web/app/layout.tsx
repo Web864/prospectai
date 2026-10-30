@@ -9,6 +9,7 @@ import './workspace.css';
 import './dashboard.css';
 import './design-system.css';
 import './theme.css';
+import './workspace-redesign.css';
 
 const themeBootstrap = `(() => {
   try {

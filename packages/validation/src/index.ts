@@ -279,6 +279,15 @@ export const analysisDetailResponseSchema = z.object({
     aiStatus: z.string().nullable().optional(),
     limitations: z.array(z.string()).default([]),
     sourceUrl: z.string().url().optional(),
+    coverage: z
+      .object({
+        discovered: z.number(),
+        analyzed: z.number(),
+        skipped: z.number(),
+        limitations: z.array(z.string()),
+      })
+      .nullable()
+      .optional(),
     findings: z.array(
       z.object({
         id: z.string(),
@@ -286,6 +295,11 @@ export const analysisDetailResponseSchema = z.object({
         title: z.string(),
         evidence: z.string(),
         interpretation: z.string().nullable(),
+        severity: z.string().optional(),
+        confidence: z.number().optional(),
+        sourceUrl: z.string().nullable().optional(),
+        recommendation: z.string().optional(),
+        detectionType: z.string().optional(),
       }),
     ),
     opportunities: z.array(

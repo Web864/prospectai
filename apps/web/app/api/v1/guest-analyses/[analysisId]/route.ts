@@ -1,7 +1,7 @@
 ﻿import { apiError, requestId } from '@prospectai/api';
 import { prisma } from '@prospectai/database';
 import { unreadablePageText } from '@prospectai/crawler';
-import { AppError, analysisLimitations } from '@prospectai/shared';
+import { AppError, analysisLimitations, auditCoverage } from '@prospectai/shared';
 import type { AnalysisJobStatus } from '@prospectai/types';
 import { requireGuestSession } from '../../../../../lib/guest-session';
 
@@ -31,7 +31,7 @@ export async function GET(
     const session = await requireGuestSession(request);
     const { analysisId } = await params;
     const analysis = await prisma.websiteAnalysis.findFirst({
-      where: { id: analysisId, guestSessionId: session.id },
+      where: { id: analysisId, guestSessionId: session.id, organizationId: session.organizationId },
       include: {
         website: { select: { domain: true } },
         findings: { select: { title: true }, orderBy: { commercialRelevance: 'desc' }, take: 5 },
@@ -65,7 +65,10 @@ export async function GET(
           reasoning: opportunity?.summary ?? analysis.businessSummary,
           keySignals: analysis.findings.map((finding) => finding.title),
           aiStatus: analysis.aiStatus,
-          limitations: analysisLimitations(analysis.status, analysis.aiStatus),
+          limitations: [
+            ...analysisLimitations(analysis.status, analysis.aiStatus),
+            ...(auditCoverage(analysis.auditSnapshot)?.limitations ?? []),
+          ],
           recommendedNextAction:
             opportunity?.pitchAngle ??
             (opportunity ? `Explore a ${opportunity.serviceCategory} conversation.` : null),

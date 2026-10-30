@@ -8,8 +8,6 @@ import {
   FileText,
   Home,
   Lightbulb,
-  Crown,
-  ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
   PieChart,
@@ -17,6 +15,7 @@ import {
   Settings,
   ShieldCheck,
   Users,
+  Plus,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -39,11 +38,19 @@ function NavigationIcon({ href }: { href: string }) {
   if (href === '/app/billing') return <CreditCard {...props} />;
   return <Settings {...props} />;
 }
-
-const searchableNavigation = [
-  ...applicationNavigation,
-  ['Extension', '/app/settings/extension'] as const,
-];
+const navigation = [...applicationNavigation, ['Extension', '/app/settings/extension'] as const];
+const descriptions: Record<string, string> = {
+  Dashboard: 'Your research and prospecting workspace.',
+  Research: 'Analyze public website signals to inform better prospecting.',
+  Analyses: 'Track website research, processing progress, and analysis results.',
+  Opportunities: 'Prioritize potential services and review supporting evidence.',
+  Leads: 'Manage researched businesses from discovery to outreach.',
+  Pitches: 'Build specific outreach based on verified research.',
+  Usage: 'Understand plan allowances and account consumption.',
+  Billing: 'Review your plan and manage billing confidently.',
+  Settings: 'Personalize your account and prospecting preferences.',
+  'Extension management': 'Connect the browser extension to your ProspectAI workspace.',
+};
 
 export function AppShell({
   title,
@@ -58,111 +65,75 @@ export function AppShell({
 }) {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const isExtensionPage = title === 'Extension management';
-  const isResearchPage = title === 'Research';
-  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
-  const searchResults = normalizedQuery
-    ? searchableNavigation.filter(([label]) => label.toLocaleLowerCase().includes(normalizedQuery))
-    : [];
-
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const searchResults = navigation.filter(([label]) =>
+    label.toLowerCase().includes(normalizedQuery),
+  );
+  const renderNavigation = (items: typeof navigation) =>
+    items.map(([label, href]) => (
+      <Link
+        key={href}
+        href={href}
+        title={!sidebarExpanded ? label : undefined}
+        aria-current={
+          activePath === href ||
+          (href !== '/app' && href !== '/app/settings' && activePath?.startsWith(`${href}/`))
+            ? 'page'
+            : undefined
+        }
+      >
+        <span className="v3-symbol" aria-hidden="true">
+          <NavigationIcon href={href} />
+        </span>
+        <span>{label}</span>
+      </Link>
+    ));
   return (
-    <div
-      className={`app-shell${sidebarExpanded ? '' : ' sidebar-collapsed'}${
-        title === 'Settings' ? ' settings-shell' : ''
-      }${isExtensionPage ? ' extension-management-shell' : ''}${
-        isResearchPage ? ' research-shell' : ''
-      }`}
-    >
-      <aside className="workspace-sidebar">
-        <Link className="brand workspace-brand" href="/" aria-label="ProspectAI home">
+    <div className={`app-shell v3-app${sidebarExpanded ? '' : ' sidebar-collapsed'}`}>
+      <aside className="workspace-sidebar v3-side">
+        <Link className="brand workspace-brand v3-logo" href="/" aria-label="ProspectAI home">
           <Image src="/brand-mark.png" alt="" width={34} height={34} priority />
           <span>
             Prospect<span className="brand-accent">AI</span>
           </span>
         </Link>
-        {!isResearchPage && <div className="workspace-label">Workspace</div>}
-        <nav aria-label="Application">
-          {applicationNavigation.map(([label, href]) => (
-            <Link
-              key={href}
-              href={href}
-              aria-current={
-                activePath === href || (href !== '/app' && activePath?.startsWith(`${href}/`))
-                  ? 'page'
-                  : undefined
-              }
-            >
-              <NavigationIcon href={href} />
-              <span>{label}</span>
-            </Link>
-          ))}
-        </nav>
-        <div className="sidebar-spacer" />
-        <div className={isResearchPage ? 'research-sidebar-bottom' : undefined}>
-          <Link
-            className="extension-nav"
-            href="/app/settings/extension"
-            aria-current={activePath === '/app/settings/extension' ? 'page' : undefined}
-          >
-            <ShieldCheck size={18} strokeWidth={1.9} aria-hidden="true" />
-            <span>
-              <strong>Extension</strong>
-              {isResearchPage && <small className="research-connected">Connected</small>}
-            </span>
-            {isResearchPage && <i className="research-connected-dot" aria-hidden="true" />}
-          </Link>
-          {activePath === '/app/settings/extension' && !isResearchPage && (
-            <span className="extension-nav-status">Connected</span>
-          )}
-          {isResearchPage ? (
-            <Link className="research-upgrade-card" href="/app/billing">
-              <Crown size={22} fill="currentColor" aria-hidden="true" />
-              <span>
-                <strong>Upgrade to Pro</strong>
-                <small>
-                  Get more analyses,
-                  <br />
-                  advanced insights and more.
-                </small>
-              </span>
-              <ChevronRight size={19} aria-hidden="true" />
-            </Link>
-          ) : (
-            <div className="sidebar-note">
-              <Lightbulb size={17} aria-hidden="true" />
-              <span>Evidence first. Opportunity focused.</span>
-            </div>
-          )}
+        <div className="v4-side-scroll">
+          <div className="v3-sectionlabel">Workspace</div>
+          <nav className="v3-nav" aria-label="Application">
+            {renderNavigation(navigation.filter(([, href]) => !href.startsWith('/app/settings')))}
+          </nav>
+        </div>
+        <div className="v4-side-bottom">
+          <div className="v3-sectionlabel">Preferences &amp; tools</div>
+          <nav className="v3-nav" aria-label="Preferences and tools">
+            {renderNavigation(navigation.filter(([, href]) => href.startsWith('/app/settings')))}
+          </nav>
+          <div className="v3-sidemeta">
+            <strong>
+              <Lightbulb size={15} aria-hidden="true" /> Evidence first
+            </strong>
+            Opportunity-focused prospecting.
+          </div>
         </div>
       </aside>
-      <main className="workspace-main">
-        <header className="workspace-topbar">
-          {/* <Link className="brand workspace-brand workspace-topbar-brand" href="/app">
-            <Image src="/brand-mark.png" alt="" width={30} height={30} />
-            <span>
-              Prospect<span className="brand-accent">AI</span>
-            </span>
-          </Link> */}
+      <div className="workspace-main v3-main">
+        <header className="workspace-topbar v3-top">
           <button
-            className="workspace-topbar-button workspace-sidebar-toggle"
+            className="v3-iconbtn v3-sidebar-toggle"
             type="button"
             aria-label={sidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
             aria-expanded={sidebarExpanded}
-            onClick={() => setSidebarExpanded((expanded) => !expanded)}
+            onClick={() => setSidebarExpanded((value) => !value)}
           >
-            {sidebarExpanded ? (
-              <PanelLeftClose size={19} aria-hidden="true" />
-            ) : (
-              <PanelLeftOpen size={19} aria-hidden="true" />
-            )}
+            {sidebarExpanded ? <PanelLeftClose size={19} /> : <PanelLeftOpen size={19} />}
           </button>
-          <div className="workspace-mobile-menu">
+          <div className="v3-mobile-navigation">
             <MobileNavigation />
           </div>
-          <div className="workspace-live-search">
-            <Search size={18} aria-hidden="true" />
+          <div className="v3-topsearch">
+            <Search size={17} aria-hidden="true" />
             <label className="sr-only" htmlFor="workspace-search">
-              Search workspace
+              Find a workspace page
             </label>
             <input
               id="workspace-search"
@@ -171,66 +142,63 @@ export function AppShell({
               placeholder="Search workspace"
               autoComplete="off"
               onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setSearchQuery('');
+              }}
             />
             {normalizedQuery && (
-              <div className="workspace-search-results" role="listbox" aria-label="Search results">
-                {searchResults.length > 0 ? (
+              <nav className="v3-search-results" aria-label="Search results">
+                {searchResults.length ? (
                   searchResults.map(([label, href]) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      role="option"
-                      aria-selected="false"
-                      onClick={() => setSearchQuery('')}
-                    >
+                    <Link key={href} href={href} onClick={() => setSearchQuery('')}>
                       <NavigationIcon href={href} />
                       <span>{label}</span>
                     </Link>
                   ))
                 ) : (
-                  <span>No matching workspace pages.</span>
+                  <p>No matching workspace pages.</p>
                 )}
-              </div>
+              </nav>
             )}
           </div>
-          <div className="workspace-topbar-actions">
+          <div className="v3-topactions">
             <ThemeToggle />
-            <details className="workspace-notifications">
-              <summary className="workspace-topbar-button" aria-label="Notifications">
-                <Bell size={19} aria-hidden="true" />
-              </summary>
-              <div className="workspace-notification-panel">
-                <strong>Notifications</strong>
-                <p>No new notifications.</p>
-              </div>
-            </details>
-            <Link className="workspace-topbar-button" href="/resources" aria-label="Help">
-              <CircleHelp size={19} aria-hidden="true" />
+            <button
+              className="v3-iconbtn"
+              type="button"
+              aria-label="Notifications unavailable"
+              title="Notifications are not available in this workspace"
+              disabled
+            >
+              <Bell size={18} />
+            </button>
+            <Link className="v3-iconbtn" href="/resources" aria-label="Help">
+              <CircleHelp size={19} />
             </Link>
             <AccountSession />
           </div>
         </header>
-        <div className="workspace-content">
-          <div className="breadcrumb">
-            <span>{trail}</span>
-            <span aria-hidden="true">/</span>
-            <strong>{title}</strong>
+        <main className="workspace-content v3-content">
+          <div className="v3-eyebrow">
+            {trail} &nbsp; / &nbsp; {title}
           </div>
-          <header className="app-header">
+          <header className="v3-intro">
             <div>
               <h1>{title}</h1>
-              <p>
-                {isExtensionPage
-                  ? 'Connect and manage the ProspectAI browser extension.'
-                  : isResearchPage
-                    ? 'Analyze any business website to discover opportunities, weaknesses, and growth potential.'
-                    : 'Prospect opportunity intelligence, grounded in evidence.'}
+              <p className="v3-subtitle">
+                {descriptions[title] ?? 'Prospect opportunity intelligence, grounded in evidence.'}
               </p>
             </div>
+            {(title === 'Dashboard' || title === 'Analyses') && (
+              <Link className="v3-btn" href="/app/research">
+                <Plus size={16} />
+                {title === 'Analyses' ? 'New analysis' : 'Analyze website'}
+              </Link>
+            )}
           </header>
           {children}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

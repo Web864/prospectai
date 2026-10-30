@@ -42,7 +42,7 @@ export default function DashboardStats({
         : Math.round((analysesUsed / analysesLimit) * 100);
 
   return (
-    <section className="dashboard-grid" aria-label="Workspace metrics">
+    <section className="v3-stats" aria-label="Workspace metrics">
       <MetricCard
         title="Analyses"
         value={analyses}

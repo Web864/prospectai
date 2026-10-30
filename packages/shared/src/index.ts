@@ -84,3 +84,4 @@ export function createLogger(service: string): Logger {
     error: (event, fields) => write('error', event, fields),
   };
 }
+export { auditCoverage } from './audit-coverage';
