@@ -11,3 +11,4 @@ test-results
 *.log
 apps/extension/.output
 packages/database/src/generated
+*.tsbuildinfo
