@@ -27,7 +27,7 @@ function isPrivateIpv4(address: string) {
     octets.some((value) => !Number.isInteger(value) || value < 0 || value > 255)
   )
     return true;
-  const [a = 0, b = 0] = octets;
+  const [a = 0, b = 0, c = 0] = octets;
   return (
     a === 0 ||
     a === 10 ||
@@ -37,34 +37,74 @@ function isPrivateIpv4(address: string) {
     (a === 172 && b >= 16 && b <= 31) ||
     (a === 192 && b === 168) ||
     (a === 192 && b === 0) ||
+    (a === 192 && b === 88 && c === 99) ||
     (a === 198 && (b === 18 || b === 19)) ||
+    (a === 198 && b === 51 && c === 100) ||
+    (a === 203 && b === 0 && c === 113) ||
     a >= 224
   );
 }
 
-function isPrivateIpv6(addressInput: string) {
-  const address = addressInput.toLowerCase().split('%')[0] ?? '';
-  if (address === '::' || address === '::1') return true;
-  if (
-    address.startsWith('fc') ||
-    address.startsWith('fd') ||
-    address.startsWith('fe8') ||
-    address.startsWith('fe9') ||
-    address.startsWith('fea') ||
-    address.startsWith('feb')
-  )
-    return true;
-  if (address.startsWith('ff')) return true;
-  const canonical = new URL(`http://[${address}]/`).hostname.slice(1, -1);
-  const mappedHex = canonical.match(/^::ffff:([\da-f]+):([\da-f]+)$/);
-  if (mappedHex) {
-    const high = parseInt(mappedHex[1]!, 16);
-    const low = parseInt(mappedHex[2]!, 16);
-    return isPrivateIpv4(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
+/** Expands any valid IPv6 spelling into eight 16-bit groups (null when invalid). */
+function ipv6Groups(address: string): number[] | null {
+  let canonical: string;
+  try {
+    // The WHATWG URL parser canonicalizes compression, case, zero padding and dotted-quad tails.
+    canonical = new URL(`http://[${address.split('%')[0] ?? ''}]/`).hostname.slice(1, -1);
+  } catch {
+    return null;
   }
-  if (/^(?:2001:db8:|2001::|64:ff9b:|100:)/.test(canonical)) return true;
-  const mapped = address.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/)?.[1];
-  return mapped ? isPrivateIpv4(mapped) : false;
+  const [head = '', tail] = canonical.split('::');
+  const left = head ? head.split(':') : [];
+  const right = tail ? tail.split(':') : [];
+  const missing = 8 - left.length - right.length;
+  if (missing < 0 || (tail === undefined && missing !== 0)) return null;
+  const groups = [
+    ...left,
+    ...Array<string>(tail === undefined ? 0 : missing).fill('0'),
+    ...right,
+  ].map((group) => parseInt(group, 16));
+  return groups.length === 8 && groups.every((group) => Number.isInteger(group)) ? groups : null;
+}
+
+function embeddedIpv4(high: number, low: number) {
+  return `${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`;
+}
+
+function isPrivateIpv6(address: string) {
+  const g = ipv6Groups(address);
+  if (!g) return true;
+  const [g0, g1, g2, g3, g4, g5, g6, g7] = g as [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+  ];
+  // ::/96 (unspecified, loopback and deprecated IPv4-compatible addresses).
+  if (g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0) return true;
+  // ::ffff:0:0/96 IPv4-mapped: judge the embedded IPv4 address.
+  if (g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0xffff)
+    return isPrivateIpv4(embeddedIpv4(g6, g7));
+  // 2002::/16 6to4: judge the embedded IPv4 address.
+  if (g0 === 0x2002) return isPrivateIpv4(embeddedIpv4(g1, g2));
+  return (
+    (g0 & 0xfe00) === 0xfc00 || // fc00::/7 unique local
+    (g0 & 0xffc0) === 0xfe80 || // fe80::/10 link local
+    (g0 & 0xffc0) === 0xfec0 || // fec0::/10 deprecated site local
+    (g0 & 0xff00) === 0xff00 || // ff00::/8 multicast
+    (g0 === 0x64 && g1 === 0xff9b) || // 64:ff9b::/32 NAT64 (incl. local-use /48)
+    g0 === 0x100 || // 100::/16 discard-only and reserved
+    (g0 === 0x2001 && (g1 === 0 || g1 === 0xdb8)) // 2001::/32 Teredo, 2001:db8::/32 documentation
+  );
+}
+
+/** URL.hostname wraps IPv6 literals in brackets, which isIP() and DNS lookups reject. */
+function bareHostname(hostname: string) {
+  return hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
 }
 
 export function isBlockedAddress(address: string) {
@@ -102,7 +142,7 @@ export function normalizePublicUrl(value: string): URL {
     hostname === 'www.linkedin.com'
   )
     throw new AppError('UNSUPPORTED_URL', 'LinkedIn pages are not supported in V1.', 400);
-  if (isIP(hostname) && isBlockedAddress(hostname))
+  if (isIP(bareHostname(hostname)) && isBlockedAddress(bareHostname(hostname)))
     throw new AppError('PRIVATE_NETWORK_BLOCKED', 'Private network targets are not allowed.', 400);
   url.hostname = hostname;
   url.hash = '';
@@ -122,7 +162,7 @@ export async function validateNetworkTarget(
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     records = await Promise.race([
-      resolver(url.hostname),
+      resolver(bareHostname(url.hostname)),
       new Promise<never>((_resolve, reject) => {
         timer = setTimeout(
           () =>

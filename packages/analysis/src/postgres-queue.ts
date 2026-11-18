@@ -25,6 +25,16 @@ const statusFromDatabase = Object.fromEntries(
   Object.entries(statusToDatabase).map(([domain, database]) => [database, domain]),
 ) as Record<DatabaseJobStatus, AnalysisJobStatus>;
 
+/*
+ * Reservation transactions (reserve*AndEnqueue) are serialized per
+ * (organization, feature) by pg_advisory_xact_lock, taken as their first statement.
+ * They deliberately run at READ COMMITTED, not SERIALIZABLE: a SERIALIZABLE
+ * transaction takes its snapshot at that first statement, so every waiter resumes
+ * with a stale snapshot and fails with a serialization error (P2034) even though the
+ * lock already guarantees mutual exclusion. READ COMMITTED takes a fresh snapshot per
+ * statement, so each waiter sees the previous holder's committed ledger rows and the
+ * idempotency and quota checks stay exact.
+ */
 type Database = typeof defaultDatabase;
 type Transaction = Prisma.TransactionClient;
 
@@ -273,7 +283,7 @@ export class PostgresAnalysisJobQueue {
         });
         return job;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
   }
 
@@ -353,7 +363,7 @@ export class PostgresAnalysisJobQueue {
         });
         return job;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
   }
 
@@ -445,7 +455,7 @@ export class PostgresAnalysisJobQueue {
         });
         return job;
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
   }
   async claimNext(workerId: string): Promise<ClaimedAnalysisJob | null> {

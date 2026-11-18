@@ -216,6 +216,50 @@ describe('PostgreSQL analysis queue policy', () => {
     ).rejects.toMatchObject({ code: 'CONFLICT', status: 409 });
     expect(persist).not.toHaveBeenCalled();
   });
+  it('runs every reservation at READ COMMITTED so lock waiters see committed ledger rows', async () => {
+    // Regression: under SERIALIZABLE the snapshot is taken at the advisory-lock
+    // statement, so each waiter resumed with a stale snapshot and failed with
+    // P2034 (75-90% of concurrent submissions in a PostgreSQL 16 reproduction).
+    // The per-organization advisory lock already provides mutual exclusion.
+    const transaction = {
+      $executeRaw: vi.fn(async () => undefined),
+      analysisJob: { findUnique: vi.fn(async () => ({ id: 'existing-job' })) },
+    };
+    const database = {
+      $transaction: vi.fn(
+        async (work: (value: typeof transaction) => unknown, ...rest: unknown[]) => {
+          void rest;
+          return work(transaction);
+        },
+      ),
+    };
+    const queue = new PostgresAnalysisJobQueue(database as never);
+    const base = {
+      organizationId: 'organization',
+      idempotencyKey: 'request',
+      allowance: 10,
+      periodStart: new Date(0),
+    };
+
+    await queue.reserveUsageAndEnqueue({ ...base, analysisId: 'analysis', feature: 'analysis' });
+    await queue.reserveAnalysisAndEnqueue({
+      ...base,
+      analysisId: 'analysis',
+      feature: 'analysis',
+    } as never);
+    await queue.reserveGuestAnalysisAndEnqueue({
+      ...base,
+      guestSessionId: 'guest-session',
+      canonicalUrl: 'https://example.com/',
+      domain: 'example.com',
+    });
+
+    expect(database.$transaction).toHaveBeenCalledTimes(3);
+    for (const [, options] of database.$transaction.mock.calls)
+      expect(options).toEqual({ isolationLevel: 'ReadCommitted' });
+    expect(transaction.$executeRaw).toHaveBeenCalledTimes(3);
+  });
+
   it('atomically locks guest allowance before creating analysis work', async () => {
     const calls: string[] = [];
     const transaction = {
