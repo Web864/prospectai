@@ -165,7 +165,8 @@ export function PopupApp() {
       })
       .catch((error: unknown) => setState(stateFromRequestError(error, navigator.onLine)));
     const storageListener = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if (changes.accessToken?.newValue) {
+      // A silent token refresh also rewrites accessToken; only a first-time token is a sign-in.
+      if (changes.accessToken?.newValue && !changes.accessToken.oldValue) {
         setState('auth_success');
         setTimeout(() => setState('registered_ready'), 700);
       }
@@ -434,6 +435,9 @@ export function PopupApp() {
       })) as { connected?: boolean };
       if (!result.connected) throw new Error('Extension pairing failed.');
       setState('auth_success');
+      // Re-signing in over an expired session replaces an existing token, which the storage
+      // listener deliberately ignores, so finish the transition here.
+      setTimeout(() => setState('registered_ready'), 700);
     } catch {
       setState('auth_failed');
     }
