@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
@@ -13,6 +14,15 @@ const nextConfig: NextConfig = {
     '@prospectai/validation',
     '@prospectai/ui',
   ],
+  // Trace files from the monorepo root so workspace packages are bundled into serverless functions.
+  outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
+  // The PDF route reads its font and logo from disk; serverless bundles only include traced files.
+  outputFileTracingIncludes: {
+    '/api/v1/analyses/[analysisId]/pdf': [
+      './public/assets/prospectai/fonts/NotoSans-Regular.ttf',
+      './public/brand-mark.png',
+    ],
+  },
   poweredByHeader: false,
   async headers() {
     return [
