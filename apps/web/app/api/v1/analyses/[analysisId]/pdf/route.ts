@@ -31,6 +31,8 @@ export async function GET(
         website: true,
         findings: { orderBy: [{ commercialRelevance: 'desc' }, { createdAt: 'asc' }] },
         opportunities: { orderBy: { opportunityScore: 'desc' } },
+        // Outreach drafts belong to registered workspaces only; guests never receive them.
+        ...(guest ? {} : { pitches: { orderBy: { createdAt: 'asc' as const } } }),
       },
     });
     if (!analysis) throw new AppError('NOT_FOUND', 'Analysis not found.', 404);

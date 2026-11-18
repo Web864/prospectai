@@ -85,3 +85,4 @@ export function createLogger(service: string): Logger {
   };
 }
 export { auditCoverage } from './audit-coverage';
+export { auditPages, type AuditPageSummary } from './audit-pages';

@@ -63,7 +63,11 @@ async function refreshAccessToken(staleAccessToken: string): Promise<string | un
   });
 }
 
-export async function apiRequest(path: string, init: RequestInit = {}) {
+export async function apiRequest(
+  path: string,
+  init: RequestInit = {},
+  options: { binary?: boolean } = {},
+) {
   const stored = await chrome.storage.local.get([
     'accessToken',
     'refreshToken',
@@ -78,7 +82,7 @@ export async function apiRequest(path: string, init: RequestInit = {}) {
   const guestToken = typeof stored.guestToken === 'string' ? stored.guestToken : undefined;
   const attempt = async (token: string | undefined) => {
     const headers = new Headers(init.headers);
-    headers.set('Content-Type', 'application/json');
+    if (!options.binary) headers.set('Content-Type', 'application/json');
     if (token) headers.set('Authorization', `Bearer ${token}`);
     else if (guestToken) headers.set('Authorization', 'Guest ' + guestToken);
     const timeout = AbortSignal.timeout(20_000);
@@ -92,6 +96,8 @@ export async function apiRequest(path: string, init: RequestInit = {}) {
       if (init.signal?.aborted) throw error;
       throw new ExtensionApiError(category);
     }
+    // Binary downloads (PDF) succeed with a non-JSON body; only failures carry a JSON error.
+    if (options.binary && response.ok) return response;
     let body: unknown;
     try {
       body = await response.clone().json();

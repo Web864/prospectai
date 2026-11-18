@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     '@prospectai/auth',
     '@prospectai/config',
     '@prospectai/database',
+    '@prospectai/scoring',
     '@prospectai/shared',
     '@prospectai/validation',
     '@prospectai/ui',

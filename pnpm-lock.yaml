@@ -99,6 +99,9 @@ importers:
       '@prospectai/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@prospectai/scoring':
+        specifier: workspace:*
+        version: link:../../packages/scoring
       '@prospectai/shared':
         specifier: workspace:*
         version: link:../../packages/shared
