@@ -31,6 +31,22 @@ describe('extension API boundary', () => {
     expect(await response.json()).toEqual({ data: { sessionId: 'test-session' } });
   });
 
+  it('returns a non-JSON binary body untouched when binary is requested', async () => {
+    fetcher.mockResolvedValue(
+      new Response(new Uint8Array([37, 80, 68, 70]), {
+        headers: { 'Content-Type': 'application/pdf' },
+      }),
+    );
+    const response = await apiRequest('/analyses/a1/pdf', {}, { binary: true });
+    expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).get('Content-Type')).toBeNull();
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([37, 80, 68, 70]));
+  });
+
+  it('still rejects a non-JSON success body for ordinary JSON requests', async () => {
+    fetcher.mockResolvedValue(new Response('%PDF', { status: 200 }));
+    await expect(apiRequest('/me')).rejects.toMatchObject({ category: 'API_INVALID_RESPONSE' });
+  });
+
   it.each([
     [401, 'API_UNAUTHORIZED', 'session_expired'],
     [403, 'API_FORBIDDEN', 'session_revoked'],

@@ -2225,8 +2225,20 @@
 }
 
 .footer-grid {
-  grid-template-columns: minmax(280px, 1.35fr) repeat(3, minmax(120px, auto));
+  grid-template-columns: minmax(0, 1.35fr) repeat(3, minmax(0, 1fr));
   gap: 48px;
+}
+
+/* Tablet: brand on its own row so the link columns never force horizontal scrolling. */
+@media (max-width: 900px) {
+  .footer-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 32px;
+  }
+
+  .footer-brand {
+    grid-column: 1 / -1;
+  }
 }
 
 .footer-brand > span:first-child strong {
@@ -2256,7 +2268,7 @@
 
 .footer-grid nav {
   gap: 10px;
-  min-width: 112px;
+  min-width: 0;
 }
 
 .footer-grid nav strong {
@@ -2295,4 +2307,95 @@
   .footer-bottom {
     display: grid;
   }
+}
+
+/*
+ * Readability floor for real page content.
+ * The product illustrations (preview, browser mock, extension popover) are intentionally small, but
+ * copy people actually read must stay legible: body text >= 14px, supporting text >= 12-13px.
+ */
+.home-section-heading p,
+.value-card p,
+.workflow-section .workflow p,
+.reasoning-row p,
+.audience-grid p,
+.home-plan > p,
+.home-plan ul,
+.home-faq-section .home-section-heading p,
+.home-faq-section .faq details p,
+.final-cta p {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.workflow-section .workflow h3,
+.home-faq-section .faq summary,
+.value-card h3,
+.audience-grid h3 {
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.score-guidance,
+.score-banner,
+.check-list,
+.check-list li,
+.text-link,
+.security-note span,
+.home-plan .home-button,
+.plan-descriptor,
+.plan-ribbon,
+.section-eyebrow,
+.final-cta .section-eyebrow,
+.final-cta-actions small {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.section-eyebrow,
+.final-cta .section-eyebrow,
+.plan-ribbon,
+.plan-descriptor {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.home-plan ul {
+  line-height: 1.8;
+}
+
+.score-card-heading small,
+.score-card-large > p,
+.score-ring-large small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Closing call-to-action band: give the copy room to breathe and stack cleanly on small screens. */
+.final-cta-section .final-cta {
+  min-height: 0;
+  padding-block: 56px;
+}
+
+@media (max-width: 760px) {
+  .final-cta-section .final-cta {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding-block: 44px;
+  }
+}
+
+.hero-trust li,
+.value-caption {
+  font-size: 13px;
+}
+
+.reasoning-row strong,
+.score-card-heading strong,
+.score-card-large strong {
+  font-size: 14px;
+}
+
+.workflow-marker > span {
+  font-size: 12px;
 }

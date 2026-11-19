@@ -58,6 +58,7 @@ export function PopupApp() {
   const [guest, setGuest] = useState<GuestSession>();
   const [guestResult, setGuestResult] = useState<GuestResult>();
   const [registeredResult, setRegisteredResult] = useState<RegisteredResult>();
+  const [pdfStatus, setPdfStatus] = useState<'idle' | 'working' | 'failed'>('idle');
   const [usage, setUsage] = useState<typeof usageResponseSchema._output.data>();
   const [progress, setProgress] = useState(0);
   const [jobProgress, setJobProgress] = useState<JobProgress>();
@@ -277,6 +278,45 @@ export function PopupApp() {
     }
   };
   pollJobRef.current = pollJob;
+  const downloadPdf = async (analysisId: string, domain: string) => {
+    if (pdfStatus === 'working') return;
+    setPdfStatus('working');
+    try {
+      const response = await apiRequest(
+        `/analyses/${encodeURIComponent(analysisId)}/pdf`,
+        {},
+        { binary: true },
+      );
+      if (!response.ok) throw new Error(`pdf_${response.status}`);
+      const blob = await response.blob();
+      const href = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = href;
+      link.download = `ProspectAI-${domain.replace(/[^a-zA-Z0-9.-]/g, '-')}-analysis.pdf`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(href), 10_000);
+      setPdfStatus('idle');
+    } catch {
+      setPdfStatus('failed');
+    }
+  };
+  const pdfButton = (analysisId: string, domain: string) => (
+    <>
+      <button
+        className="secondary-action"
+        type="button"
+        onClick={() => void downloadPdf(analysisId, domain)}
+        disabled={pdfStatus === 'working'}
+      >
+        {pdfStatus === 'working' ? 'Preparing PDF…' : 'Download full PDF report'}
+      </button>
+      {pdfStatus === 'failed' && (
+        <small role="alert">The PDF could not be created. Please try again.</small>
+      )}
+    </>
+  );
   const analyzeGuest = async () => {
     if (!url || !guest || operationRef.current) return;
     if (guest.quotaReached) return setState('guest_limit_reached');
@@ -590,6 +630,7 @@ export function PopupApp() {
                 </ul>
               </div>
             )}
+            {pdfButton(guestResult.id, guestResult.domain)}
             {guestResult.recommendedNextAction && (
               <div className="next-action">
                 <small>Recommended next action</small>
@@ -680,6 +721,7 @@ export function PopupApp() {
             >
               Open full report →
             </a>
+            {pdfButton(registeredResult.id, registeredResult.domain)}
           </div>
         )}
         {['auth_start', 'auth_pending', 'auth_success'].includes(state) && (

@@ -1382,3 +1382,10 @@
     scroll-behavior: auto;
   }
 }
+
+/* The lead search icon sits inside its flex control instead of escaping to the page corner. */
+.app-shell.v3-app .v3-control > .lead-filter-control-icon {
+  position: static;
+  transform: none;
+  pointer-events: none;
+}

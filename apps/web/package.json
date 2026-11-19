@@ -20,6 +20,7 @@
     "@prospectai/config": "workspace:*",
     "@prospectai/crawler": "workspace:*",
     "@prospectai/database": "workspace:*",
+    "@prospectai/scoring": "workspace:*",
     "@prospectai/shared": "workspace:*",
     "@prospectai/types": "workspace:*",
     "@prospectai/validation": "workspace:*",

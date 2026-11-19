@@ -4,7 +4,7 @@ export const scoringVersion = 'website-v2';
 export const opportunityScoringVersion = 'opportunity-v1';
 
 const severityWeight = [0, 4, 9, 16, 25, 36] as const;
-const componentWeights = {
+export const componentWeights = {
   Technical: 0.2,
   SEO: 0.2,
   Performance: 0.15,
