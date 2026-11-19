@@ -12,3 +12,13 @@ test-results
 apps/extension/.output
 packages/database/src/generated
 *.tsbuildinfo
+
+/apps.zip
+/apps/web.zip
+
+/apps.zip
+/apps/web.zip
+
+*.zip
+
+*.zip

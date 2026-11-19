@@ -1,0 +1,9 @@
+/* Homepage V2 brand-aligned navigation and public pre-login layout. */
+.marketing-nav{background:#f7f9fa;border-bottom:1px solid #e4e9ed;color:#101d2c;font-family:'DM Sans',Arial,sans-serif}
+.marketing-nav .marketing-nav-inner{min-height:84px;max-width:1160px;margin:auto;padding-inline:24px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.marketing-nav .brand-lockup{font-family:Manrope,Arial,sans-serif;font-size:23px;font-weight:800;letter-spacing:-1.3px;color:#101d2c}
+.marketing-nav .brand-accent{color:#098568}.marketing-nav .marketing-links{display:flex;align-items:center;gap:31px}.marketing-nav .marketing-links a{font-size:13px;font-weight:600;color:#46586a;text-decoration:none}.marketing-nav .marketing-links a:hover,.marketing-nav .marketing-links a.is-active{color:#098568}
+.marketing-nav .marketing-actions{display:flex;align-items:center;gap:15px}.marketing-nav .marketing-actions>a:not(.nav-cta){font-size:13px;font-weight:700;color:#101d2c}
+.marketing-nav a.nav-cta{background:#101d2c;color:white;border-radius:9px;padding:12px 17px;font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:9px}
+.marketing-nav a:focus-visible,.marketing-nav summary:focus-visible{outline:3px solid #58bda4;outline-offset:3px}
+@media(max-width:850px){.marketing-nav .marketing-links,.marketing-nav .marketing-actions{display:none}.marketing-nav .marketing-mobile-menu{display:block}}

@@ -24,7 +24,7 @@ import { useState } from 'react';
 import { applicationNavigation } from './application-navigation';
 import { MobileNavigation } from './mobile-navigation';
 import { AccountSession } from './account-session';
-import { ThemeToggle } from './theme-toggle';
+import './prospect-codex-workspace.css';
 
 function NavigationIcon({ href }: { href: string }) {
   const props = { size: 18, strokeWidth: 1.9, 'aria-hidden': true } as const;
@@ -162,7 +162,6 @@ export function AppShell({
             )}
           </div>
           <div className="v3-topactions">
-            <ThemeToggle />
             <button
               className="v3-iconbtn"
               type="button"
