@@ -20,6 +20,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/api/v1/analyses/[analysisId]/pdf': [
       './public/assets/prospectai/fonts/NotoSans-Regular.ttf',
+      './public/assets/prospectai/fonts/NotoSans-Bold.ttf',
       './public/brand-mark.png',
     ],
   },

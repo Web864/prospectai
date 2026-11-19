@@ -96,6 +96,12 @@ export async function renderAnalysisPdf(
     ),
     { subset: true },
   );
+  const bold = await document.embedFont(
+    new Uint8Array(
+      await readFile(join(process.cwd(), 'public/assets/prospectai/fonts/NotoSans-Bold.ttf')),
+    ),
+    { subset: true },
+  );
   const logo = await document.embedPng(
     new Uint8Array(await readFile(join(process.cwd(), 'public/brand-mark.png'))),
   );
@@ -130,11 +136,11 @@ export async function renderAnalysisPdf(
   let y = TOP;
   let textLength = 0;
   const widths = new Map<string, number>();
-  const width = (value: string, size: number) => {
-    const key = `${size}:${value}`;
+  const width = (value: string, size: number, heavy = false) => {
+    const key = `${heavy ? 'b' : 'r'}${size}:${value}`;
     const cached = widths.get(key);
     if (cached !== undefined) return cached;
-    const measured = font.widthOfTextAtSize(value, size);
+    const measured = (heavy ? bold : font).widthOfTextAtSize(value, size);
     if (widths.size < 20_000) widths.set(key, measured);
     return measured;
   };
@@ -147,7 +153,7 @@ export async function renderAnalysisPdf(
   const ensure = (height: number) => {
     if (y - height < BOTTOM) newPage();
   };
-  const wrap = (value: string, size: number, maxWidth: number) => {
+  const wrap = (value: string, size: number, maxWidth: number, heavy = false) => {
     textLength += value.length;
     if (textLength > MAX_TEXT)
       throw new AppError('VALIDATION_ERROR', 'This report exceeds the PDF text limit.', 422);
@@ -157,7 +163,7 @@ export async function renderAnalysisPdf(
       for (const word of paragraph.split(/ +/)) {
         if (!word) continue;
         const candidate = line ? `${line} ${word}` : word;
-        if (width(candidate, size) <= maxWidth) {
+        if (width(candidate, size, heavy) <= maxWidth) {
           line = candidate;
           continue;
         }
@@ -165,13 +171,13 @@ export async function renderAnalysisPdf(
           lines.push(line);
           line = '';
         }
-        if (width(word, size) <= maxWidth) {
+        if (width(word, size, heavy) <= maxWidth) {
           line = word;
           continue;
         }
         // Long unbroken strings such as URLs are split by glyph width.
         for (const character of word) {
-          if (line && width(line + character, size) > maxWidth) {
+          if (line && width(line + character, size, heavy) > maxWidth) {
             lines.push(line);
             line = '';
           }
@@ -191,15 +197,23 @@ export async function renderAnalysisPdf(
       width?: number;
       after?: number;
       lineHeight?: number;
+      bold?: boolean;
     } = {},
   ) => {
     const size = options.size ?? 10;
     const x = options.x ?? LEFT;
     const maxWidth = options.width ?? LEFT + WIDTH - x;
     const step = size * (options.lineHeight ?? 1.45);
-    for (const line of wrap(value, size, maxWidth)) {
+    for (const line of wrap(value, size, maxWidth, options.bold)) {
       ensure(step);
-      if (line) page.drawText(line, { x, y: y - size, size, font, color: options.color ?? ink });
+      if (line)
+        page.drawText(line, {
+          x,
+          y: y - size,
+          size,
+          font: options.bold ? bold : font,
+          color: options.color ?? ink,
+        });
       y -= step;
     }
     y -= options.after ?? 4;
@@ -207,7 +221,7 @@ export async function renderAnalysisPdf(
   const heading = (title: string) => {
     ensure(70);
     y -= 12;
-    text(title, { size: 14, color: teal, after: 3 });
+    text(title, { size: 14, color: teal, after: 3, bold: true });
     page.drawLine({
       start: { x: LEFT, y },
       end: { x: LEFT + WIDTH, y },
@@ -217,14 +231,14 @@ export async function renderAnalysisPdf(
     y -= 9;
   };
   const labelled = (name: string, value: string, color: Color = ink) => {
-    text(name.toUpperCase(), { size: 7.5, color: muted, after: 0, lineHeight: 1.3 });
+    text(name.toUpperCase(), { size: 7.5, color: muted, after: 0, lineHeight: 1.3, bold: true });
     text(value, { size: 9.5, color, after: 5 });
   };
   const chip = (value: string, color: Color, x: number, top: number) => {
     const caption = value.toUpperCase();
-    const chipWidth = width(caption, 7.5) + 10;
+    const chipWidth = width(caption, 7.5, true) + 10;
     page.drawRectangle({ x, y: top - 12, width: chipWidth, height: 12, color });
-    page.drawText(caption, { x: x + 5, y: top - 9.5, size: 7.5, font, color: white });
+    page.drawText(caption, { x: x + 5, y: top - 9.5, size: 7.5, font: bold, color: white });
     return chipWidth;
   };
   const table = (columns: Array<{ title: string; width: number }>, rows: string[][]) => {
@@ -236,7 +250,13 @@ export async function renderAnalysisPdf(
       page.drawRectangle({ x: LEFT, y: y - 18, width: WIDTH, height: 18, color: panel });
       let x = LEFT;
       for (const column of columns) {
-        page.drawText(clean(column.title), { x: x + pad, y: y - 12.5, size, font, color: teal });
+        page.drawText(clean(column.title), {
+          x: x + pad,
+          y: y - 12.5,
+          size,
+          font: bold,
+          color: teal,
+        });
         x += column.width;
       }
       y -= 18;
@@ -279,8 +299,8 @@ export async function renderAnalysisPdf(
   };
 
   // ---- Title block -------------------------------------------------------------------------
-  text('Website Intelligence Report', { size: 22, after: 2 });
-  text(report.domain, { size: 16, color: teal, after: 2 });
+  text('Website Intelligence Report', { size: 24, after: 2, bold: true });
+  text(report.domain, { size: 16, color: teal, after: 2, bold: true });
   text(report.url, { size: 9, color: muted, after: 2 });
   text(
     `Analyzed ${formatDate(report.analyzedAt)}  |  Status: ${label(report.status)}` +
@@ -330,6 +350,7 @@ export async function renderAnalysisPdf(
       borderColor: rule,
       borderWidth: 0.8,
     });
+    page.drawRectangle({ x, y: y - 3, width: 155, height: 3, color });
     page.drawText(title, { x: x + 10, y: y - 17, size: 8.5, font, color: muted });
     if (caption)
       page.drawText(caption, {
@@ -344,7 +365,7 @@ export async function renderAnalysisPdf(
       x: x + 10,
       y: y - 50,
       size: 28,
-      font,
+      font: bold,
       color: value === null ? muted : color,
     });
     if (value !== null)
@@ -432,7 +453,7 @@ export async function renderAnalysisPdf(
     )
     .slice(0, 5);
   if (topFindings.length) {
-    text('Most important findings', { size: 11, color: teal, after: 3 });
+    text('Most important findings', { size: 11, color: teal, after: 3, bold: true });
     for (const finding of topFindings) {
       ensure(20);
       const chipWidth = chip(
@@ -454,7 +475,7 @@ export async function renderAnalysisPdf(
   )[0];
   if (topOpportunity) {
     y -= 4;
-    text('Strongest service opportunity', { size: 11, color: teal, after: 3 });
+    text('Strongest service opportunity', { size: 11, color: teal, after: 3, bold: true });
     text(
       `${topOpportunity.title} - ${topOpportunity.serviceCategory}, Opportunity Score ${topOpportunity.opportunityScore} / 100`,
       { size: 9.5 },
@@ -480,7 +501,13 @@ export async function renderAnalysisPdf(
     for (const component of report.componentScores) {
       ensure(22);
       const color = scoreColor(component.score);
-      page.drawText(clean(component.name), { x: 50, y: y - 11, size: 9.5, font, color: ink });
+      page.drawText(clean(component.name), {
+        x: 50,
+        y: y - 11,
+        size: 9.5,
+        font: bold,
+        color: ink,
+      });
       page.drawText(`${Math.round(component.weight * 100)}%`, {
         x: 170,
         y: y - 11,
@@ -488,7 +515,13 @@ export async function renderAnalysisPdf(
         font,
         color: muted,
       });
-      page.drawText(String(component.score), { x: 220, y: y - 11, size: 9.5, font, color });
+      page.drawText(String(component.score), {
+        x: 220,
+        y: y - 11,
+        size: 9.5,
+        font: bold,
+        color,
+      });
       page.drawRectangle({ x: 255, y: y - 11, width: 200, height: 6, color: rule });
       page.drawRectangle({
         x: 255,
@@ -560,7 +593,7 @@ export async function renderAnalysisPdf(
     );
     ensure(80);
     y -= 4;
-    text(`${category} (${group.length})`, { size: 12, color: teal, after: 4 });
+    text(`${category} (${group.length})`, { size: 12, color: teal, after: 4, bold: true });
     for (const finding of group) {
       ensure(90);
       const chipWidth = chip(
@@ -569,7 +602,13 @@ export async function renderAnalysisPdf(
         LEFT,
         y,
       );
-      text(finding.title, { size: 10.5, x: LEFT + chipWidth + 8, after: 2, lineHeight: 1.3 });
+      text(finding.title, {
+        size: 10.5,
+        x: LEFT + chipWidth + 8,
+        after: 2,
+        lineHeight: 1.3,
+        bold: true,
+      });
       const meta = [
         finding.confidence === undefined ? null : `Confidence ${percent(finding.confidence)}`,
         finding.detectionType ? `Detection: ${label(finding.detectionType)}` : null,
@@ -595,7 +634,7 @@ export async function renderAnalysisPdf(
     text('No sufficiently grounded service opportunities were recorded.');
   for (const item of report.opportunities) {
     ensure(100);
-    text(item.title, { size: 11.5, color: teal, after: 2 });
+    text(item.title, { size: 11.5, color: teal, after: 2, bold: true });
     ensure(16);
     let x = LEFT;
     if (item.strength) x += chip(`${item.strength} strength`, teal, x, y) + 8;
@@ -617,7 +656,7 @@ export async function renderAnalysisPdf(
     heading('Outreach drafts');
     for (const pitch of report.pitches) {
       ensure(60);
-      text(label(pitch.format), { size: 11, color: teal, after: 2 });
+      text(label(pitch.format), { size: 11, color: teal, after: 2, bold: true });
       text(pitch.content, { size: 9.5, after: 8 });
     }
   }
@@ -639,7 +678,7 @@ export async function renderAnalysisPdf(
     }
     if (firstPage) {
       y -= 4;
-      text(`Security headers on ${firstPage.url}`, { size: 11, color: teal, after: 3 });
+      text(`Security headers on ${firstPage.url}`, { size: 11, color: teal, after: 3, bold: true });
       const captured = Object.keys(firstPage.securityHeaders).map((key) => key.toLowerCase());
       if (!captured.length)
         text('Response header data was not captured for this page, so header status is unknown.', {
@@ -698,8 +737,9 @@ export async function renderAnalysisPdf(
   // ---- Running header and footer on every page ---------------------------------------------
   const pageList = document.getPages();
   for (const [index, current] of pageList.entries()) {
+    current.drawRectangle({ x: 0, y: PAGE[1] - 6, width: PAGE[0], height: 6, color: teal });
     current.drawImage(logo, { x: 50, y: 781, width: 22, height: 22 });
-    current.drawText('ProspectAI', { x: 80, y: 787, size: 14, font, color: teal });
+    current.drawText('ProspectAI', { x: 80, y: 787, size: 14, font: bold, color: teal });
     current.drawText(clean(report.domain), {
       x: 545 - width(clean(report.domain), 9),
       y: 788,
