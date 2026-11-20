@@ -27,3 +27,26 @@ backend and nothing works. This is the most common reason the extension "does no
 - Open the popup, right-click, **Inspect**, and watch the Network tab: requests must go to your domain, not localhost.
 - `apps/extension/dist/manifest.json` → `host_permissions` must list your domain.
 - Sign-in uses Chrome's identity redirect (`https://<extension-id>.chromiumapp.org/`); the API already accepts it.
+
+## Publishing to the Chrome Web Store
+
+Do these only after the web app is deployed and working on its final HTTPS domain, because the domain is baked
+into the extension build and cannot be changed without publishing a new version.
+
+1. **Build** with the final domain (see above), then zip the _contents_ of `apps/extension/dist` so that
+   `manifest.json` sits at the top level of the zip.
+   - Windows PowerShell: `Compress-Archive -Path apps\extension\dist\* -DestinationPath prospectai-extension.zip`
+   - macOS/Linux: `cd apps/extension/dist && zip -r ../../../prospectai-extension.zip .`
+2. **Developer account:** register at the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
+   (one-time US$5 fee).
+3. **New item → upload the zip.** Raise the `version` in `apps/extension/manifest.config.ts` for every later update.
+4. **Store listing:** name, short description (up to 132 characters), longer description, category, at least one
+   1280x800 screenshot of the real popup, and a 440x280 promo tile. The 128x128 icon is already in the zip.
+5. **Privacy tab:** single purpose = "analyze the active website and show prospect intelligence". Justify each
+   permission: `activeTab` (read the current page URL when the user clicks), `storage` (keep the session),
+   `identity` (sign-in window), and the host permission (talk to the ProspectAI API). Link the privacy policy at
+   `https://<your-domain>/privacy`.
+6. **Distribution:** start with _Unlisted_ or _Trusted testers_, install it from the Store, run sign-in and an
+   analysis, then switch to _Public_ and submit for review (usually a few days).
+
+See `chrome-web-store-plan.md` for the full policy checklist.
