@@ -1284,3 +1284,12 @@ body {
   outline: 3px solid var(--popup-focus);
   outline-offset: 2px;
 }
+
+.server-hint {
+  display: block;
+  margin-top: 10px;
+  color: var(--muted, #5f6b7a);
+  font-size: 12px;
+  text-align: center;
+  word-break: break-all;
+}

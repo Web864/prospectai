@@ -11,7 +11,7 @@ import {
 } from '@prospectai/validation';
 import { apiRequest } from './api-client';
 import { analysisSubmissionKey } from './analysis-submission';
-import { APP_URL } from './config';
+import { API_BASE_URL, APP_URL } from './config';
 import { createOpaqueToken, createPkcePair } from './pkce';
 import { guestEntryState, guestRemainingLabel } from './guest-flow';
 import brandIconUrl from './icons/icon-128.png';
@@ -757,6 +757,10 @@ export function PopupApp() {
           >
             Try again
           </button>
+        )}
+        {['backend_unavailable', 'offline', 'api_timeout', 'api_server_error'].includes(state) && (
+          // Shows which server this build talks to, so a localhost build on a deployed site is obvious.
+          <small className="server-hint">Server: {new URL(API_BASE_URL).host}</small>
         )}
         {['session_expired', 'session_revoked'].includes(state) && (
           <button
