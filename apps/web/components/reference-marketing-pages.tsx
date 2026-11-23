@@ -128,7 +128,7 @@ export function FeaturesPage() {
               <IconTile icon={Icon} tone={tone} />
               <h2>{title}</h2>
               <p>{copy}</p>
-              <Link href="/how-it-works" aria-label={`Learn more about ${title}`}>
+              <Link href="/#how" aria-label={`Learn more about ${title}`}>
                 <ArrowRight size={21} aria-hidden="true" />
               </Link>
             </article>
@@ -168,7 +168,7 @@ export function ResourcesPage() {
               <p>{copy}</p>
               <Link
                 className="reference-resource-arrow"
-                href="/how-it-works"
+                href="/#how"
                 aria-label={`Learn more about ${title}`}
               >
                 <ArrowRight size={22} strokeWidth={2.35} aria-hidden="true" />

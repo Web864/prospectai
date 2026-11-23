@@ -2,7 +2,7 @@ import { ArrowRight, Github, Linkedin, Menu, Youtube } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { InputHTMLAttributes, ReactNode } from 'react';
-import { ThemeToggle } from './theme-toggle';
+import './prospect-codex-public.css';
 
 function BrandLink() {
   return (
@@ -16,11 +16,10 @@ function BrandLink() {
 }
 
 const navigation = [
-  ['Features', '/features'],
-  ['Use Cases', '/how-it-works'],
-  ['Pricing', '/pricing'],
-  ['FAQ', '/faq'],
-  ['Resources', '/resources'],
+  ['How it works', '/#how'],
+  ['Features', '/#features'],
+  ['Use cases', '/#audiences'],
+  ['FAQ', '/#faq'],
 ] as const;
 
 export function SiteShell({ children, activePath }: { children: ReactNode; activePath?: string }) {
@@ -42,10 +41,9 @@ export function SiteShell({ children, activePath }: { children: ReactNode; activ
             ))}
           </nav>
           <div className="marketing-actions">
-            <ThemeToggle />
             <Link href="/login">Log in</Link>
             <Link className="button button-primary home-button nav-cta" href="/signup">
-              Start free <ArrowRight size={17} aria-hidden="true" />
+              Get started <ArrowRight size={17} aria-hidden="true" />
             </Link>
           </div>
           <details className="marketing-mobile-menu">
@@ -67,7 +65,7 @@ export function SiteShell({ children, activePath }: { children: ReactNode; activ
               </nav>
               <Link href="/login">Log in</Link>
               <Link className="button button-primary home-button" href="/signup">
-                Start free <ArrowRight size={17} aria-hidden="true" />
+                Get started <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
           </details>
@@ -99,15 +97,15 @@ export function PublicFooter() {
         </div>
         <nav aria-label="Product links">
           <strong>Product</strong>
-          <Link href="/features">Features</Link>
+          <Link href="/#features">Features</Link>
           <Link href="/pricing">Pricing</Link>
-          <Link href="/how-it-works">Use Cases</Link>
+          <Link href="/#audiences">Use Cases</Link>
           <Link href="/resources">Resources</Link>
         </nav>
         <nav aria-label="Resource links">
           <strong>Resources</strong>
           <Link href="/resources">Guides</Link>
-          <Link href="/faq">Help Center</Link>
+          <Link href="/#faq">FAQ</Link>
           <Link href="/contact">Contact</Link>
         </nav>
         <nav aria-label="Company links">
@@ -138,7 +136,6 @@ export function FormPage({
     <main className="form-wrap">
       <div className="form-page-top">
         <BrandLink />
-        {/* <ThemeToggle /> */}
       </div>
       <section className="form-panel">
         <div>
