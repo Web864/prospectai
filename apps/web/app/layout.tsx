@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { MotionLayer } from '../components/motion-layer';
 import { siteDescription, siteName, siteTagline, siteUrl } from '../lib/site-metadata';
 import './globals.css';
 import './phase4.css';
@@ -11,6 +12,7 @@ import './dashboard.css';
 import './design-system.css';
 import './theme.css';
 import './workspace-redesign.css';
+import './motion.css';
 
 const themeBootstrap = `(() => {
   try {
@@ -49,7 +51,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <MotionLayer />
+        {children}
+      </body>
     </html>
   );
 }
