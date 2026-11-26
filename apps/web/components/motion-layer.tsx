@@ -14,8 +14,6 @@ export const FX_CARD_SELECTOR = [
   '.reference-feature-card',
   '.reference-resource-card',
   '.reference-plan',
-  '.faq-question-card',
-  '.pricing-result-card',
   '.blog-card',
   '.v3-stat',
   '.v3-surface',

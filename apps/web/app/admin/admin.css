@@ -363,7 +363,7 @@
 .admin-faq-row .admin-row-actions {
   display: flex;
   gap: 8px;
-  align-items: end;
+  align-items: flex-end;
   grid-column: 1 / -1;
 }
 

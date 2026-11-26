@@ -2,6 +2,8 @@ import { ArrowRight, Menu } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { InputHTMLAttributes, ReactNode } from 'react';
+import { siteAssistantEnabled } from '../lib/site-assistant-flag';
+import { SiteAssistant } from './site-assistant';
 import './prospect-codex-public.css';
 
 function BrandLink() {
@@ -76,6 +78,7 @@ export function SiteShell({ children, activePath }: { children: ReactNode; activ
       </header>
       {children}
       <PublicFooter />
+      {siteAssistantEnabled() && <SiteAssistant />}
     </>
   );
 }

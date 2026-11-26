@@ -333,3 +333,10 @@
     padding-top: 44px;
   }
 }
+
+/* Whole-card links: the dark theme underlines links on hover, which would underline every line. */
+html a.blog-card,
+html a.blog-card:hover,
+html a.blog-card:hover * {
+  text-decoration: none;
+}
