@@ -9,8 +9,6 @@ import {
   usageResponseSchema,
 } from '@prospectai/validation';
 import { apiRequest } from './api-client';
-import { appLink, readApiError } from './api-envelope';
-import { APP_URL } from './config';
 import {
   type ActiveAnalysis,
   analysisSubmissionKey,
@@ -912,6 +910,12 @@ export function PopupApp() {
           >
             Continue with Google
           </button>
+        )}
+        {['backend_unavailable', 'offline', 'api_timeout', 'api_server_error'].includes(state) && (
+          // Shows which server this build talks to, so a localhost build on a deployed site is obvious.
+          <small className="server-hint">Server: {new URL(API_BASE_URL).host}</small>
+        )}
+        {['session_expired', 'session_revoked'].includes(state) && (
           <button
             type="button"
             className="button button-secondary"

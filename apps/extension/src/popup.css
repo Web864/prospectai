@@ -1322,3 +1322,12 @@ details[open] p {
     transform: none !important;
   }
 }
+
+.server-hint {
+  display: block;
+  margin-top: 10px;
+  color: var(--muted, #5f6b7a);
+  font-size: 12px;
+  text-align: center;
+  word-break: break-all;
+}

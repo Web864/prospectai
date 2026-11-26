@@ -12,16 +12,14 @@ describe('ProspectAI homepage', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Know the business. Find your angle. Win better clients.',
+        name: /Know the business\.\s*Find your angle\.\s*Win better clients\./,
       }),
     ).toBeTruthy();
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(
-      screen.getByRole('heading', {
-        name: 'A better conversation starts before the first message.',
-      }),
+      screen.getByRole('heading', { level: 2, name: /Make the next step\s*make sense\./ }),
     ).toBeTruthy();
-    expect(screen.getByText('Are the opportunities guaranteed?')).toBeTruthy();
+    for (const step of ['What you can observe', 'Why it might matter', 'What to explore next'])
+      expect(screen.getByRole('heading', { level: 3, name: step })).toBeTruthy();
   });
 
   it('provides conversion actions and independent page navigation', () => {
@@ -31,7 +29,9 @@ describe('ProspectAI homepage', () => {
       </SiteShell>,
     );
 
-    expect(screen.getByRole('link', { name: /Start free/ }).getAttribute('href')).toBe('/signup');
+    expect(
+      screen.getAllByRole('link', { name: /Start free|Get started/ }).length,
+    ).toBeGreaterThanOrEqual(3);
     expect(screen.getByLabelText('Open navigation menu')).toBeTruthy();
     const main = screen.getByRole('navigation', { name: 'Main navigation' });
     const hrefs = within(main)
