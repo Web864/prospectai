@@ -26,46 +26,57 @@ import { prospectFaqQuestions } from './marketing-views';
 const featureCards = [
   {
     title: 'Evidence first',
-    copy: 'See the specific signals ProspectAI detected before considering a recommendation.',
+    copy: 'Technical, SEO, accessibility, mobile, trust, conversion and performance checks across the site, each stored with the page and the observation behind it.',
     icon: Search,
     tone: 'teal',
+    href: '/how-it-works',
   },
   {
     title: 'Commercial interpretation',
-    copy: "Understand why a website issue may matter to the prospect's business.",
+    copy: "Every finding explains why it may matter to the prospect's business, and the opportunity score is calculated by transparent rules rather than an AI guess.",
     icon: Building2,
     tone: 'violet',
+    href: '/how-it-works',
   },
   {
     title: 'Services worth selling',
-    copy: 'Prioritize grounded opportunities that fit the services you actually offer.',
+    copy: 'Opportunities match the services you sell. Save the prospect, draft a pitch from the evidence, and export a PDF report to share.',
     icon: TrendingUp,
     tone: 'blue',
+    href: '/pricing',
   },
 ] as const;
 
 const resourceCards = [
   {
-    title: 'Evidence first',
-    copy: 'See the specific signals ProspectAI detected before considering a recommendation.',
+    title: 'Read an opportunity score',
+    copy: 'The score weighs how severe and how commercially relevant each finding is. Treat a high score as a reason to look closer, not as proof the business will buy.',
     icon: BarChart3,
+    href: '/faq',
   },
   {
-    title: 'Commercial interpretation',
-    copy: "Understand why a website issue may matter to the prospect's business.",
+    title: 'Validate before you pitch',
+    copy: 'Open the page behind each finding and confirm it yourself. A missing meta description on one page is a detail; a site with no clear way to contact the business is a conversation.',
     icon: FileText,
+    href: '/how-it-works',
   },
   {
-    title: 'Services worth selling',
-    copy: 'Prioritize grounded opportunities that fit the services you actually offer.',
+    title: 'Lead with one specific angle',
+    copy: 'Pick the single finding that best matches a service you sell, say what you saw and why it matters, and offer a small next step instead of a full proposal.',
     icon: Target,
+    href: '/features',
   },
 ] as const;
+
+const analysisAllowance = (value: string | undefined, fallback: number) => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+};
 
 const plans = [
   {
     name: 'Free',
-    copy: 'Explore the core workflow.',
+    copy: `Explore the core workflow with ${analysisAllowance(process.env.FREE_MONTHLY_ANALYSIS_LIMIT, 10)} website analyses a month.`,
     cta: 'Start free',
     href: '/signup',
     icon: Rocket,
@@ -73,7 +84,7 @@ const plans = [
   },
   {
     name: 'Pro / Individual',
-    copy: 'Consistent prospecting for one professional.',
+    copy: `Consistent prospecting for one professional: ${analysisAllowance(process.env.PRO_MONTHLY_ANALYSIS_LIMIT, 100)} analyses a month.`,
     cta: 'Choose plan',
     href: '/signup?plan=pro',
     icon: UserRound,
@@ -81,7 +92,7 @@ const plans = [
   },
   {
     name: 'Agency',
-    copy: 'Shared capacity for a growing team.',
+    copy: `Shared capacity for a growing team: ${analysisAllowance(process.env.AGENCY_MONTHLY_ANALYSIS_LIMIT, 500)} analyses a month.`,
     cta: 'Choose plan',
     href: '/signup?plan=agency',
     icon: Users,
@@ -119,7 +130,7 @@ export function FeaturesPage() {
         </section>
 
         <section className="reference-feature-grid" aria-label="ProspectAI feature principles">
-          {featureCards.map(({ title, copy, icon: Icon, tone }, index) => (
+          {featureCards.map(({ title, copy, icon: Icon, tone, href }, index) => (
             <article
               className={`reference-feature-card reference-card-${tone} reference-enter`}
               style={{ animationDelay: `${280 + index * 90}ms` }}
@@ -128,7 +139,7 @@ export function FeaturesPage() {
               <IconTile icon={Icon} tone={tone} />
               <h2>{title}</h2>
               <p>{copy}</p>
-              <Link href="/#how" aria-label={`Learn more about ${title}`}>
+              <Link href={href} aria-label={`Learn more about ${title}`}>
                 <ArrowRight size={21} aria-hidden="true" />
               </Link>
             </article>
@@ -148,14 +159,14 @@ export function ResourcesPage() {
           <div className="reference-heading reference-enter reference-enter-1">
             <span className="reference-resources-eyebrow">ProspectAI</span>
             <h1 id="resources-page-title">
-              Talk to the <span>ProspectAI</span> team
+              Prospecting with <span>website evidence</span>
             </h1>
             <p>Built for freelancers, agencies, consultants, and small sales teams.</p>
           </div>
         </section>
 
         <section className="reference-resources-grid" aria-label="ProspectAI principles">
-          {resourceCards.map(({ title, copy, icon: Icon }, index) => (
+          {resourceCards.map(({ title, copy, icon: Icon, href }, index) => (
             <article
               className="reference-resource-card reference-enter"
               style={{ animationDelay: `${210 + index * 90}ms` }}
@@ -168,7 +179,7 @@ export function ResourcesPage() {
               <p>{copy}</p>
               <Link
                 className="reference-resource-arrow"
-                href="/#how"
+                href={href}
                 aria-label={`Learn more about ${title}`}
               >
                 <ArrowRight size={22} strokeWidth={2.35} aria-hidden="true" />

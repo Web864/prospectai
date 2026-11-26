@@ -59,11 +59,21 @@ export function apiError(error: unknown, id: string): Response {
     { status: 500, headers: { 'X-Request-Id': id } },
   );
 }
+/** Largest JSON body any API route accepts. Bounds parsing and validation cost per request. */
+export const maxJsonBodyBytes = 256 * 1024;
+
 export async function parseJson<T>(request: Request, schema: ZodType<T>): Promise<T> {
+  const declared = Number(request.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > maxJsonBodyBytes)
+    throw new AppError('VALIDATION_ERROR', 'The request body is too large.', 413);
   let body: unknown;
   try {
-    body = await request.json();
-  } catch {
+    const text = await request.text();
+    if (Buffer.byteLength(text) > maxJsonBodyBytes)
+      throw new AppError('VALIDATION_ERROR', 'The request body is too large.', 413);
+    body = JSON.parse(text);
+  } catch (error) {
+    if (error instanceof AppError) throw error;
     // Unreadable or non-JSON bodies are a client error, not a server fault.
     throw new AppError('VALIDATION_ERROR', 'The request body must be valid JSON.', 400);
   }
