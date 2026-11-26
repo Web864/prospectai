@@ -13,6 +13,7 @@ import {
   severityLabel,
   stageIndex,
   stageLabel,
+  uniqueByTitle,
 } from './state-model';
 import { useCountUp } from './motion';
 
@@ -257,7 +258,7 @@ export function RegisteredResultView({
   result: RegisteredResult;
   actions: RegisteredActions;
 }) {
-  const problems = bySeverity(result.findings).slice(0, 3);
+  const problems = uniqueByTitle(bySeverity(result.findings)).slice(0, 3);
   const opportunities = result.opportunities.slice(0, 3);
   const top = opportunities[0];
   const partial = result.status === 'partial';
@@ -453,7 +454,7 @@ export function GuestResultView({
             <section aria-labelledby="guest-signals">
               <h2 id="guest-signals">Top problems</h2>
               <ul className="bullet-list">
-                {result.keySignals.slice(0, 4).map((signal) => (
+                {[...new Set(result.keySignals)].slice(0, 4).map((signal) => (
                   <li key={signal}>{signal}</li>
                 ))}
               </ul>

@@ -1,4 +1,4 @@
-﻿import { apiError, requestId } from '@prospectai/api';
+import { apiError, requestId } from '@prospectai/api';
 import { prisma } from '@prospectai/database';
 import { unreadablePageText } from '@prospectai/crawler';
 import { AppError, analysisLimitations, auditCoverage } from '@prospectai/shared';
@@ -34,7 +34,8 @@ export async function GET(
       where: { id: analysisId, guestSessionId: session.id, organizationId: session.organizationId },
       include: {
         website: { select: { domain: true } },
-        findings: { select: { title: true }, orderBy: { commercialRelevance: 'desc' }, take: 5 },
+        // One finding is stored per page, so read more than five and keep five distinct titles.
+        findings: { select: { title: true }, orderBy: { commercialRelevance: 'desc' }, take: 25 },
         opportunities: {
           select: {
             opportunityScore: true,
@@ -65,7 +66,7 @@ export async function GET(
           // and the full report. The top service's own score is not the analysis score.
           opportunityScore: analysis.opportunityScore ?? opportunity?.opportunityScore ?? null,
           reasoning: opportunity?.summary ?? analysis.businessSummary,
-          keySignals: analysis.findings.map((finding) => finding.title),
+          keySignals: [...new Set(analysis.findings.map((finding) => finding.title))].slice(0, 5),
           aiStatus: analysis.aiStatus,
           limitations: [
             ...analysisLimitations(analysis.status, analysis.aiStatus),

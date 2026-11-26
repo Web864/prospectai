@@ -332,6 +332,20 @@ export function bySeverity<T extends { severity?: string | undefined }>(items: r
   );
 }
 
+/**
+ * The crawler records one finding per page, so a multi-page site can return the same problem
+ * several times. The popup's short lists show each problem once (the first, most severe copy).
+ */
+export function uniqueByTitle<T extends { title: string }>(items: readonly T[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = item.title.trim().toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function severityLabel(severity: string | undefined) {
   if (!severity) return 'Finding';
   const lower = severity.toLowerCase();

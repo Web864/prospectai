@@ -3,6 +3,7 @@ import { ExtensionApiError } from './api-errors';
 import {
   analysisStages,
   bySeverity,
+  uniqueByTitle,
   confidenceLabel,
   isTerminalStatus,
   jobHealth,
@@ -119,6 +120,13 @@ describe('result presentation helpers', () => {
       { id: 'c', severity: 'MEDIUM' },
     ]);
     expect(ordered.map((item) => item.id)).toEqual(['b', 'c', 'a']);
+    // One finding per crawled page: the same problem on three pages is listed once.
+    const unique = uniqueByTitle([
+      { id: 'p1', title: 'Form controls lack detectable labels' },
+      { id: 'p2', title: 'Form controls lack detectable labels ' },
+      { id: 'p3', title: 'Initial response is slow' },
+    ]);
+    expect(unique.map((item) => item.id)).toEqual(['p1', 'p3']);
     expect(confidenceLabel(0.82)).toBe('High');
     expect(confidenceLabel(0.6)).toBe('Medium');
     expect(confidenceLabel(0.3)).toBe('Low');
