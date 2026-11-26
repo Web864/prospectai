@@ -61,7 +61,9 @@ export async function GET(
           id: analysis.id,
           companyName: analysis.website.domain,
           domain: analysis.website.domain,
-          opportunityScore: opportunity?.opportunityScore ?? null,
+          // The analysis-level score, so guests see the same number as the registered result
+          // and the full report. The top service's own score is not the analysis score.
+          opportunityScore: analysis.opportunityScore ?? opportunity?.opportunityScore ?? null,
           reasoning: opportunity?.summary ?? analysis.businessSummary,
           keySignals: analysis.findings.map((finding) => finding.title),
           aiStatus: analysis.aiStatus,
