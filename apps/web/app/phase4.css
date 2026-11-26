@@ -445,6 +445,23 @@ textarea:focus-visible {
   line-height: 1.7;
   color: #46546b;
 }
+.legal ul {
+  padding-left: 22px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+.legal li + li {
+  margin-top: 8px;
+}
+.legal .legal-notice {
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--pa-color-surface-muted);
+}
+.legal .button {
+  display: inline-flex;
+}
 @media (max-width: 800px) {
   .marketing-nav nav {
     display: none;

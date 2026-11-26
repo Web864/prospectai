@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiRequest } from './api-client';
 import { API_BASE_URL } from './config';
 import { ExtensionApiError } from './api-errors';
-import { stateFromApiStatus, stateFromRequestError } from './state-model';
+import { noticeFromApi, noticeFromRequestError } from './state-model';
 
 describe('extension API boundary', () => {
   const fetcher = vi.fn<typeof fetch>();
@@ -49,10 +49,10 @@ describe('extension API boundary', () => {
 
   it.each([
     [401, 'API_UNAUTHORIZED', 'session_expired'],
-    [403, 'API_FORBIDDEN', 'session_revoked'],
-    [404, 'API_NOT_FOUND', 'api_not_found'],
+    [403, 'API_FORBIDDEN', 'access_denied'],
+    [404, 'API_NOT_FOUND', 'result_missing'],
     [429, 'API_RATE_LIMITED', 'rate_limited'],
-    [500, 'API_SERVER_ERROR', 'api_server_error'],
+    [500, 'API_SERVER_ERROR', 'service_unavailable'],
   ] as const)(
     'distinguishes HTTP %i from a connection failure',
     async (status, category, state) => {
@@ -64,7 +64,7 @@ describe('extension API boundary', () => {
         status,
         category,
       });
-      expect(stateFromApiStatus(status)).toBe(state);
+      expect(noticeFromApi(status).kind).toBe(state);
       expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toContain('test-guest-token');
     },
   );
@@ -78,20 +78,20 @@ describe('extension API boundary', () => {
     await expect(apiRequest('/guest-sessions')).rejects.toMatchObject({
       category: 'API_INVALID_RESPONSE',
     });
-    expect(stateFromRequestError(new ExtensionApiError('API_TIMEOUT'), true)).toBe('api_timeout');
-    expect(stateFromRequestError(new ExtensionApiError('NETWORK_UNREACHABLE'), true)).toBe(
-      'backend_unavailable',
+    expect(noticeFromRequestError(new ExtensionApiError('API_TIMEOUT'), true).kind).toBe(
+      'request_timeout',
     );
-    expect(stateFromRequestError(new ExtensionApiError('NETWORK_UNREACHABLE'), false)).toBe(
+    expect(noticeFromRequestError(new ExtensionApiError('NETWORK_UNREACHABLE'), true).kind).toBe(
+      'network',
+    );
+    expect(noticeFromRequestError(new ExtensionApiError('NETWORK_UNREACHABLE'), false).kind).toBe(
       'offline',
     );
   });
 
   it('preserves expired guest and exhausted trial semantics', async () => {
-    expect(stateFromApiStatus(401, 'GUEST_SESSION_EXPIRED')).toBe('first_use_guest');
-    expect(stateFromApiStatus(429, 'GUEST_TRIAL_EXHAUSTED')).toBe('guest_limit_reached');
-    expect(stateFromApiStatus(504, 'ANALYSIS_TIMEOUT')).toBe('analysis_timed_out');
-    expect(stateFromApiStatus(502, 'AI_UNAVAILABLE')).toBe('api_server_error');
+    expect(noticeFromApi(401, 'GUEST_SESSION_EXPIRED').kind).toBe('guest_session_expired');
+    expect(noticeFromApi(429, 'GUEST_TRIAL_EXHAUSTED').kind).toBe('guest_quota_exhausted');
   });
 });
 
@@ -125,7 +125,9 @@ describe('extension token refresh', () => {
             Object.fromEntries(keys.filter((key) => key in store).map((key) => [key, store[key]])),
           ),
           set: vi.fn(async (values: Record<string, unknown>) => void Object.assign(store, values)),
-          remove: vi.fn(async (key: string) => void delete store[key]),
+          remove: vi.fn(async (keys: string | string[]) => {
+            for (const key of Array.isArray(keys) ? keys : [keys]) delete store[key];
+          }),
         },
       },
     });
@@ -181,6 +183,9 @@ describe('extension token refresh', () => {
     expect(response.status).toBe(401);
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect('refreshToken' in store).toBe(false);
+    // The dead access token is dropped too, and the UI is told the session expired.
+    expect('accessToken' in store).toBe(false);
+    expect(store.sessionState).toBe('expired');
     // With the dead refresh token cleared, later requests no longer hit the refresh endpoint.
     fetcher.mockResolvedValueOnce(
       Response.json({ error: { code: 'UNAUTHENTICATED' } }, { status: 401 }),

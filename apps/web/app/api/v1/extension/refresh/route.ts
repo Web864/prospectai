@@ -4,10 +4,12 @@ import { loadAuthEnvironment } from '@prospectai/config';
 import { prisma } from '@prospectai/database';
 import { AppError } from '@prospectai/shared';
 import { extensionRefreshSchema } from '@prospectai/validation';
+import { enforceRateLimit } from '../../../../../lib/rate-limit';
 
 export async function POST(request: Request) {
   const id = requestId(request.headers);
   try {
+    await enforceRateLimit(request, 'extension.refresh', 60, 15 * 60_000);
     const input = await parseJson(request, extensionRefreshSchema);
     const environment = loadAuthEnvironment();
     const session = await prisma.extensionSession.findUnique({

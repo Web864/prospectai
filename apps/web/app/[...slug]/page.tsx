@@ -1,22 +1,16 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AppShell } from '../../components/app-shell';
 import { DashboardView } from '../../components/product-views';
-import { Badge, Button, StatePanel } from '../../components/design-system';
-import { FormPage, SiteShell, TextField } from '../../components/site-shell';
-import { FaqView } from '../../components/marketing-views';
-import { HowItWorksPage } from '../../components/how-it-works-page';
+import { StatePanel } from '../../components/design-system';
+import { FormPage } from '../../components/site-shell';
 import { LeadListView } from '../../components/lead-list-view';
 import { LeadDetailView } from '../../components/lead-detail-view';
 import { AnalysisDetailView } from '../../components/analysis-detail-view';
-import {
-  FaqPage,
-  FeaturesPage,
-  PricingPage,
-  ResourcesPage,
-} from '../../components/reference-marketing-pages';
 import { AuthForm } from '../../components/auth-form';
 import { OnboardingForm } from '../../components/onboarding-form';
 import { ExtensionConnect } from '../../components/extension-connect';
+import { privateMetadata } from '../../lib/site-metadata';
 import {
   AnalysesView,
   BillingView,
@@ -27,20 +21,6 @@ import {
   UsageView,
 } from '../../components/workspace-views';
 
-const featureCopy = [
-  {
-    title: 'Evidence first',
-    copy: 'See the specific signals ProspectAI detected before considering a recommendation.',
-  },
-  {
-    title: 'Commercial interpretation',
-    copy: "Understand why a website issue may matter to the prospect's business.",
-  },
-  {
-    title: 'Services worth selling',
-    copy: 'Prioritize grounded opportunities that fit the services you actually offer.',
-  },
-];
 const appTitles: Record<string, string> = {
   app: 'Dashboard',
   'app/dashboard': 'Dashboard',
@@ -61,65 +41,28 @@ const appTitles: Record<string, string> = {
   'app/reports': 'Reports',
 };
 
-function Marketing({ page }: { page: string }) {
-  const title =
-    page === 'features'
-      ? 'From website signals to credible sales opportunities'
-      : page === 'pricing'
-        ? 'Start free, scale when prospecting works'
-        : page === 'faq'
-          ? 'Questions, answered plainly'
-          : 'Talk to the ProspectAI team';
-  return (
-    <SiteShell>
-      <main className="page">
-        <div className="section-title">
-          <Badge>ProspectAI</Badge>
-          <h1>{title}</h1>
-          <p className="muted">
-            Built for freelancers, agencies, consultants, and small sales teams.
-          </p>
-        </div>
-        {page === 'faq' ? (
-          <FaqView />
-        ) : page === 'pricing' ? (
-          <section className="plan-grid">
-            {['Free', 'Pro / Individual', 'Agency'].map((plan, index) => (
-              <article className="plan" key={plan}>
-                <h2>{plan}</h2>
-                <p>
-                  {index === 0
-                    ? 'Explore the core workflow.'
-                    : index === 1
-                      ? 'Consistent prospecting for one professional.'
-                      : 'Shared capacity for a growing team.'}
-                </p>
-                <Button>{index === 0 ? 'Start free' : 'Choose plan'}</Button>
-              </article>
-            ))}
-          </section>
-        ) : page === 'contact' ? (
-          <form className="form-panel" method="post">
-            <TextField label="Work email" name="email" type="email" autoComplete="email" required />
-            <label className="field">
-              How can we help?
-              <textarea rows={5} />
-            </label>
-            <Button type="submit">Send message</Button>
-          </form>
-        ) : (
-          <section className="feature-grid">
-            {featureCopy.map((item) => (
-              <article className="feature" key={item.title}>
-                <h2>{item.title}</h2>
-                <p>{item.copy}</p>
-              </article>
-            ))}
-          </section>
-        )}
-      </main>
-    </SiteShell>
-  );
+const authTitles: Record<string, string> = {
+  signup: 'Create your account',
+  login: 'Sign in',
+  'verify-email': 'Verify your email',
+  'forgot-password': 'Reset your password',
+  'reset-password': 'Choose a new password',
+  onboarding: 'Set up your workspace',
+  'extension/connect': 'Connect the Chrome extension',
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string[] }>;
+}): Promise<Metadata> {
+  const path = (await params).slug.join('/');
+  if (path in authTitles) return privateMetadata(authTitles[path]!);
+  if (path in appTitles || path.startsWith('app/analysis/') || path.startsWith('app/leads/'))
+    return privateMetadata(appTitles[path] ?? 'Workspace');
+  // Rejecting unknown paths here, before the loading boundary streams, yields a real 404 status
+  // instead of a soft 404 (HTTP 200 with a "not found" page).
+  notFound();
 }
 
 function Auth({
@@ -228,51 +171,5 @@ export default async function RoutedPage({
         <OnboardingForm />
       </FormPage>
     );
-  if (['privacy', 'terms'].includes(path))
-    return (
-      <SiteShell>
-        <main className="page legal">
-          <h1>{path === 'privacy' ? 'Privacy policy' : 'Terms of service'}</h1>
-          <p>Last updated September 2026</p>
-          <h2>Plain-language scope</h2>
-          <p>
-            ProspectAI processes the information required to provide website analysis, account
-            security, and subscription services. Final legal text will be reviewed before public
-            release.
-          </p>
-        </main>
-      </SiteShell>
-    );
-  if (path === 'features')
-    return (
-      <SiteShell activePath="/features">
-        <FeaturesPage />
-      </SiteShell>
-    );
-  if (path === 'pricing')
-    return (
-      <SiteShell activePath="/pricing">
-        <PricingPage />
-      </SiteShell>
-    );
-  if (path === 'faq')
-    return (
-      <SiteShell activePath="/faq">
-        <FaqPage />
-      </SiteShell>
-    );
-  if (path === 'how-it-works')
-    return (
-      <SiteShell activePath="/how-it-works">
-        <HowItWorksPage />
-      </SiteShell>
-    );
-  if (path === 'resources')
-    return (
-      <SiteShell activePath="/resources">
-        <ResourcesPage />
-      </SiteShell>
-    );
-  if (path === 'contact') return <Marketing page={path} />;
   notFound();
 }

@@ -169,9 +169,22 @@ export async function findOrCreateGoogleAccount(emailInput: string) {
         include: { memberships: { orderBy: { createdAt: 'asc' }, take: 1 } },
       });
     } else if (!user.emailVerifiedAt) {
+      // Google has proven ownership of this address, but the existing account never did. Anyone
+      // could have registered it with a password ("pre-account takeover"), so that unproven
+      // password and every session created with it are discarded before the owner signs in.
+      const now = new Date();
+      await transaction.authSession.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      await transaction.extensionSession.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { status: 'REVOKED', revokedAt: now },
+      });
+      await transaction.authActionToken.deleteMany({ where: { userId: user.id, usedAt: null } });
       user = await transaction.user.update({
         where: { id: user.id },
-        data: { emailVerifiedAt: new Date() },
+        data: { emailVerifiedAt: now, passwordHash: null },
         include: { memberships: { orderBy: { createdAt: 'asc' }, take: 1 } },
       });
     }

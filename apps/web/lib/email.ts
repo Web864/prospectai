@@ -25,19 +25,25 @@ export async function sendTransactionalEmail(input: { to: string; subject: strin
   }
   if (!environment.RESEND_API_KEY)
     throw new AppError('EMAIL_UNAVAILABLE', 'Transactional email is not configured.', 503);
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${environment.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: environment.EMAIL_FROM,
-      to: [input.to],
-      subject: input.subject,
-      text: input.text,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      signal: AbortSignal.timeout(10_000),
+      headers: {
+        Authorization: `Bearer ${environment.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: environment.EMAIL_FROM,
+        to: [input.to],
+        subject: input.subject,
+        text: input.text,
+      }),
+    });
+  } catch {
+    throw new AppError('EXTERNAL_SERVICE_ERROR', 'Transactional email delivery failed.', 502);
+  }
   if (!response.ok)
     throw new AppError('EXTERNAL_SERVICE_ERROR', 'Transactional email delivery failed.', 502);
   return { delivered: true, adapter: 'resend' as const };

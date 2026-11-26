@@ -72,7 +72,9 @@ storage and are sent as `Authorization: Guest ...`, never cookies.
 
 For release, set `VITE_APP_URL` and `VITE_API_BASE_URL` to deployed HTTPS URLs and run
 `pnpm --filter @prospectai/extension build:production`. This command rejects missing URLs,
-localhost, loopback hosts, HTTP, and embedded credentials. Local `dist` is not a release artifact.
+localhost, loopback hosts, HTTP, and embedded credentials, writes `dist-production/`, and runs
+`scripts/verify-release.mjs` on the result. Local `dist` (named "ProspectAI (Development)") is not
+a release artifact. See `docs/extension-final-global-audit.md` for the store checklist.
 Inspect the generated manifest before uploading it. Extension-origin requests use Chrome's
 scoped host permission; do not add wildcard CORS or `<all_urls>`.
 

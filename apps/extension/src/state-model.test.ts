@@ -1,104 +1,135 @@
 import { describe, expect, it } from 'vitest';
+import { ExtensionApiError } from './api-errors';
 import {
-  guestEntryState,
-  guestRemainingLabel,
-  guestResultState,
-  guestStorageKeys,
-} from './guest-flow';
-import {
-  extensionStates,
-  stateCopy,
-  stateFromApiStatus,
-  stateFromJobStatus,
-  stateFromTab,
-  analysisStage,
-  analysisStageCount,
+  analysisStages,
+  bySeverity,
+  uniqueByTitle,
+  confidenceLabel,
+  isTerminalStatus,
+  jobHealth,
+  noticeFromApi,
+  noticeFromJobFailure,
+  noticeFromRequestError,
+  stageIndex,
+  stageLabel,
 } from './state-model';
 
-const entitlement = (remaining: number) => ({ quotaReached: remaining === 0 });
-
-describe('value-first extension states', () => {
-  it('has user-facing copy for every required state', () =>
-    expect(Object.keys(stateCopy)).toHaveLength(extensionStates.length));
-
-  it('shows a detection state before the active page and guest session are known', () => {
-    expect(stateCopy.detecting_page.title).toBe('Checking this page');
-    expect(stateCopy.detecting_page.detail).toContain('active page');
-  });
-
-  it('opens a fresh install in guest mode instead of requiring an account', () => {
-    expect(guestEntryState(entitlement(3), false)).toBe('first_use_guest');
-    expect(stateCopy.first_use_guest.title).toBe('Page ready to analyze');
-  });
-
-  it('preserves ready guest state across extension reopen and browser storage reload', () => {
-    expect(guestEntryState(entitlement(2), true)).toBe('guest_ready');
-    expect(guestEntryState(entitlement(1), true)).toBe('guest_ready');
-    expect(guestRemainingLabel({ trialLimit: 3, trialRemaining: 3 })).toBe(
-      '3 of 3 free analyses remaining',
-    );
-    expect(guestRemainingLabel({ trialLimit: 3, trialRemaining: 2 })).toBe(
-      '2 of 3 free analyses remaining',
-    );
-    expect(guestRemainingLabel({ trialLimit: 3, trialRemaining: 1 })).toBe(
-      '1 of 3 free analyses remaining',
-    );
-    expect(guestRemainingLabel({ trialLimit: 3, trialRemaining: 0 })).toBe(
-      '0 of 3 free analyses remaining',
-    );
-  });
-
-  it('shows each completed guest result before progressive registration', () => {
-    expect(guestResultState(false)).toBe('guest_result');
-    expect(guestEntryState(entitlement(0), true)).toBe('guest_limit_reached');
-    expect(stateCopy.guest_limit_reached.detail).toContain('Create your free account');
-  });
-
-  it('stores only the minimal guest session and current-result handoff state', () => {
-    expect(guestStorageKeys).toEqual([
-      'guestToken',
-      'guestSessionId',
-      'privacyAcknowledged',
-      'currentGuestAnalysisId',
-      'activeAnalysisJobId',
-      'activeAnalysisMode',
-      'analysisStartedAt',
+describe('truthful analysis stages', () => {
+  it('lists exactly the stages the worker reports, in order', () => {
+    // apps/worker/src/index.ts: validating 5, fetching 15, extracting 40, rule_analysis 60,
+    // ai_processing 75, opportunity_scoring 90.
+    expect(analysisStages.map((stage) => stage.status)).toEqual([
+      'queued',
+      'validating',
+      'fetching',
+      'extracting',
+      'rule_analysis',
+      'ai_processing',
+      'opportunity_scoring',
     ]);
-    expect(guestStorageKeys).not.toContain('pageContent');
-    expect(guestStorageKeys).not.toContain('browsingHistory');
+    expect(stageIndex('rendering')).toBe(stageIndex('fetching'));
+    expect(stageLabel('retry_pending')).toContain('Retrying');
   });
 
-  it('supports public sites while keeping internal, local, and LinkedIn pages disabled', () => {
-    expect(stateFromTab('https://example.com')).toBe('guest_ready');
-    expect(stateFromTab('chrome://settings')).toBe('unsupported_page');
-    expect(stateFromTab('http://localhost:3000')).toBe('unsupported_page');
-    expect(stateFromTab('https://www.linkedin.com/company/example')).toBe('unsupported_page');
+  it('treats only completed, partial, failed and cancelled as terminal', () => {
+    for (const status of ['completed', 'partial', 'failed', 'cancelled'] as const)
+      expect(isTerminalStatus(status)).toBe(true);
+    for (const status of ['queued', 'fetching', 'ai_processing', 'retry_pending'] as const)
+      expect(isTerminalStatus(status)).toBe(false);
   });
 
-  it('maps guest and registered PostgreSQL job states without infinite loading', () => {
-    expect(stateFromJobStatus('fetching', 'guest')).toBe('guest_analyzing');
-    expect(stateFromJobStatus('completed', 'guest')).toBe('guest_result');
-    expect(stateFromJobStatus('completed', 'registered')).toBe('registered_result');
-    expect(stateFromJobStatus('partial', 'guest')).toBe('partial_result');
-    expect(stateFromJobStatus('cancelled', 'guest')).toBe('analysis_failed');
+  it('never calls a long-running job a failure', () => {
+    const now = Date.parse('2026-11-26T12:00:00.000Z');
+    const at = (seconds: number) => new Date(now - seconds * 1000).toISOString();
+    expect(jobHealth({ status: 'fetching', updatedAt: at(5), nextAttemptAt: at(5) }, now)).toBe(
+      'normal',
+    );
+    expect(jobHealth({ status: 'queued', updatedAt: at(45), nextAttemptAt: at(45) }, now)).toBe(
+      'waiting_for_worker',
+    );
+    expect(
+      jobHealth({ status: 'ai_processing', updatedAt: at(90), nextAttemptAt: at(90) }, now),
+    ).toBe('slow');
+    expect(
+      jobHealth({ status: 'retry_pending', updatedAt: at(1), nextAttemptAt: at(-20) }, now),
+    ).toBe('retry_scheduled');
+  });
+});
+
+describe('specific, actionable errors', () => {
+  it('separates registered quota exhaustion from rate limiting (both are HTTP 429)', () => {
+    expect(noticeFromApi(429, 'USAGE_LIMIT_REACHED')).toMatchObject({
+      kind: 'quota_exhausted',
+      action: 'upgrade',
+    });
+    expect(noticeFromApi(429, 'RATE_LIMITED')).toMatchObject({
+      kind: 'rate_limited',
+      action: 'retry',
+    });
+    expect(noticeFromApi(429, 'GUEST_TRIAL_EXHAUSTED').kind).toBe('guest_quota_exhausted');
   });
 
-  it('exposes truthful analysis stages and timeout recovery state', () => {
-    expect(analysisStageCount).toBe(6);
-    expect(analysisStage('fetching')).toEqual({ index: 2, label: 'Fetching website' });
-    expect(analysisStage('ai_processing')).toEqual({ index: 5, label: 'Generating insight' });
-    expect(stateFromJobStatus('retry_pending', 'guest')).toBe('guest_analyzing');
-    expect(stateCopy.analysis_timed_out.detail).toContain('healthy progress');
+  it('maps session, access, server and URL failures to distinct notices', () => {
+    expect(noticeFromApi(401, 'UNAUTHENTICATED')).toMatchObject({
+      kind: 'session_expired',
+      title: 'Your session has expired',
+    });
+    expect(noticeFromApi(403).kind).toBe('access_denied');
+    expect(noticeFromApi(503, 'BACKEND_UNAVAILABLE').title).toBe(
+      'The analysis service is temporarily unavailable',
+    );
+    expect(noticeFromApi(400, 'PRIVATE_NETWORK_BLOCKED').title).toBe(
+      'This page cannot be analyzed',
+    );
+    expect(noticeFromApi(400, 'VALIDATION_ERROR').kind).toBe('request_rejected');
   });
-  it('separates trial exhaustion from rate limiting and account-session errors', () => {
-    expect(stateFromApiStatus(429, 'GUEST_TRIAL_EXHAUSTED')).toBe('guest_limit_reached');
-    expect(stateFromApiStatus(429, 'RATE_LIMITED')).toBe('rate_limited');
-    expect(stateFromApiStatus(401, 'GUEST_SESSION_EXPIRED')).toBe('first_use_guest');
-    expect(stateFromApiStatus(401, 'UNAUTHENTICATED')).toBe('session_expired');
-    expect(stateFromApiStatus(401, 'AUTH_HANDOFF_EXPIRED')).toBe('auth_failed');
-    expect(stateFromApiStatus(400, 'AUTH_HANDOFF_INVALID')).toBe('auth_failed');
-    expect(stateCopy.auth_failed.detail).toContain('guest result is safe');
-    expect(stateFromApiStatus(403)).toBe('session_revoked');
-    expect(stateFromApiStatus(503)).toBe('api_server_error');
+
+  it('explains persisted crawler failures instead of a generic failure', () => {
+    expect(noticeFromJobFailure('failed', 'WEBSITE_UNREACHABLE').title).toBe(
+      'We could not access the website',
+    );
+    expect(noticeFromJobFailure('failed', 'WEBSITE_BLOCKED_CRAWLER').kind).toBe('crawler_blocked');
+    expect(noticeFromJobFailure('failed', 'ANALYSIS_TIMEOUT').kind).toBe('crawler_timeout');
+    expect(noticeFromJobFailure('failed', 'WORKER_LEASE_EXPIRED').title).toBe(
+      'This analysis could not be completed',
+    );
+    expect(noticeFromJobFailure('cancelled', null).kind).toBe('analysis_cancelled');
+  });
+
+  it('distinguishes offline, unreachable, timeout and malformed responses', () => {
+    expect(noticeFromRequestError(new ExtensionApiError('NETWORK_UNREACHABLE'), true).title).toBe(
+      'ProspectAI could not reach the service',
+    );
+    expect(noticeFromRequestError(new ExtensionApiError('NETWORK_UNREACHABLE'), false).kind).toBe(
+      'offline',
+    );
+    expect(noticeFromRequestError(new ExtensionApiError('API_TIMEOUT'), true).kind).toBe(
+      'request_timeout',
+    );
+    expect(noticeFromRequestError(new ExtensionApiError('API_INVALID_RESPONSE'), true).kind).toBe(
+      'invalid_response',
+    );
+  });
+});
+
+describe('result presentation helpers', () => {
+  it('orders findings by severity and labels confidence', () => {
+    const ordered = bySeverity([
+      { id: 'a', severity: 'LOW' },
+      { id: 'b', severity: 'CRITICAL' },
+      { id: 'c', severity: 'MEDIUM' },
+    ]);
+    expect(ordered.map((item) => item.id)).toEqual(['b', 'c', 'a']);
+    // One finding per crawled page: the same problem on three pages is listed once.
+    const unique = uniqueByTitle([
+      { id: 'p1', title: 'Form controls lack detectable labels' },
+      { id: 'p2', title: 'Form controls lack detectable labels ' },
+      { id: 'p3', title: 'Initial response is slow' },
+    ]);
+    expect(unique.map((item) => item.id)).toEqual(['p1', 'p3']);
+    expect(confidenceLabel(0.82)).toBe('High');
+    expect(confidenceLabel(0.6)).toBe('Medium');
+    expect(confidenceLabel(0.3)).toBe('Low');
+    expect(confidenceLabel(null)).toBe('Unknown');
   });
 });

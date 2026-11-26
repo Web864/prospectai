@@ -1,4 +1,5 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import { siteDescription, siteName, siteTagline, siteUrl } from '../lib/site-metadata';
 import './globals.css';
 import './phase4.css';
 import './components.css';
@@ -23,8 +24,23 @@ const themeBootstrap = `(() => {
 })();`;
 
 export const metadata: Metadata = {
-  title: 'ProspectAI',
-  description: 'Prospect opportunity intelligence.',
+  metadataBase: siteUrl(),
+  title: { default: `${siteName}: ${siteTagline}`, template: `%s | ${siteName}` },
+  description: siteDescription,
+  applicationName: siteName,
+  openGraph: { type: 'website', siteName, locale: 'en_US' },
+  twitter: { card: 'summary_large_image' },
+  icons: { icon: '/brand-mark.png', apple: '/brand-mark.png' },
+  formatDetection: { telephone: false, email: false, address: false },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b1220' },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

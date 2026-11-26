@@ -9,6 +9,14 @@ export async function POST(request: Request) {
   try {
     await enforceRateLimit(request, 'auth.password-reset-request', 5, 60 * 60_000);
     const input = await parseJson(request, emailActionSchema);
+    // Stops one address from being flooded with reset emails from many clients.
+    await enforceRateLimit(
+      request,
+      'auth.password-reset-request.account',
+      3,
+      60 * 60_000,
+      `account:${input.email.trim().toLowerCase()}`,
+    );
     const user = await prisma.user.findUnique({ where: { email: input.email.toLowerCase() } });
     if (user) await sendPasswordReset(user.id, user.email);
     return Response.json(

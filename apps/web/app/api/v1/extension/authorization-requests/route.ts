@@ -3,6 +3,7 @@ import { apiError, parseJson, requestId } from '@prospectai/api';
 import { loadPublicEnvironment } from '@prospectai/config';
 import { prisma } from '@prospectai/database';
 import { extensionAuthorizationRequestSchema } from '@prospectai/validation';
+import { assertAllowedExtensionRedirect } from '../../../../../lib/extension-redirect';
 import { requireGuestSession } from '../../../../../lib/guest-session';
 import { enforceRateLimit } from '../../../../../lib/rate-limit';
 
@@ -11,6 +12,7 @@ export async function POST(request: Request) {
   try {
     await enforceRateLimit(request, 'extension.authorization.create', 10, 15 * 60_000);
     const input = await parseJson(request, extensionAuthorizationRequestSchema);
+    assertAllowedExtensionRedirect(input.redirectUri);
     const authorization = request.headers.get('authorization');
     const guest = authorization?.startsWith('Guest ') ? await requireGuestSession(request) : null;
     const publicId = randomUUID();

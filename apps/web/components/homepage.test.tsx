@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Homepage } from './homepage';
 import { SiteShell } from './site-shell';
@@ -6,7 +6,7 @@ import { SiteShell } from './site-shell';
 afterEach(cleanup);
 
 describe('ProspectAI homepage', () => {
-  it('communicates the evidence-first opportunity intelligence proposition', () => {
+  it('communicates the research-before-outreach proposition', () => {
     render(<Homepage />);
 
     expect(
@@ -22,7 +22,7 @@ describe('ProspectAI homepage', () => {
       expect(screen.getByRole('heading', { level: 3, name: step })).toBeTruthy();
   });
 
-  it('provides conversion actions and accessible desktop and mobile navigation', () => {
+  it('provides conversion actions and independent page navigation', () => {
     render(
       <SiteShell>
         <Homepage />
@@ -33,7 +33,12 @@ describe('ProspectAI homepage', () => {
       screen.getAllByRole('link', { name: /Start free|Get started/ }).length,
     ).toBeGreaterThanOrEqual(3);
     expect(screen.getByLabelText('Open navigation menu')).toBeTruthy();
-    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeTruthy();
+    const main = screen.getByRole('navigation', { name: 'Main navigation' });
+    const hrefs = within(main)
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'));
+    expect(hrefs).toEqual(['/how-it-works', '/features', '/pricing', '/resources', '/faq']);
+    expect(hrefs.every((href) => !href?.includes('#'))).toBe(true);
     expect(screen.getByRole('navigation', { name: 'Mobile navigation' })).toBeTruthy();
     expect(screen.getByRole('contentinfo')).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Product links' })).toBeTruthy();
