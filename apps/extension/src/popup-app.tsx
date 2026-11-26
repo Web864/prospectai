@@ -23,6 +23,7 @@ import {
   writeActiveAnalysis,
 } from './job-store';
 import { detectPage, type PageDetection, unsupportedCopy } from './page-detection';
+import { usePointerGlow } from './motion';
 import { createOpaqueToken } from './pkce';
 import { AUTH_FLOW_KEY, type AuthFlow } from './service-worker-contract';
 import {
@@ -83,6 +84,24 @@ function storedTheme(value: unknown) {
   return value === 'dark' || value === 'light' ? value : undefined;
 }
 
+const features = [
+  {
+    icon: '◎',
+    title: 'Evidence-based scores',
+    detail: 'Website health and sales opportunity from real page data.',
+  },
+  {
+    icon: '◆',
+    title: 'Services to sell',
+    detail: 'Ranked opportunities with the commercial reason behind each.',
+  },
+  {
+    icon: '✦',
+    title: 'Ready-to-send pitch',
+    detail: 'A tailored cold email built from what the analysis found.',
+  },
+];
+
 export function PopupApp() {
   const [page, setPage] = useState<PageDetection>();
   const [view, setView] = useState<View>({ name: 'detecting' });
@@ -107,6 +126,8 @@ export function PopupApp() {
   const failuresRef = useRef(0);
   const pollingJobRef = useRef<string | undefined>(undefined);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  usePointerGlow(shellRef);
   const mounted = useRef(true);
 
   const updateSession = (kind: SessionKind) => {
@@ -691,17 +712,42 @@ export function PopupApp() {
     case 'ready':
       body = (
         <div className="state">
-          {heading('Ready to analyze')}
-          <p className="muted">
-            ProspectAI will fetch this public website, score it from real evidence and show you what
-            you could sell.
-          </p>
+          <div className="hero glow-card">
+            <div className="hero-orb" aria-hidden="true">
+              <img src={brandIconUrl} alt="" width="34" height="34" />
+            </div>
+            <div className="hero-copy">
+              {heading('Ready to analyze')}
+              <p className="muted">
+                ProspectAI will fetch this public website, score it from real evidence and show you
+                what you could sell.
+              </p>
+            </div>
+          </div>
+          <ul className="feature-grid" aria-label="What the analysis gives you">
+            {features.map((feature, index) => (
+              <li
+                key={feature.title}
+                className="feature glow-card"
+                style={{ '--i': index } as React.CSSProperties}
+              >
+                <span className="feature-icon" aria-hidden="true">
+                  {feature.icon}
+                </span>
+                <strong>{feature.title}</strong>
+                <span>{feature.detail}</span>
+              </li>
+            ))}
+          </ul>
           <button
             type="button"
-            className="button button-primary button-large"
+            className="button button-primary button-large button-shine"
             onClick={() => void analyze()}
           >
             Analyze {page?.supported ? page.domain : 'this website'}
+            <span className="button-arrow" aria-hidden="true">
+              →
+            </span>
           </button>
           <p className="fine-print">
             Only this page’s address is sent to ProspectAI, and only when you click Analyze. Your
@@ -902,12 +948,23 @@ export function PopupApp() {
   }
 
   return (
-    <div className="shell">
+    <div className="shell" ref={shellRef}>
+      <div className="aurora" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+      <div className="spotlight" aria-hidden="true" />
       <header className="topbar">
         <div className="brand">
-          <img src={brandIconUrl} alt="" width="22" height="22" />
-          <span>
-            Prospect<strong>AI</strong>
+          <span className="brand-mark">
+            <img src={brandIconUrl} alt="" width="24" height="24" />
+          </span>
+          <span className="brand-text">
+            <span className="brand-name">
+              Prospect<strong>AI</strong>
+            </span>
+            <span className="brand-tagline">Website prospecting</span>
           </span>
         </div>
         <button
@@ -921,8 +978,14 @@ export function PopupApp() {
       </header>
       {viewDomain && (
         <p className="site" title={viewDomain}>
-          <span className="site-dot" aria-hidden="true" />
-          {viewDomain}
+          <span className="site-avatar" aria-hidden="true">
+            {viewDomain.charAt(0).toUpperCase()}
+          </span>
+          <span className="site-domain">{viewDomain}</span>
+          <span className="site-chip" aria-hidden="true">
+            <span className="site-dot" />
+            {page?.supported && page.domain === viewDomain ? 'Active tab' : 'Last analysis'}
+          </span>
         </p>
       )}
       {signedInBanner && session === 'registered' && (

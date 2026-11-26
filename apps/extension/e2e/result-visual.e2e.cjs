@@ -1,5 +1,5 @@
 // Usage: node e2e/result-visual.e2e.cjs <prepared-extension-dir> <screenshot-dir>
-// Visual check of the result screen in real Chromium with mocked API responses (route interception).
+// Visual check of the ready, progress and result screens in real Chromium with mocked API responses (route interception).
 const { chromium } = require('playwright');
 const shots = process.argv[3];
 const analysisId = 'cjld2cjxh0000qzrmn831i7rn';
@@ -99,24 +99,29 @@ const result = (status) => ({
   if (!sw) sw = await context.waitForEvent('serviceworker');
   const site = await context.newPage();
   await site.goto('http://acme-prospect.com/');
-  for (const status of ['completed', 'partial']) {
+  for (const status of ['ready', 'extracting', 'completed', 'partial']) {
+    await sw.evaluate(() => chrome.storage.local.remove('activeAnalysis'));
     await sw.evaluate(
-      ({ analysisId }) =>
+      ({ analysisId, status }) =>
         chrome.storage.local.set({
           accessToken: 'a'.repeat(43),
           refreshToken: 'r'.repeat(43),
           accessTokenExpiresAt: '2030-01-01T00:00:00.000Z',
           sessionState: 'connected',
-          activeAnalysis: {
-            jobId: 'job-1',
-            analysisId,
-            mode: 'registered',
-            url: 'http://acme-prospect.com/',
-            domain: 'acme-prospect.com',
-            submittedAt: new Date().toISOString(),
-          },
+          ...(status === 'ready'
+            ? {}
+            : {
+                activeAnalysis: {
+                  jobId: 'job-1',
+                  analysisId,
+                  mode: 'registered',
+                  url: 'http://acme-prospect.com/',
+                  domain: 'acme-prospect.com',
+                  submittedAt: new Date().toISOString(),
+                },
+              }),
         }),
-      { analysisId },
+      { analysisId, status },
     );
     await context.route('http://localhost:3000/api/v1/**', (route) => {
       const url = route.request().url();
@@ -127,7 +132,7 @@ const result = (status) => ({
               id: 'job-1',
               analysisId,
               status,
-              progress: 100,
+              progress: status === 'extracting' ? 40 : 100,
               attempt: 1,
               maxAttempts: 3,
               nextAttemptAt: new Date().toISOString(),
@@ -183,8 +188,13 @@ const result = (status) => ({
       }),
     );
     const p = await pending;
-    await p.setViewportSize({ width: 380, height: 1400 });
+    await p.setViewportSize({ width: 640, height: 600 });
     await p.waitForTimeout(2000);
+    // Hover a card so the pointer spotlight and card glow show in the screenshot.
+    const card = p.locator('.glow-card').first();
+    const box = await card.boundingBox();
+    if (box) await p.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.5, { steps: 4 });
+    await p.waitForTimeout(400);
     if (status === 'completed') {
       await p.getByRole('button', { name: 'Save prospect' }).click();
       await p.getByRole('button', { name: 'Generate pitch' }).click();
@@ -194,11 +204,13 @@ const result = (status) => ({
     await p.emulateMedia({ colorScheme: 'dark' });
     await p.waitForTimeout(200);
     await p.screenshot({ path: `${shots}/6-result-${status}-dark.png`, fullPage: true });
-    // 200% browser zoom on a 380 px popup
+    // 200% browser zoom on the popup
     await p.emulateMedia({ colorScheme: 'light' });
-    await p.evaluate(() => {
-      document.body.style.zoom = '2';
-    });
+    // At 200% zoom Chrome's 800 px popup cap leaves a 400 CSS px viewport.
+    await p.setViewportSize({ width: 400, height: 600 });
+    await p.waitForTimeout(200);
+    if (status === 'completed')
+      await p.screenshot({ path: `${shots}/7-result-zoom-200.png`, fullPage: true });
     const overflow = await p.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth + 1,
     );

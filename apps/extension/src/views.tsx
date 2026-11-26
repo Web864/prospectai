@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type {
   analysisDetailResponseSchema,
   analysisJobProgressResponseSchema,
@@ -14,6 +14,7 @@ import {
   stageIndex,
   stageLabel,
 } from './state-model';
+import { useCountUp } from './motion';
 
 export type RegisteredResult = typeof analysisDetailResponseSchema._output.data;
 export type GuestResult = typeof guestAnalysisResultResponseSchema._output.data;
@@ -47,6 +48,53 @@ function scoreTone(score: number | null | undefined) {
   return 'poor';
 }
 
+const RING_RADIUS = 26;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+/** A score tile with an animated ring gauge. The spoken value is always the final number. */
+function ScoreRing({
+  label,
+  value,
+  tone,
+  index,
+}: {
+  label: string;
+  value: number | null;
+  tone: string;
+  index: number;
+}) {
+  const shown = useCountUp(value);
+  const fraction = value === null ? 0 : Math.max(0, Math.min(100, value)) / 100;
+  return (
+    <div
+      className={`score glow-card score-${tone}`}
+      style={{ '--i': index, '--circ': RING_CIRCUMFERENCE } as CSSProperties}
+    >
+      <svg className="ring" viewBox="0 0 64 64" aria-hidden="true">
+        <circle className="ring-track" cx="32" cy="32" r={RING_RADIUS} />
+        <circle
+          className="ring-value"
+          cx="32"
+          cy="32"
+          r={RING_RADIUS}
+          strokeDasharray={RING_CIRCUMFERENCE}
+          strokeDashoffset={RING_CIRCUMFERENCE * (1 - fraction)}
+        />
+      </svg>
+      <div className="score-text">
+        <dt>{label}</dt>
+        <dd>
+          <span aria-hidden="true">{shown ?? '–'}</span>
+          <small aria-hidden="true">/100</small>
+          <span className="sr-only">
+            {value === null ? 'not available' : `${value} out of 100`}
+          </span>
+        </dd>
+      </div>
+    </div>
+  );
+}
+
 /** Website score: higher is healthier. Opportunity: higher means more to sell. */
 export function ScoreRow({
   websiteScore,
@@ -57,28 +105,25 @@ export function ScoreRow({
   opportunityScore: number | null;
   confidence?: number | null;
 }) {
+  const label = confidenceLabel(confidence);
+  const level = { High: 3, Medium: 2, Low: 1, Unknown: 0 }[label] ?? 0;
   return (
     <dl className="score-row">
       {websiteScore !== undefined && (
-        <div className={`score score-${scoreTone(websiteScore)}`}>
-          <dt>Website</dt>
-          <dd>
-            {websiteScore ?? '–'}
-            <small>/100</small>
-          </dd>
-        </div>
+        <ScoreRing label="Website" value={websiteScore} tone={scoreTone(websiteScore)} index={0} />
       )}
-      <div className="score score-opportunity">
-        <dt>Opportunity</dt>
-        <dd>
-          {opportunityScore ?? '–'}
-          <small>/100</small>
-        </dd>
-      </div>
+      <ScoreRing label="Opportunity" value={opportunityScore} tone="opportunity" index={1} />
       {confidence !== undefined && (
-        <div className="score score-neutral">
-          <dt>Confidence</dt>
-          <dd className="score-word">{confidenceLabel(confidence)}</dd>
+        <div className="score glow-card score-neutral" style={{ '--i': 2 } as CSSProperties}>
+          <span className="meter" aria-hidden="true">
+            {[1, 2, 3].map((bar) => (
+              <span key={bar} className={bar <= level ? 'meter-on' : undefined} />
+            ))}
+          </span>
+          <div className="score-text">
+            <dt>Confidence</dt>
+            <dd className="score-word">{label}</dd>
+          </div>
         </div>
       )}
     </dl>
@@ -120,7 +165,7 @@ export function ProgressPanel({
   const health = job ? jobHealth(job, now) : 'normal';
   const percent = job?.progress ?? 0;
   return (
-    <div className="progress-panel">
+    <div className="progress-panel glow-card">
       <div className="progress-head">
         <strong>{job ? stageLabel(status) : 'Submitting analysis'}</strong>
         <span className="muted">
@@ -238,57 +283,63 @@ export function RegisteredResultView({
           <p className="clamp">{result.businessSummary}</p>
         </section>
       )}
-      {opportunities.length > 0 && (
-        <section aria-labelledby="opportunity-heading">
-          <h2 id="opportunity-heading">What you can sell</h2>
-          <ul className="item-list">
-            {opportunities.map((opportunity) => (
-              <li key={opportunity.id}>
-                <div className="item-head">
-                  <strong>{opportunity.serviceCategory}</strong>
-                  <span className="pill pill-accent">{opportunity.opportunityScore}</span>
-                </div>
-                <p>{opportunity.commercialReason}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {problems.length > 0 && (
-        <section aria-labelledby="problem-heading">
-          <h2 id="problem-heading">Top problems</h2>
-          <ul className="item-list">
-            {problems.map((finding) => (
-              <li key={finding.id}>
-                <div className="item-head">
-                  <strong>{finding.title}</strong>
-                  <span
-                    className={`pill pill-severity-${(finding.severity ?? 'info').toLowerCase()}`}
-                  >
-                    {severityLabel(finding.severity)}
-                  </span>
-                </div>
-                <details>
-                  <summary>Evidence</summary>
-                  <p>{finding.evidence}</p>
-                </details>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {opportunities.length === 0 && problems.length === 0 && (
-        <p className="callout">
-          No significant problems were detected on the analyzed pages, so there is no clear service
-          opportunity yet.
-        </p>
-      )}
-      {top?.pitchAngle && (
-        <section className="next-step" aria-labelledby="next-heading">
-          <h2 id="next-heading">Suggested next step</h2>
-          <p>{top.pitchAngle}</p>
-        </section>
-      )}
+      <div className="result-grid">
+        <div className="result-column">
+          {opportunities.length > 0 && (
+            <section aria-labelledby="opportunity-heading">
+              <h2 id="opportunity-heading">What you can sell</h2>
+              <ul className="item-list">
+                {opportunities.map((opportunity) => (
+                  <li key={opportunity.id} className="glow-card">
+                    <div className="item-head">
+                      <strong>{opportunity.serviceCategory}</strong>
+                      <span className="pill pill-accent">{opportunity.opportunityScore}</span>
+                    </div>
+                    <p>{opportunity.commercialReason}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {top?.pitchAngle && (
+            <section className="next-step glow-card" aria-labelledby="next-heading">
+              <h2 id="next-heading">Suggested next step</h2>
+              <p>{top.pitchAngle}</p>
+            </section>
+          )}
+        </div>
+        <div className="result-column">
+          {problems.length > 0 && (
+            <section aria-labelledby="problem-heading">
+              <h2 id="problem-heading">Top problems</h2>
+              <ul className="item-list">
+                {problems.map((finding) => (
+                  <li key={finding.id} className="glow-card">
+                    <div className="item-head">
+                      <strong>{finding.title}</strong>
+                      <span
+                        className={`pill pill-severity-${(finding.severity ?? 'info').toLowerCase()}`}
+                      >
+                        {severityLabel(finding.severity)}
+                      </span>
+                    </div>
+                    <details>
+                      <summary>Evidence</summary>
+                      <p>{finding.evidence}</p>
+                    </details>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {opportunities.length === 0 && problems.length === 0 && (
+            <p className="callout">
+              No significant problems were detected on the analyzed pages, so there is no clear
+              service opportunity yet.
+            </p>
+          )}
+        </div>
+      </div>
       <div className="action-grid">
         <button
           type="button"
@@ -315,6 +366,9 @@ export function RegisteredResultView({
         >
           {actions.pitch.status === 'working' ? 'Writing pitch…' : 'Generate pitch'}
         </button>
+        <ExternalLink href={actions.reportUrl} className="button button-primary button-shine">
+          Open full report →
+        </ExternalLink>
       </div>
       <div role="status" aria-live="polite" className="action-feedback">
         {(actions.save.status === 'saved' || actions.save.status === 'exists') &&
@@ -332,7 +386,7 @@ export function RegisteredResultView({
         )}
       </div>
       {actions.pitch.status === 'ready' && actions.pitch.content && (
-        <section className="pitch" aria-labelledby="pitch-heading">
+        <section className="pitch glow-card" aria-labelledby="pitch-heading">
           <div className="item-head">
             <h2 id="pitch-heading">Cold email draft</h2>
             <button
@@ -346,9 +400,6 @@ export function RegisteredResultView({
           <pre className="pitch-body">{actions.pitch.content}</pre>
         </section>
       )}
-      <ExternalLink href={actions.reportUrl} className="button button-primary">
-        Open full report →
-      </ExternalLink>
       <div className="link-row">
         <button
           type="button"
@@ -396,31 +447,41 @@ export function GuestResultView({
           <p className="clamp">{result.reasoning}</p>
         </section>
       )}
-      {result.keySignals.length > 0 && (
-        <section aria-labelledby="guest-signals">
-          <h2 id="guest-signals">Top problems</h2>
-          <ul className="bullet-list">
-            {result.keySignals.slice(0, 4).map((signal) => (
-              <li key={signal}>{signal}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {result.recommendedNextAction && (
-        <section className="next-step" aria-labelledby="guest-next">
-          <h2 id="guest-next">Suggested next step</h2>
-          <p>{result.recommendedNextAction}</p>
-        </section>
-      )}
-      <div className="upsell">
-        <strong>Keep this prospect</strong>
-        <p>
-          A free account saves this result, shows every finding with evidence and writes a tailored
-          pitch.
-        </p>
-        <button type="button" className="button button-primary" onClick={onCreateAccount}>
-          Create free account to save
-        </button>
+      <div className="result-grid">
+        <div className="result-column">
+          {result.keySignals.length > 0 && (
+            <section aria-labelledby="guest-signals">
+              <h2 id="guest-signals">Top problems</h2>
+              <ul className="bullet-list">
+                {result.keySignals.slice(0, 4).map((signal) => (
+                  <li key={signal}>{signal}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {result.recommendedNextAction && (
+            <section className="next-step glow-card" aria-labelledby="guest-next">
+              <h2 id="guest-next">Suggested next step</h2>
+              <p>{result.recommendedNextAction}</p>
+            </section>
+          )}
+        </div>
+        <div className="result-column">
+          <div className="upsell glow-card">
+            <strong>Keep this prospect</strong>
+            <p>
+              A free account saves this result, shows every finding with evidence and writes a
+              tailored pitch.
+            </p>
+            <button
+              type="button"
+              className="button button-primary button-shine"
+              onClick={onCreateAccount}
+            >
+              Create free account to save
+            </button>
+          </div>
+        </div>
       </div>
       <div className="link-row">
         <button type="button" className="link-action" onClick={onPdf} disabled={pdf === 'working'}>
