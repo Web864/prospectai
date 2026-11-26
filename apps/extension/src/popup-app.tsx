@@ -1,295 +1,574 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   analysisAcceptedResponseSchema,
   analysisDetailResponseSchema,
   analysisJobProgressResponseSchema,
-  extensionAuthorizationCreatedSchema,
   guestAnalysisAcceptedResponseSchema,
   guestAnalysisResultResponseSchema,
   guestSessionResponseSchema,
   usageResponseSchema,
 } from '@prospectai/validation';
 import { apiRequest } from './api-client';
-import { analysisSubmissionKey } from './analysis-submission';
+import { appLink, readApiError } from './api-envelope';
 import { APP_URL } from './config';
-import { createOpaqueToken, createPkcePair } from './pkce';
-import { guestEntryState, guestRemainingLabel } from './guest-flow';
-import brandIconUrl from './icons/icon-128.png';
 import {
-  analysisStage,
-  analysisStageCount,
-  stateCopy,
-  stateFromApiStatus,
-  stateFromRequestError,
-  stateFromJobStatus,
-  stateFromTab,
-  type ExtensionState,
+  type ActiveAnalysis,
+  analysisSubmissionKey,
+  clearActiveAnalysis,
+  clearSubmissionKey,
+  isRunning,
+  patchActiveAnalysis,
+  readActiveAnalysis,
+  withSubmissionLock,
+  writeActiveAnalysis,
+} from './job-store';
+import { detectPage, type PageDetection, unsupportedCopy } from './page-detection';
+import { usePointerGlow } from './motion';
+import { createOpaqueToken } from './pkce';
+import { AUTH_FLOW_KEY, type AuthFlow } from './service-worker-contract';
+import {
+  isTerminalStatus,
+  isTransient,
+  type Notice,
+  notice,
+  noticeFromApi,
+  noticeFromJobFailure,
+  noticeFromRequestError,
 } from './state-model';
+import {
+  ExternalLink,
+  GuestResultView,
+  type GuestResult,
+  type JobProgress,
+  ProgressPanel,
+  type RegisteredActions,
+  RegisteredResultView,
+  type RegisteredResult,
+  Spinner,
+} from './views';
+import brandIconUrl from './icons/icon-48.png';
 import './popup.css';
 
-const pollIntervalMs = 1_500;
 type GuestSession = typeof guestSessionResponseSchema._output.data;
-type GuestResult = typeof guestAnalysisResultResponseSchema._output.data;
-type RegisteredResult = typeof analysisDetailResponseSchema._output.data;
-type AnalysisMode = 'guest' | 'registered';
-type JobProgress = typeof analysisJobProgressResponseSchema._output.data;
-type PollJob = (jobId: string, mode: AnalysisMode, attempt?: number) => Promise<void>;
+type Usage = typeof usageResponseSchema._output.data;
+type SessionKind = 'registered' | 'guest' | 'expired';
+type RetryTarget = 'submit' | 'job' | 'boot';
 
-async function errorCode(response: Response) {
-  try {
-    const body = (await response.json()) as { error?: { code?: string } };
-    return body.error?.code;
-  } catch {
-    return undefined;
-  }
+type View =
+  | { name: 'detecting' }
+  | { name: 'unsupported' }
+  | { name: 'ready' }
+  | { name: 'submitting' }
+  | {
+      name: 'analyzing';
+      record: ActiveAnalysis;
+      job?: JobProgress | undefined;
+      reconnecting?: string | undefined;
+    }
+  | {
+      name: 'result';
+      record?: ActiveAnalysis | undefined;
+      registered?: RegisteredResult;
+      guest?: GuestResult;
+    }
+  | { name: 'notice'; notice: Notice; retry: RetryTarget; record?: ActiveAnalysis | undefined }
+  | { name: 'guest_limit' }
+  | { name: 'auth_pending'; startedAt: string };
+
+const AUTH_STALE_MS = 10 * 60_000;
+const MAX_TRANSIENT_FAILURES = 6;
+const idleSave: RegisteredActions['save'] = { status: 'idle' };
+const idlePitch: RegisteredActions['pitch'] = { status: 'idle' };
+
+function storedTheme(value: unknown) {
+  return value === 'dark' || value === 'light' ? value : undefined;
 }
 
-function hostname(url?: string) {
-  try {
-    return url ? new URL(url).hostname : '';
-  } catch {
-    return '';
-  }
-}
+const features = [
+  {
+    icon: '◎',
+    title: 'Evidence-based scores',
+    detail: 'Website health and sales opportunity from real page data.',
+  },
+  {
+    icon: '◆',
+    title: 'Services to sell',
+    detail: 'Ranked opportunities with the commercial reason behind each.',
+  },
+  {
+    icon: '✦',
+    title: 'Ready-to-send pitch',
+    detail: 'A tailored cold email built from what the analysis found.',
+  },
+];
 
 export function PopupApp() {
-  const [url, setUrl] = useState<string>();
-  const [state, setState] = useState<ExtensionState>('detecting_page');
+  const [page, setPage] = useState<PageDetection>();
+  const [view, setView] = useState<View>({ name: 'detecting' });
+  const [session, setSession] = useState<SessionKind>('guest');
   const [guest, setGuest] = useState<GuestSession>();
-  const [guestResult, setGuestResult] = useState<GuestResult>();
-  const [registeredResult, setRegisteredResult] = useState<RegisteredResult>();
-  const [pdfStatus, setPdfStatus] = useState<'idle' | 'working' | 'failed'>('idle');
-  const [usage, setUsage] = useState<typeof usageResponseSchema._output.data>();
-  const [progress, setProgress] = useState(0);
-  const [jobProgress, setJobProgress] = useState<JobProgress>();
-  const [analysisStartedAt, setAnalysisStartedAt] = useState<string>();
-  const [clock, setClock] = useState(() => Date.now());
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const pollingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const operationRef = useRef<'guest' | 'registered' | 'retry' | null>(null);
-  const lastAnalysisModeRef = useRef<AnalysisMode | null>(null);
-  const pollJobRef = useRef<PollJob | null>(null);
-  const [activeJobId, setActiveJobId] = useState<string>();
+  const [usage, setUsage] = useState<Usage>();
+  const [now, setNow] = useState(() => Date.now());
+  const [theme, setTheme] = useState<'light' | 'dark' | undefined>();
+  const [save, setSave] = useState(idleSave);
+  const [pitch, setPitch] = useState(idlePitch);
+  const [copied, setCopied] = useState(false);
+  const [pdf, setPdf] = useState<'idle' | 'working' | 'failed'>('idle');
+  const [signedInBanner, setSignedInBanner] = useState(false);
+  const [systemDark, setSystemDark] = useState(
+    () => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false,
+  );
 
+  const sessionRef = useRef<SessionKind>('guest');
+  const pageRef = useRef<PageDetection | undefined>(undefined);
+  const busyRef = useRef(false);
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const failuresRef = useRef(0);
+  const pollingJobRef = useRef<string | undefined>(undefined);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  usePointerGlow(shellRef);
+  const mounted = useRef(true);
+
+  const updateSession = (kind: SessionKind) => {
+    sessionRef.current = kind;
+    setSession(kind);
+  };
+  const show = useCallback((next: View) => {
+    if (mounted.current) setView(next);
+  }, []);
+  const stopPolling = () => {
+    if (pollTimer.current) clearTimeout(pollTimer.current);
+    pollTimer.current = undefined;
+    pollingJobRef.current = undefined;
+  };
+
+  // ---------- Result loading ----------
+  const loadResult = async (analysisId: string, record?: ActiveAnalysis) => {
+    const registered = sessionRef.current === 'registered';
+    const response = await apiRequest(
+      registered
+        ? `/analyses/${encodeURIComponent(analysisId)}`
+        : `/guest-analyses/${encodeURIComponent(analysisId)}`,
+    );
+    if (!response.ok) {
+      const { code } = await readApiError(response);
+      const failure =
+        code === 'ANALYSIS_UNAVAILABLE'
+          ? notice('result_missing')
+          : noticeFromApi(response.status, code);
+      if (failure.kind === 'result_missing' && record) await clearActiveAnalysis(record.jobId);
+      return show({ name: 'notice', notice: failure, retry: 'job', record });
+    }
+    const body: unknown = await response.json().catch(() => null);
+    // Only a COMPLETED or PARTIAL analysis is a result. A preserved guest analysis that failed
+    // (or is still queued) must never be presented as a finished report.
+    const status = (body as { data?: { status?: unknown } } | null)?.data?.status;
+    if (status !== 'completed' && status !== 'partial') {
+      if (record) {
+        await clearActiveAnalysis(record.jobId);
+        return show({ name: 'notice', notice: notice('result_missing'), retry: 'boot' });
+      }
+      return enterReady();
+    }
+    setSave(idleSave);
+    setPdf('idle');
+    if (registered) {
+      const parsed = analysisDetailResponseSchema.safeParse(body);
+      if (!parsed.success)
+        return show({ name: 'notice', notice: notice('invalid_response'), retry: 'job', record });
+      const existingPitch = parsed.data.data.pitches[0];
+      setPitch(existingPitch ? { status: 'ready', content: existingPitch.content } : idlePitch);
+      show({ name: 'result', record, registered: parsed.data.data });
+      void refreshUsage();
+    } else {
+      const parsed = guestAnalysisResultResponseSchema.safeParse(body);
+      if (!parsed.success)
+        return show({ name: 'notice', notice: notice('invalid_response'), retry: 'job', record });
+      show({ name: 'result', record, guest: parsed.data.data });
+      void refreshGuest();
+    }
+    if (record) await patchActiveAnalysis(record.jobId, { seen: true });
+  };
+
+  // ---------- Job polling (only while the popup is open; the worker keeps the badge honest) ----------
+  const poll = async (record: ActiveAnalysis): Promise<void> => {
+    if (pollTimer.current) clearTimeout(pollTimer.current);
+    pollingJobRef.current = record.jobId;
+    const retryLater = (failure: Notice) => {
+      failuresRef.current += 1;
+      if (failuresRef.current > MAX_TRANSIENT_FAILURES) {
+        pollingJobRef.current = undefined;
+        return show({
+          name: 'notice',
+          notice: { ...failure, action: 'resume', keepsJob: true },
+          retry: 'job',
+          record,
+        });
+      }
+      setView((current) =>
+        current.name === 'analyzing' && current.record.jobId === record.jobId
+          ? { ...current, reconnecting: failure.title }
+          : { name: 'analyzing', record, reconnecting: failure.title },
+      );
+      const delay = Math.min(1_500 * 2 ** failuresRef.current, 15_000);
+      pollTimer.current = setTimeout(() => void poll(record), delay);
+    };
+    try {
+      const response = await apiRequest(`/analysis-jobs/${encodeURIComponent(record.jobId)}`);
+      if (!mounted.current || pollingJobRef.current !== record.jobId) return;
+      if (!response.ok) {
+        const { code } = await readApiError(response);
+        const failure = noticeFromApi(response.status, code);
+        if (failure.kind === 'result_missing') {
+          await clearActiveAnalysis(record.jobId);
+          pollingJobRef.current = undefined;
+          return show({ name: 'notice', notice: failure, retry: 'boot' });
+        }
+        if (isTransient(failure.kind)) return retryLater(failure);
+        pollingJobRef.current = undefined;
+        return show({
+          name: 'notice',
+          notice: { ...failure, keepsJob: true },
+          retry: 'job',
+          record,
+        });
+      }
+      const parsed = analysisJobProgressResponseSchema.safeParse(
+        await response.json().catch(() => null),
+      );
+      if (!parsed.success) return retryLater(notice('invalid_response'));
+      failuresRef.current = 0;
+      const job = parsed.data.data;
+      const next = (await patchActiveAnalysis(record.jobId, {
+        status: job.status,
+        analysisId: job.analysisId,
+      })) ?? { ...record, status: job.status, analysisId: job.analysisId };
+      if (isTerminalStatus(job.status)) {
+        pollingJobRef.current = undefined;
+        if (job.status === 'completed' || job.status === 'partial')
+          return loadResult(job.analysisId, next);
+        await patchActiveAnalysis(record.jobId, { seen: true });
+        if (sessionRef.current === 'guest') void refreshGuest();
+        return show({
+          name: 'notice',
+          notice: noticeFromJobFailure(job.status, job.errorCode),
+          retry: 'submit',
+          record: next,
+        });
+      }
+      show({ name: 'analyzing', record: next, job });
+      const age = Date.now() - Date.parse(record.submittedAt);
+      pollTimer.current = setTimeout(() => void poll(next), age < 60_000 ? 1_500 : 3_000);
+    } catch (error) {
+      if (!mounted.current || pollingJobRef.current !== record.jobId) return;
+      retryLater(noticeFromRequestError(error, navigator.onLine));
+    }
+  };
+
+  // ---------- Session state ----------
   const refreshGuest = async () => {
-    const response = await apiRequest('/guest-sessions');
-    if (!response.ok) throw new Error('Guest session unavailable.');
-    const parsed = guestSessionResponseSchema.safeParse(await response.json());
-    if (!parsed.success) throw new Error('Guest session response invalid.');
+    const response = await apiRequest('/guest-sessions', { method: 'POST' });
+    if (!response.ok) return undefined;
+    const parsed = guestSessionResponseSchema.safeParse(await response.json().catch(() => null));
+    if (!parsed.success) return undefined;
     setGuest(parsed.data.data);
     await chrome.storage.local.set({ guestSessionId: parsed.data.data.sessionId });
     return parsed.data.data;
   };
+  const refreshUsage = async () => {
+    const response = await apiRequest('/usage').catch(() => undefined);
+    if (!response?.ok) return undefined;
+    const parsed = usageResponseSchema.safeParse(await response.json().catch(() => null));
+    if (parsed.success) setUsage(parsed.data.data);
+    return parsed.success ? parsed.data.data : undefined;
+  };
 
-  useEffect(() => {
-    void chrome.storage.local.get('theme').then((stored) => {
-      const nextTheme = stored.theme === 'dark' ? 'dark' : 'light';
-      setTheme(nextTheme);
-      document.documentElement.dataset.theme = nextTheme;
-    });
-  }, []);
+  /** Shows the right entry screen for the current page and session (no job involved). */
+  const enterReady = async () => {
+    const detected = pageRef.current;
+    if (!detected?.supported) return show({ name: 'unsupported' });
+    if (sessionRef.current === 'expired')
+      return show({ name: 'notice', notice: notice('session_expired'), retry: 'boot' });
+    if (sessionRef.current === 'registered') {
+      show({ name: 'ready' });
+      const current = await refreshUsage();
+      if (current?.quotaReached)
+        show({ name: 'notice', notice: notice('quota_exhausted'), retry: 'boot' });
+      return;
+    }
+    const { guestToken } = await chrome.storage.local.get('guestToken');
+    if (typeof guestToken !== 'string')
+      await chrome.storage.local.set({ guestToken: createOpaqueToken() });
+    const response = await apiRequest('/guest-sessions', { method: 'POST' });
+    if (!response.ok) {
+      const { code } = await readApiError(response);
+      return show({ name: 'notice', notice: noticeFromApi(response.status, code), retry: 'boot' });
+    }
+    const parsed = guestSessionResponseSchema.safeParse(await response.json().catch(() => null));
+    if (!parsed.success)
+      return show({ name: 'notice', notice: notice('invalid_response'), retry: 'boot' });
+    setGuest(parsed.data.data);
+    await chrome.storage.local.set({ guestSessionId: parsed.data.data.sessionId });
+    show(parsed.data.data.quotaReached ? { name: 'guest_limit' } : { name: 'ready' });
+  };
 
-  useEffect(() => {
-    let active = true;
-    void Promise.all([
+  const boot = async () => {
+    stopPolling();
+    failuresRef.current = 0;
+    const [tabs, local, sessionArea] = await Promise.all([
       chrome.tabs.query({ active: true, lastFocusedWindow: true }),
       chrome.storage.local.get([
         'accessToken',
+        'sessionState',
         'guestToken',
         'guestSessionId',
-        'privacyAcknowledged',
         'lastConvertedAnalysisId',
-        'activeAnalysisJobId',
-        'activeAnalysisMode',
-        'analysisStartedAt',
+        'theme',
       ]),
-    ])
-      .then(async ([tabs, stored]) => {
-        if (!active) return;
-        const currentUrl = tabs[0]?.url;
-        setUrl(currentUrl);
-        const pageState = stateFromTab(currentUrl);
-        if (pageState === 'unsupported_page' || pageState === 'permission_error') {
-          setState(pageState);
-          return;
-        }
-        const storedJobId =
-          typeof stored.activeAnalysisJobId === 'string' ? stored.activeAnalysisJobId : undefined;
-        const resumeStoredJob = async (mode: AnalysisMode) => {
-          if (!storedJobId || !pollJobRef.current) return false;
-          lastAnalysisModeRef.current = mode;
-          setActiveJobId(storedJobId);
-          setAnalysisStartedAt(
-            typeof stored.analysisStartedAt === 'string' ? stored.analysisStartedAt : undefined,
-          );
-          setProgress(0);
-          setJobProgress(undefined);
-          setState(mode === 'guest' ? 'guest_analyzing' : 'registered_analyzing');
-          await pollJobRef.current(storedJobId, mode);
-          return true;
-        };
-        if (typeof stored.accessToken === 'string') {
-          if (typeof stored.guestToken === 'string' && typeof stored.guestSessionId === 'string')
-            await chrome.runtime.sendMessage({ type: 'convert-guest' }).catch(() => undefined);
-          if (typeof stored.lastConvertedAnalysisId === 'string') {
-            const response = await apiRequest(
-              `/analyses/${encodeURIComponent(stored.lastConvertedAnalysisId)}`,
-            );
-            if (response.ok) {
-              const parsed = analysisDetailResponseSchema.safeParse(await response.json());
-              if (parsed.success) {
-                setRegisteredResult(parsed.data.data);
-                setState('registered_result');
-                await chrome.storage.local.remove('lastConvertedAnalysisId');
-                return;
-              }
-            }
-          }
-          if (await resumeStoredJob('registered')) return;
-          setState('registered_ready');
-          return;
-        }
-        if (typeof stored.guestToken !== 'string') {
-          await chrome.storage.local.set({ guestToken: createOpaqueToken() });
-        }
-        const response = await apiRequest('/guest-sessions', { method: 'POST' });
-        if (!response.ok) {
-          setState(stateFromApiStatus(response.status, await errorCode(response)));
-          return;
-        }
-        const parsed = guestSessionResponseSchema.safeParse(await response.json());
-        if (!parsed.success) return setState('api_invalid_response');
-        setGuest(parsed.data.data);
-        await chrome.storage.local.set({ guestSessionId: parsed.data.data.sessionId });
-        if (await resumeStoredJob('guest')) return;
-        setState(guestEntryState(parsed.data.data, stored.privacyAcknowledged === true));
-      })
-      .catch((error: unknown) => setState(stateFromRequestError(error, navigator.onLine)));
-    const storageListener = (changes: Record<string, chrome.storage.StorageChange>) => {
-      // A silent token refresh also rewrites accessToken; only a first-time token is a sign-in.
-      if (changes.accessToken?.newValue && !changes.accessToken.oldValue) {
-        setState('auth_success');
-        setTimeout(() => setState('registered_ready'), 700);
-      }
-      const restoredAnalysisId = changes.lastConvertedAnalysisId?.newValue;
-      if (typeof restoredAnalysisId === 'string') {
-        void apiRequest(`/analyses/${encodeURIComponent(restoredAnalysisId)}`)
-          .then(async (response) => {
-            if (!response.ok) return;
-            const parsed = analysisDetailResponseSchema.safeParse(await response.json());
-            if (!parsed.success) return;
-            setGuest(undefined);
-            setGuestResult(undefined);
-            setRegisteredResult(parsed.data.data);
-            setState('registered_result');
-            await chrome.storage.local.remove('lastConvertedAnalysisId');
-          })
-          .catch(() => undefined);
-      }
-    };
-    chrome.storage.onChanged.addListener(storageListener);
-    return () => {
-      active = false;
-      chrome.storage.onChanged.removeListener(storageListener);
-      if (pollingTimer.current) clearTimeout(pollingTimer.current);
-    };
-  }, []);
+      chrome.storage.session.get(AUTH_FLOW_KEY),
+    ]);
+    if (!mounted.current) return;
+    const detected = detectPage(tabs[0]?.url);
+    pageRef.current = detected;
+    setPage(detected);
+    updateSession(
+      typeof local.accessToken === 'string'
+        ? 'registered'
+        : local.sessionState === 'expired'
+          ? 'expired'
+          : 'guest',
+    );
 
-  useEffect(() => {
-    if (usage || !['registered_ready', 'registered_result'].includes(state)) return;
-    void apiRequest('/usage')
-      .then(async (response) => {
-        if (!response.ok) return;
-        const parsed = usageResponseSchema.safeParse(await response.json());
-        if (parsed.success) setUsage(parsed.data.data);
-      })
-      .catch(() => undefined);
-  }, [state, usage]);
+    const flow = sessionArea[AUTH_FLOW_KEY] as AuthFlow | undefined;
+    if (flow?.status === 'pending' && Date.now() - Date.parse(flow.startedAt) < AUTH_STALE_MS)
+      return show({ name: 'auth_pending', startedAt: flow.startedAt });
+    if (flow && flow.status !== 'pending') {
+      await chrome.storage.session.remove(AUTH_FLOW_KEY);
+      if (flow.status === 'failed')
+        return show({
+          name: 'notice',
+          notice: notice(flow.reason === 'cancelled' ? 'sign_in_cancelled' : 'sign_in_failed'),
+          retry: 'boot',
+        });
+      setSignedInBanner(true);
+    }
+    // A guest who signed in while offline still has guest keys: finish the conversion now.
+    if (sessionRef.current === 'registered' && typeof local.guestToken === 'string')
+      await chrome.runtime.sendMessage({ type: 'convert-guest' }).catch(() => undefined);
 
-  const pollJob = async (jobId: string, mode: AnalysisMode, attempt = 0): Promise<void> => {
+    const record = await readActiveAnalysis();
+    if (record && (isRunning(record) || !record.seen)) {
+      show({ name: 'analyzing', record });
+      return poll(record);
+    }
+    const { lastConvertedAnalysisId } = await chrome.storage.local.get('lastConvertedAnalysisId');
+    if (sessionRef.current === 'registered' && typeof lastConvertedAnalysisId === 'string') {
+      await chrome.storage.local.remove('lastConvertedAnalysisId');
+      return loadResult(lastConvertedAnalysisId);
+    }
+    return enterReady();
+  };
+
+  const safely = (work: () => Promise<unknown>, retry: RetryTarget) => {
+    void work().catch((error: unknown) =>
+      show({ name: 'notice', notice: noticeFromRequestError(error, navigator.onLine), retry }),
+    );
+  };
+
+  // ---------- Submission ----------
+  const analyze = async () => {
+    const detected = pageRef.current;
+    if (busyRef.current || !detected?.supported) return;
+    busyRef.current = true;
+    show({ name: 'submitting' });
     try {
-      const response = await apiRequest('/analysis-jobs/' + encodeURIComponent(jobId));
-      if (!response.ok) {
-        setState(stateFromApiStatus(response.status, await errorCode(response)));
-        return;
-      }
-      const parsed = analysisJobProgressResponseSchema.safeParse(await response.json());
-      if (!parsed.success) {
-        setState('api_invalid_response');
-        return;
-      }
-      const job = parsed.data.data;
-      setJobProgress(job);
-      setProgress(job.progress);
-      if (job.startedAt) setAnalysisStartedAt(job.startedAt);
-      const nextState = stateFromJobStatus(job.status, mode);
-      setState(nextState);
-      const terminal =
-        nextState === 'guest_result' ||
-        nextState === 'registered_result' ||
-        nextState === 'partial_result' ||
-        nextState === 'analysis_failed';
-      const clearActiveJob = async () => {
-        await chrome.storage.local.remove([
-          'activeAnalysisJobId',
-          'activeAnalysisMode',
-          'analysisStartedAt',
-        ]);
-        setActiveJobId(undefined);
-      };
-      if (['guest_result', 'registered_result', 'partial_result'].includes(nextState)) {
-        const path =
-          mode === 'guest'
-            ? '/guest-analyses/' + encodeURIComponent(job.analysisId)
-            : '/analyses/' + encodeURIComponent(job.analysisId);
-        const detailResponse = await apiRequest(path);
-        if (!detailResponse.ok) {
-          setState(stateFromApiStatus(detailResponse.status, await errorCode(detailResponse)));
-          return;
-        }
-        if (detailResponse.ok) {
-          const body = await detailResponse.json();
-          if (mode === 'guest') {
-            const detail = guestAnalysisResultResponseSchema.safeParse(body);
-            if (!detail.success) return setState('api_invalid_response');
-            setGuestResult(detail.data.data);
-            await clearActiveJob();
-            await refreshGuest().catch(() => undefined);
-          } else {
-            const detail = analysisDetailResponseSchema.safeParse(body);
-            if (!detail.success) return setState('api_invalid_response');
-            setRegisteredResult(detail.data.data);
-            await clearActiveJob();
+      const record = await withSubmissionLock(
+        async (): Promise<ActiveAnalysis | Notice | 'limit'> => {
+          // Another popup (or an earlier click) already has a job in flight: resume, never resubmit.
+          const existing = await readActiveAnalysis();
+          if (existing && isRunning(existing)) return existing;
+          const mode = sessionRef.current === 'registered' ? 'registered' : 'guest';
+          const key = await analysisSubmissionKey(mode, detected.url);
+          const response = await apiRequest(
+            mode === 'registered' ? '/analyses' : '/guest-analyses',
+            {
+              method: 'POST',
+              headers: { 'Idempotency-Key': key },
+              body: JSON.stringify({ url: detected.url }),
+            },
+          );
+          if (!response.ok) {
+            const { code } = await readApiError(response);
+            // A definitive refusal created no job; a fresh key is correct for the next attempt.
+            if (response.status < 500 && response.status !== 408 && code !== 'RATE_LIMITED')
+              await clearSubmissionKey();
+            if (code === 'GUEST_TRIAL_EXHAUSTED') return 'limit';
+            return noticeFromApi(response.status, code);
           }
-        }
-        return;
-      }
-      if (nextState === 'analysis_failed') {
-        if (terminal) await clearActiveJob();
-        if (mode === 'guest') await refreshGuest().catch(() => undefined);
-        return;
-      }
-      pollingTimer.current = setTimeout(
-        () => void pollJob(jobId, mode, attempt + 1),
-        pollIntervalMs,
+          const body: unknown = await response.json().catch(() => null);
+          let accepted: { jobId: string; analysisId?: string | undefined } | undefined;
+          if (mode === 'guest') {
+            const parsed = guestAnalysisAcceptedResponseSchema.safeParse(body);
+            if (parsed.success) {
+              accepted = parsed.data.data;
+              setGuest(parsed.data.data.entitlement);
+            }
+          } else {
+            const parsed = analysisAcceptedResponseSchema.safeParse(body);
+            if (parsed.success) accepted = parsed.data.data;
+          }
+          if (!accepted) return notice('invalid_response');
+          const next: ActiveAnalysis = {
+            jobId: accepted.jobId,
+            ...(accepted.analysisId ? { analysisId: accepted.analysisId } : {}),
+            mode,
+            url: detected.url,
+            domain: detected.domain,
+            submittedAt: new Date().toISOString(),
+            status: 'queued',
+          };
+          await writeActiveAnalysis(next);
+          await clearSubmissionKey();
+          return next;
+        },
       );
+      if (record === 'limit') {
+        void refreshGuest();
+        return show({ name: 'guest_limit' });
+      }
+      if ('kind' in record) return show({ name: 'notice', notice: record, retry: 'submit' });
+      if (sessionRef.current === 'guest')
+        await chrome.storage.local.set({ privacyAcknowledged: true });
+      show({ name: 'analyzing', record });
+      await poll(record);
     } catch (error) {
-      setState(stateFromRequestError(error, navigator.onLine));
+      // The request may have reached the server; the stored idempotency key makes "Try again" safe.
+      show({
+        name: 'notice',
+        notice: noticeFromRequestError(error, navigator.onLine),
+        retry: 'submit',
+      });
+    } finally {
+      busyRef.current = false;
     }
   };
-  pollJobRef.current = pollJob;
+
+  // ---------- Account ----------
+  const startSignIn = async (provider: 'google' | 'account') => {
+    show({ name: 'auth_pending', startedAt: new Date().toISOString() });
+    const response = (await chrome.runtime
+      .sendMessage({ type: 'start-sign-in', provider })
+      .catch(() => undefined)) as { started?: boolean } | undefined;
+    if (!response?.started)
+      show({ name: 'notice', notice: notice('sign_in_failed'), retry: 'boot' });
+  };
+  const signOut = async () => {
+    stopPolling();
+    show({ name: 'detecting' });
+    await chrome.runtime.sendMessage({ type: 'sign-out' }).catch(() => undefined);
+    setUsage(undefined);
+    setGuest(undefined);
+    setSignedInBanner(false);
+    await boot();
+  };
+  const continueAsGuest = async () => {
+    await chrome.storage.local.remove('sessionState');
+    updateSession('guest');
+    await enterReady();
+  };
+
+  // ---------- Result actions ----------
+  const saveProspect = async (result: RegisteredResult) => {
+    setSave({ status: 'working' });
+    try {
+      const response = await apiRequest('/leads', {
+        method: 'POST',
+        body: JSON.stringify({ analysisId: result.id, name: result.companyName ?? result.domain }),
+      });
+      const body: unknown = await response
+        .clone()
+        .json()
+        .catch(() => null);
+      if (response.status === 201) {
+        const id = (body as { data?: { id?: unknown } } | null)?.data?.id;
+        return setSave({
+          status: 'saved',
+          ...(typeof id === 'string' ? { leadUrl: appLink(APP_URL, '/app/leads/', id) } : {}),
+        });
+      }
+      const { code, details } = await readApiError(response);
+      if (response.status === 409 && typeof details.leadId === 'string')
+        return setSave({
+          status: 'exists',
+          leadUrl: appLink(APP_URL, '/app/leads/', details.leadId),
+        });
+      setSave({
+        status: 'failed',
+        message: noticeFromApi(response.status, code).title + '. The prospect was not saved.',
+      });
+    } catch (error) {
+      setSave({
+        status: 'failed',
+        message:
+          noticeFromRequestError(error, navigator.onLine).title + '. The prospect was not saved.',
+      });
+    }
+  };
+  const generatePitch = async (result: RegisteredResult) => {
+    const opportunity = result.opportunities[0];
+    if (!opportunity) return;
+    setPitch({ status: 'working' });
+    try {
+      const response = await apiRequest('/pitches', {
+        method: 'POST',
+        body: JSON.stringify({
+          analysisId: result.id,
+          opportunityId: opportunity.id,
+          format: 'cold_email',
+        }),
+      });
+      if (response.ok) {
+        const body = (await response.json().catch(() => null)) as {
+          data?: { content?: unknown };
+        } | null;
+        if (typeof body?.data?.content === 'string')
+          return setPitch({ status: 'ready', content: body.data.content });
+        return setPitch({ status: 'failed', message: notice('invalid_response').title });
+      }
+      const { code } = await readApiError(response);
+      setPitch({
+        status: 'failed',
+        message:
+          code === 'AI_UNAVAILABLE'
+            ? 'Pitch writing is unavailable right now because the AI service is not reachable. Your analysis is saved; try again later.'
+            : noticeFromApi(response.status, code).title + '.',
+      });
+    } catch (error) {
+      setPitch({
+        status: 'failed',
+        message: noticeFromRequestError(error, navigator.onLine).title + '.',
+      });
+    }
+  };
+  const copyPitch = async () => {
+    if (pitch.content) await navigator.clipboard.writeText(pitch.content).catch(() => undefined);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1_500);
+  };
   const downloadPdf = async (analysisId: string, domain: string) => {
-    if (pdfStatus === 'working') return;
-    setPdfStatus('working');
+    if (pdf === 'working') return;
+    setPdf('working');
     try {
       const response = await apiRequest(
         `/analyses/${encodeURIComponent(analysisId)}/pdf`,
         {},
         { binary: true },
       );
-      if (!response.ok) throw new Error(`pdf_${response.status}`);
-      const blob = await response.blob();
-      const href = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      if (!response.ok) throw new Error('pdf');
+      const href = URL.createObjectURL(
+        new Blob([await response.blob()], { type: 'application/pdf' }),
+      );
       const link = document.createElement('a');
       link.href = href;
       link.download = `ProspectAI-${domain.replace(/[^a-zA-Z0-9.-]/g, '-')}-analysis.pdf`;
@@ -297,482 +576,439 @@ export function PopupApp() {
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(href), 10_000);
-      setPdfStatus('idle');
+      setPdf('idle');
     } catch {
-      setPdfStatus('failed');
+      setPdf('failed');
     }
   };
-  const pdfButton = (analysisId: string, domain: string) => (
-    <>
-      <button
-        className="secondary-action"
-        type="button"
-        onClick={() => void downloadPdf(analysisId, domain)}
-        disabled={pdfStatus === 'working'}
-      >
-        {pdfStatus === 'working' ? 'Preparing PDF…' : 'Download full PDF report'}
-      </button>
-      {pdfStatus === 'failed' && (
-        <small role="alert">The PDF could not be created. Please try again.</small>
-      )}
-    </>
-  );
-  const analyzeGuest = async () => {
-    if (!url || !guest || operationRef.current) return;
-    if (guest.quotaReached) return setState('guest_limit_reached');
-    operationRef.current = 'guest';
-    lastAnalysisModeRef.current = 'guest';
-    setState('guest_disclosure');
-    await chrome.storage.local.set({ privacyAcknowledged: true });
-    const startedAt = new Date().toISOString();
-    setAnalysisStartedAt(startedAt);
-    setJobProgress(undefined);
-    setState('guest_analyzing');
-    setProgress(0);
-    try {
-      const response = await apiRequest('/guest-analyses', {
-        method: 'POST',
-        headers: { 'Idempotency-Key': await analysisSubmissionKey('guest', url) },
-        body: JSON.stringify({ url }),
-      });
-      if (!response.ok)
-        return setState(stateFromApiStatus(response.status, await errorCode(response)));
-      const parsed = guestAnalysisAcceptedResponseSchema.safeParse(await response.json());
-      if (!parsed.success) return setState('api_invalid_response');
-      setGuest(parsed.data.data.entitlement);
-      await chrome.storage.local.set({
-        currentGuestAnalysisId: parsed.data.data.analysisId,
-        activeAnalysisJobId: parsed.data.data.jobId,
-        activeAnalysisMode: 'guest',
-        analysisStartedAt: startedAt,
-      });
-      setActiveJobId(parsed.data.data.jobId);
-      await chrome.storage.local.remove('pendingAnalysisSubmission');
-      await pollJob(parsed.data.data.jobId, 'guest');
-    } catch (error) {
-      setState(stateFromRequestError(error, navigator.onLine));
-    } finally {
-      operationRef.current = null;
-    }
+  const finishResult = async () => {
+    const current = view;
+    if ((current.name === 'result' || current.name === 'notice') && current.record)
+      await clearActiveAnalysis(current.record.jobId);
+    setPitch(idlePitch);
+    setSave(idleSave);
+    await enterReady();
   };
 
-  const analyzeRegistered = async () => {
-    if (!url || operationRef.current) return;
-    operationRef.current = 'registered';
-    lastAnalysisModeRef.current = 'registered';
-    const startedAt = new Date().toISOString();
-    setAnalysisStartedAt(startedAt);
-    setJobProgress(undefined);
-    setState('registered_analyzing');
-    setProgress(0);
-    try {
-      const response = await apiRequest('/analyses', {
-        method: 'POST',
-        headers: { 'Idempotency-Key': await analysisSubmissionKey('registered', url) },
-        body: JSON.stringify({ url }),
-      });
-      if (!response.ok)
-        return setState(stateFromApiStatus(response.status, await errorCode(response)));
-      const parsed = analysisAcceptedResponseSchema.safeParse(await response.json());
-      if (!parsed.success) return setState('api_invalid_response');
-      await chrome.storage.local.set({
-        activeAnalysisJobId: parsed.data.data.jobId,
-        activeAnalysisMode: 'registered',
-        analysisStartedAt: startedAt,
-      });
-      setActiveJobId(parsed.data.data.jobId);
-      await chrome.storage.local.remove('pendingAnalysisSubmission');
-      await pollJob(parsed.data.data.jobId, 'registered');
-    } catch (error) {
-      setState(stateFromRequestError(error, navigator.onLine));
-    } finally {
-      operationRef.current = null;
+  const runNoticeAction = async (current: Extract<View, { name: 'notice' }>) => {
+    const { action } = current.notice;
+    if (action === 'sign_in') return startSignIn('account');
+    if (action === 'create_account') return startSignIn('account');
+    if (action === 'upgrade')
+      return void chrome.tabs.create({ url: appLink(APP_URL, '/app/billing') });
+    if (action === 'resume' && current.record) {
+      failuresRef.current = 0;
+      show({ name: 'analyzing', record: current.record });
+      return poll(current.record);
     }
+    if (action === 'analyze_again') {
+      if (current.record) await clearActiveAnalysis(current.record.jobId);
+      return analyze();
+    }
+    if (current.retry === 'job' && current.record) {
+      failuresRef.current = 0;
+      show({ name: 'analyzing', record: current.record });
+      return poll(current.record);
+    }
+    if (current.retry === 'submit') return analyze();
+    return boot();
   };
 
-  const retry = async () => {
-    if (operationRef.current) return;
-    operationRef.current = 'retry';
-    try {
-      if (
-        activeJobId &&
-        lastAnalysisModeRef.current &&
-        [
-          'analysis_timed_out',
-          'backend_unavailable',
-          'offline',
-          'api_server_error',
-          'api_timeout',
-          'api_invalid_response',
-        ].includes(state)
-      ) {
-        const mode = lastAnalysisModeRef.current;
-        setState(mode === 'guest' ? 'guest_analyzing' : 'registered_analyzing');
-        await pollJobRef.current?.(activeJobId, mode);
-        return;
+  // ---------- Lifecycle ----------
+  useEffect(() => {
+    mounted.current = true;
+    void chrome.storage.local.get('theme').then(({ theme: value }) => setTheme(storedTheme(value)));
+    safely(boot, 'boot');
+    const onStorage = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'session' && AUTH_FLOW_KEY in changes) {
+        const flow = changes[AUTH_FLOW_KEY]?.newValue as AuthFlow | undefined;
+        if (flow && flow.status !== 'pending') safely(boot, 'boot');
       }
-      if (lastAnalysisModeRef.current === 'guest' && guest) {
-        if (state === 'analysis_failed') {
-          operationRef.current = null;
-          await analyzeGuest();
-          return;
-        }
-        const refreshed = await refreshGuest();
-        setState(guestEntryState(refreshed, true));
-        return;
-      }
-      if (lastAnalysisModeRef.current === 'registered') {
-        if (state === 'analysis_failed') {
-          operationRef.current = null;
-          await analyzeRegistered();
-          return;
-        }
-        setState('registered_ready');
-        return;
-      }
-      window.location.reload();
-    } catch (error) {
-      setState(stateFromRequestError(error, navigator.onLine));
-    } finally {
-      operationRef.current = null;
-    }
-  };
-  const beginAuthentication = async (provider: 'google' | 'account') => {
-    setState('auth_start');
-    try {
-      const { verifier, challenge } = await createPkcePair();
-      const response = await apiRequest('/extension/authorization-requests', {
-        method: 'POST',
-        body: JSON.stringify({
-          extensionVersion: chrome.runtime.getManifest().version,
-          codeChallenge: challenge,
-          deviceName: navigator.platform || 'Chrome extension',
-          preferredProvider: provider,
-          redirectUri: chrome.identity.getRedirectURL('prospectai'),
-        }),
-      });
-      if (!response.ok) throw new Error('Authorization request failed.');
-      const parsed = extensionAuthorizationCreatedSchema.safeParse(await response.json());
-      if (!parsed.success) throw new Error('Authorization response invalid.');
-      await chrome.storage.local.set({
-        pkceVerifier: verifier,
-        authorizationRequestId: parsed.data.data.id,
-      });
-      setState('auth_pending');
-      const callbackUrl = await chrome.identity.launchWebAuthFlow({
-        url: parsed.data.data.authorizationUrl,
-        interactive: true,
-      });
-      if (!callbackUrl) throw new Error('Authentication was canceled.');
-      const callback = new URL(callbackUrl);
-      if (callback.searchParams.get('state') !== parsed.data.data.id)
-        throw new Error('Authorization state did not match.');
-      const code = callback.searchParams.get('code');
-      if (!code) throw new Error('Authorization code was missing.');
-      const result = (await chrome.runtime.sendMessage({
-        type: 'complete-pairing',
-        code,
-      })) as { connected?: boolean };
-      if (!result.connected) throw new Error('Extension pairing failed.');
-      setState('auth_success');
-      // Re-signing in over an expired session replaces an existing token, which the storage
-      // listener deliberately ignores, so finish the transition here.
-      setTimeout(() => setState('registered_ready'), 700);
-    } catch {
-      setState('auth_failed');
-    }
-  };
+    };
+    chrome.storage.onChanged.addListener(onStorage);
+    return () => {
+      mounted.current = false;
+      chrome.storage.onChanged.removeListener(onStorage);
+      stopPolling();
+    };
+    // boot is intentionally run once per popup open.
+  }, []);
 
   useEffect(() => {
-    if (!['guest_analyzing', 'registered_analyzing', 'analysis_timed_out'].includes(state)) return;
-    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    if (view.name !== 'analyzing' && view.name !== 'auth_pending') return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
-  }, [state]);
+  }, [view.name]);
 
-  const stage = jobProgress
-    ? analysisStage(jobProgress.status)
-    : { index: 1, label: 'Submitting analysis' };
-  const elapsedStart = jobProgress?.startedAt ?? analysisStartedAt;
-  const elapsedMs = elapsedStart ? Math.max(0, clock - Date.parse(elapsedStart)) : 0;
-  const elapsedTotalSeconds = Math.floor(elapsedMs / 1000);
-  const elapsedLabel =
-    String(Math.floor(elapsedTotalSeconds / 60)).padStart(2, '0') +
-    ':' +
-    String(elapsedTotalSeconds % 60).padStart(2, '0');
-  const longWait = Boolean(
-    jobProgress?.updatedAt &&
-      Number.isFinite(Date.parse(jobProgress.updatedAt)) &&
-      clock - Date.parse(jobProgress.updatedAt) >= 60_000,
+  // Move focus to the new heading so keyboard and screen-reader users follow state changes.
+  useEffect(() => {
+    if (view.name !== 'detecting') headingRef.current?.focus({ preventScroll: true });
+  }, [view.name]);
+
+  useEffect(() => {
+    const query = window.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!query) return;
+    const update = () => setSystemDark(query.matches);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (theme) document.documentElement.dataset.theme = theme;
+    else delete document.documentElement.dataset.theme;
+  }, [theme]);
+
+  const effectiveTheme = theme ?? (systemDark ? 'dark' : 'light');
+  const toggleTheme = () => {
+    const next = effectiveTheme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    void chrome.storage.local.set({ theme: next });
+  };
+
+  // ---------- Render ----------
+  const viewDomain =
+    view.name === 'analyzing'
+      ? view.record.domain
+      : view.name === 'result'
+        ? (view.registered?.domain ?? view.guest?.domain ?? view.record?.domain)
+        : view.name === 'notice' && view.record
+          ? view.record.domain
+          : page?.supported
+            ? page.domain
+            : undefined;
+
+  const heading = (text: string) => (
+    <h1 ref={headingRef} tabIndex={-1}>
+      {text}
+    </h1>
   );
 
-  const copy = stateCopy[state];
-  const domain = hostname(url);
-  const isGuestEntry = state === 'first_use_guest' || state === 'guest_ready';
-  const isGuestResult = state === 'guest_result' || (state === 'partial_result' && !!guest);
-  const isRegisteredResult =
-    state === 'registered_result' || (state === 'partial_result' && !guest);
+  const reportUrl = (id: string) => appLink(APP_URL, '/app/analysis/', id);
+  const otherPageAvailable =
+    page?.supported && view.name === 'result' && view.record && view.record.url !== page.url;
+
+  let body: React.ReactNode;
+  switch (view.name) {
+    case 'detecting':
+      body = (
+        <div className="state" role="status">
+          {heading('Detecting page')}
+          <p className="muted">
+            <Spinner /> Checking the active tab…
+          </p>
+        </div>
+      );
+      break;
+    case 'unsupported': {
+      const copy = unsupportedCopy[page && !page.supported ? page.reason : 'invalid'];
+      body = (
+        <div className="state">
+          {heading(copy.title)}
+          <p className="muted">{copy.detail}</p>
+        </div>
+      );
+      break;
+    }
+    case 'ready':
+      body = (
+        <div className="state">
+          <div className="hero glow-card">
+            <div className="hero-orb" aria-hidden="true">
+              <img src={brandIconUrl} alt="" width="34" height="34" />
+            </div>
+            <div className="hero-copy">
+              {heading('Ready to analyze')}
+              <p className="muted">
+                ProspectAI will fetch this public website, score it from real evidence and show you
+                what you could sell.
+              </p>
+            </div>
+          </div>
+          <ul className="feature-grid" aria-label="What the analysis gives you">
+            {features.map((feature, index) => (
+              <li
+                key={feature.title}
+                className="feature glow-card"
+                style={{ '--i': index } as React.CSSProperties}
+              >
+                <span className="feature-icon" aria-hidden="true">
+                  {feature.icon}
+                </span>
+                <strong>{feature.title}</strong>
+                <span>{feature.detail}</span>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="button button-primary button-large button-shine"
+            onClick={() => void analyze()}
+          >
+            Analyze {page?.supported ? page.domain : 'this website'}
+            <span className="button-arrow" aria-hidden="true">
+              →
+            </span>
+          </button>
+          <p className="fine-print">
+            Only this page’s address is sent to ProspectAI, and only when you click Analyze. Your
+            browsing is never monitored.
+          </p>
+          {session === 'registered' && usage && (
+            <p className="usage" role="status">
+              {usage.remaining === null
+                ? 'Unlimited analyses on your plan'
+                : `${usage.remaining} of ${usage.limit} analyses left this period`}
+            </p>
+          )}
+          {session === 'guest' && guest && (
+            <div className="guest-bar">
+              <span>
+                {guest.trialRemaining} of {guest.trialLimit} free analyses left
+              </span>
+              <button
+                type="button"
+                className="link-action"
+                onClick={() => void startSignIn('account')}
+              >
+                Sign in
+              </button>
+            </div>
+          )}
+        </div>
+      );
+      break;
+    case 'submitting':
+      body = (
+        <div className="state" role="status">
+          {heading('Starting analysis')}
+          <p className="muted">
+            <Spinner /> Sending {page?.supported ? page.domain : 'the page'} to ProspectAI…
+          </p>
+        </div>
+      );
+      break;
+    case 'analyzing':
+      body = (
+        <div className="state">
+          {heading('Analysis in progress')}
+          <div aria-live="polite">
+            <ProgressPanel
+              domain={view.record.domain}
+              job={view.job}
+              submittedAt={view.record.submittedAt}
+              now={now}
+              reconnecting={view.reconnecting}
+            />
+          </div>
+        </div>
+      );
+      break;
+    case 'result':
+      body = (
+        <div className="state">
+          {heading(
+            view.registered?.status === 'partial' || view.guest?.status === 'partial'
+              ? 'Partial result ready'
+              : 'Result ready',
+          )}
+          {view.registered && (
+            <RegisteredResultView
+              result={view.registered}
+              actions={{
+                reportUrl: reportUrl(view.registered.id),
+                save,
+                onSave: () => void saveProspect(view.registered!),
+                pitch,
+                onPitch: () => void generatePitch(view.registered!),
+                onCopyPitch: () => void copyPitch(),
+                copied,
+                pdf,
+                onPdf: () => void downloadPdf(view.registered!.id, view.registered!.domain),
+              }}
+            />
+          )}
+          {view.guest && (
+            <GuestResultView
+              result={view.guest}
+              remaining={guest?.trialRemaining}
+              onCreateAccount={() => void startSignIn('account')}
+              onPdf={() => void downloadPdf(view.guest!.id, view.guest!.domain)}
+              pdf={pdf}
+            />
+          )}
+          <button type="button" className="button button-ghost" onClick={() => void finishResult()}>
+            {otherPageAvailable && page?.supported ? `Analyze ${page.domain} instead` : 'Done'}
+          </button>
+        </div>
+      );
+      break;
+    case 'notice': {
+      const { notice: current } = view;
+      const label: Record<Notice['action'], string | undefined> = {
+        retry: 'Try again',
+        resume: 'Check again',
+        sign_in:
+          current.kind === 'sign_in_failed' || current.kind === 'sign_in_cancelled'
+            ? 'Try signing in again'
+            : 'Sign in again',
+        upgrade: 'See plans',
+        create_account: 'Create free account',
+        analyze_again: 'Try again',
+        none: undefined,
+      };
+      body = (
+        <div className="state">
+          {heading(current.title)}
+          <p className="muted" role="alert">
+            {current.detail}
+          </p>
+          {label[current.action] && (
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => safely(() => runNoticeAction(view), view.retry)}
+            >
+              {label[current.action]}
+            </button>
+          )}
+          {current.kind === 'session_expired' && (
+            <button
+              type="button"
+              className="button button-ghost"
+              onClick={() => void continueAsGuest()}
+            >
+              Continue as guest
+            </button>
+          )}
+          {current.kind === 'quota_exhausted' && (
+            <ExternalLink href={appLink(APP_URL, '/app/usage')}>View usage</ExternalLink>
+          )}
+          {view.record && !isRunning(view.record) && (
+            <button
+              type="button"
+              className="button button-ghost"
+              onClick={() => void finishResult()}
+            >
+              Dismiss
+            </button>
+          )}
+        </div>
+      );
+      break;
+    }
+    case 'guest_limit':
+      body = (
+        <div className="state">
+          {heading('Free analyses used')}
+          <p className="muted">
+            You have used your {guest?.trialLimit ?? ''} free guest analyses. A free account
+            continues with monthly analyses, saved prospects and AI-written pitches. Your guest
+            results move into the account.
+          </p>
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={() => void startSignIn('google')}
+          >
+            Continue with Google
+          </button>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => void startSignIn('account')}
+          >
+            Sign in or create account with email
+          </button>
+        </div>
+      );
+      break;
+    case 'auth_pending':
+      body = (
+        <div className="state" role="status">
+          {heading('Finish signing in')}
+          <p className="muted">
+            Complete sign-in in the ProspectAI window. You can reopen this popup afterwards; your
+            account connects automatically.
+          </p>
+          <p className="muted">
+            <Spinner /> Waiting for ProspectAI…
+          </p>
+          {now - Date.parse(view.startedAt) > 60_000 && (
+            <button
+              type="button"
+              className="button button-ghost"
+              onClick={() => void startSignIn('account')}
+            >
+              Start sign-in again
+            </button>
+          )}
+        </div>
+      );
+      break;
+  }
 
   return (
-    <main className="value-page">
-      <header className="value-header">
-        <div className="value-brand">
-          <img src={brandIconUrl} alt="" />
-          <strong>
-            Prospect<span>AI</span>
-          </strong>
+    <div className="shell" ref={shellRef}>
+      <div className="aurora" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+      <div className="spotlight" aria-hidden="true" />
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-mark">
+            <img src={brandIconUrl} alt="" width="24" height="24" />
+          </span>
+          <span className="brand-text">
+            <span className="brand-name">
+              Prospect<strong>AI</strong>
+            </span>
+            <span className="brand-tagline">Website prospecting</span>
+          </span>
         </div>
-        {/* <span className="mode-pill">{guest ? 'Guest mode' : 'ProspectAI'}</span> */}
         <button
-          className="theme-toggle"
+          className="icon-button"
           type="button"
-          aria-label={theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
-          aria-pressed={theme === 'dark'}
-          onClick={() => {
-            const nextTheme = theme === 'dark' ? 'light' : 'dark';
-            setTheme(nextTheme);
-            document.documentElement.dataset.theme = nextTheme;
-            void chrome.storage.local.set({ theme: nextTheme });
-          }}
+          aria-label={effectiveTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          onClick={toggleTheme}
         >
-          {theme === 'dark' ? 'Light' : 'Dark'}
+          <span aria-hidden="true">{effectiveTheme === 'dark' ? '☀' : '☾'}</span>
         </button>
       </header>
-
-      <section className="value-card" aria-live="polite">
-        <p className="value-kicker">
-          {domain ? `Page to analyze: ${domain}` : 'Opportunity intelligence'}
+      {viewDomain && (
+        <p className="site" title={viewDomain}>
+          <span className="site-avatar" aria-hidden="true">
+            {viewDomain.charAt(0).toUpperCase()}
+          </span>
+          <span className="site-domain">{viewDomain}</span>
+          <span className="site-chip" aria-hidden="true">
+            <span className="site-dot" />
+            {page?.supported && page.domain === viewDomain ? 'Active tab' : 'Last analysis'}
+          </span>
         </p>
-        <h1>{copy.title}</h1>
-        <p className="value-detail">
-          {state === 'analysis_failed' && jobProgress?.errorMessage
-            ? jobProgress.errorMessage
-            : copy.detail}
+      )}
+      {signedInBanner && session === 'registered' && (
+        <p className="banner" role="status">
+          Account connected. Your guest results are now in your workspace.
         </p>
-        {state === 'detecting_page' && (
-          <div className="auth-status" role="status">
-            <span className="status-spinner" />
-            Checking the active page...
-          </div>
-        )}
-        {guest && (
-          <div className="trial-meter" role="status">
-            <span>Guest mode</span>
-            <strong>{guestRemainingLabel(guest)}</strong>
-          </div>
-        )}
-        {isGuestEntry && (
+      )}
+      <main>{body}</main>
+      <footer className="footer">
+        {session === 'registered' ? (
           <>
-            <div className="privacy-note">
-              ProspectAI analyzes the page you choose to provide prospect intelligence. It does not
-              monitor your browsing or analyze pages in the background.
-            </div>
-            <button className="primary-action" type="button" onClick={() => void analyzeGuest()}>
-              {state === 'first_use_guest' ? 'Start Free Analysis' : 'Analyze This Prospect'}
-              <span aria-hidden="true">→</span>
-            </button>
-            <button
-              className="text-action"
-              type="button"
-              onClick={() => void beginAuthentication('account')}
-            >
-              Sign in
+            <ExternalLink href={appLink(APP_URL, '/app')}>Dashboard</ExternalLink>
+            <button type="button" className="link-action" onClick={() => void signOut()}>
+              Sign out
             </button>
           </>
-        )}{' '}
-        {['guest_analyzing', 'registered_analyzing', 'analysis_timed_out'].includes(state) && (
-          <div className="analysis-progress" role="status" aria-live="polite">
-            <div className="analysis-progress-heading">
-              <strong>
-                Step {stage.index} of {analysisStageCount}
-              </strong>
-              <span>{progress}%</span>
-            </div>
-            <div className="progress" aria-label={progress + '% complete'}>
-              <span style={{ width: progress + '%' }} />
-            </div>
-            <strong>{stage.label}</strong>
-            <small>Elapsed {elapsedLabel}</small>
-            {jobProgress && jobProgress.attempt > 0 && (
-              <small>
-                Attempt {jobProgress.attempt} of {jobProgress.maxAttempts}
-              </small>
-            )}
-            {longWait && (
-              <small>
-                We are taking a little longer than usual. The worker is still being checked.
-              </small>
-            )}
-          </div>
-        )}
-        {isGuestResult && guestResult && (
-          <div className="guest-result">
-            <div className="result-heading">
-              <div>
-                <small>Prospect</small>
-                <strong>{guestResult.companyName}</strong>
-              </div>
-              <div className="opportunity-score">
-                <small>Opportunity</small>
-                <strong>{guestResult.opportunityScore ?? '--'}</strong>
-              </div>
-            </div>
-            {guestResult.reasoning && <p>{guestResult.reasoning}</p>}
-            {guestResult.limitations.map((limitation) => (
-              <p key={limitation}>{limitation}</p>
-            ))}
-            {guestResult.keySignals.length > 0 && (
-              <div>
-                <h2>Key signals</h2>
-                <ul>
-                  {guestResult.keySignals.map((signal) => (
-                    <li key={signal}>{signal}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {pdfButton(guestResult.id, guestResult.domain)}
-            {guestResult.recommendedNextAction && (
-              <div className="next-action">
-                <small>Recommended next action</small>
-                <strong>{guestResult.recommendedNextAction}</strong>
-              </div>
-            )}
-            {guest && guest.trialRemaining > 0 ? (
-              <button
-                className="primary-action"
-                type="button"
-                onClick={() => {
-                  setGuestResult(undefined);
-                  setState('guest_ready');
-                }}
-              >
-                Analyze Another Prospect <span aria-hidden="true">→</span>
-              </button>
-            ) : (
-              <p className="limit-message">You have completed your free ProspectAI analyses.</p>
-            )}
-            <button
-              className="secondary-action"
-              type="button"
-              onClick={() => void beginAuthentication('google')}
-            >
-              Save This Prospect - Create Free Account
-            </button>
-          </div>
-        )}
-        {state === 'guest_limit_reached' && (
-          <div className="conversion-panel">
-            <ul>
-              <li>Save prospects and access analysis history</li>
-              <li>Unlock fuller AI research and personalized pitches</li>
-              <li>Sync across devices and receive monthly credits</li>
-            </ul>
-            <button
-              className="primary-action"
-              type="button"
-              onClick={() => void beginAuthentication('google')}
-            >
-              Continue with Google <span aria-hidden="true">→</span>
-            </button>
-            <button
-              className="text-action"
-              type="button"
-              onClick={() => void beginAuthentication('account')}
-            >
-              Sign in
-            </button>
-          </div>
-        )}
-        {state === 'registered_ready' && (
+        ) : (
           <>
-            {usage && (
-              <p className="registered-usage">
-                {usage.remaining ?? 'Unlimited'} analyses remaining this period
-              </p>
-            )}
-            <button
-              className="primary-action"
-              type="button"
-              onClick={() => void analyzeRegistered()}
-            >
-              Analyze This Prospect <span aria-hidden="true">→</span>
-            </button>
+            <ExternalLink href={appLink(APP_URL, '/privacy')}>Privacy</ExternalLink>
+            <span className="muted">Analysis starts only when you click.</span>
           </>
         )}
-        {isRegisteredResult && registeredResult && (
-          <div className="guest-result">
-            {registeredResult.limitations.map((limitation) => (
-              <p key={limitation}>{limitation}</p>
-            ))}
-            <div className="result-heading">
-              <div>
-                <small>Prospect</small>
-                <strong>{registeredResult.companyName ?? registeredResult.domain}</strong>
-              </div>
-              <div className="opportunity-score">
-                <small>Opportunity</small>
-                <strong>{registeredResult.opportunityScore ?? '--'}</strong>
-              </div>
-            </div>
-            <a
-              className="primary-link"
-              href={`${APP_URL}/app/analysis/${encodeURIComponent(registeredResult.id)}`}
-              target="_blank"
-            >
-              Open full report →
-            </a>
-            {pdfButton(registeredResult.id, registeredResult.domain)}
-          </div>
-        )}
-        {['auth_start', 'auth_pending', 'auth_success'].includes(state) && (
-          <div className="auth-status" role="status">
-            <span className="status-spinner" />
-            {copy.detail}
-          </div>
-        )}
-        {state === 'auth_failed' && (
-          <button
-            className="primary-action"
-            type="button"
-            onClick={() => void beginAuthentication('google')}
-          >
-            Try authentication again
-          </button>
-        )}
-        {[
-          'offline',
-          'backend_unavailable',
-          'rate_limited',
-          'analysis_failed',
-          'analysis_timed_out',
-          'api_server_error',
-          'api_timeout',
-          'api_invalid_response',
-        ].includes(state) && (
-          <button
-            className="secondary-action"
-            type="button"
-            onClick={() => void retry()}
-            disabled={operationRef.current !== null}
-          >
-            Try again
-          </button>
-        )}
-        {['session_expired', 'session_revoked'].includes(state) && (
-          <button
-            className="primary-action"
-            type="button"
-            onClick={() => void beginAuthentication('account')}
-          >
-            Sign in again <span aria-hidden="true">→</span>
-          </button>
-        )}
-      </section>
-
-      <footer className="value-footer">
-        <span>Analysis starts only when you choose.</span>
-        <span>ProspectAI | Opportunity Intelligence</span>
       </footer>
-    </main>
+    </div>
   );
 }

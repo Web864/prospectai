@@ -1,4 +1,4 @@
-﻿import { extensionTokenResponseSchema } from '@prospectai/validation';
+import { extensionTokenResponseSchema } from '@prospectai/validation';
 import { API_BASE_URL } from './config';
 
 import { apiFailureCategory, ExtensionApiError } from './api-errors';
@@ -23,8 +23,26 @@ async function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
     : work();
 }
 
-/** Returns a usable access token, or undefined when the session could not be refreshed. */
-async function refreshAccessToken(staleAccessToken: string): Promise<string | undefined> {
+/** Session keys removed when the server says the extension session is over. */
+export const sessionTokenKeys = ['accessToken', 'refreshToken', 'accessTokenExpiresAt'] as const;
+
+/**
+ * The server rejected the session for good: drop the credentials so no context keeps sending a
+ * dead token, and leave a non-secret marker so the UI can say "Your session has expired"
+ * instead of silently falling back to guest mode.
+ */
+export async function markSessionExpired() {
+  await chrome.storage.local.remove([...sessionTokenKeys]);
+  await chrome.storage.local.set({ sessionState: 'expired' });
+}
+
+/**
+ * Returns a usable access token, 'revoked' when the server rejected the refresh token for good,
+ * or undefined when the refresh could not be attempted (transient failure: tokens are kept).
+ */
+async function refreshAccessToken(
+  staleAccessToken: string,
+): Promise<string | 'revoked' | undefined> {
   return withRefreshLock(async () => {
     const stored = await chrome.storage.local.get(['accessToken', 'refreshToken']);
     // Another context rotated the tokens while this one waited for the lock: reuse its result
@@ -47,7 +65,7 @@ async function refreshAccessToken(staleAccessToken: string): Promise<string | un
     if (response.status === 401 || response.status === 403) {
       // The server rejected this refresh token for good (expired, revoked or already rotated).
       await chrome.storage.local.remove('refreshToken');
-      return undefined;
+      return 'revoked';
     }
     if (!response.ok) return undefined;
     const parsed = extensionTokenResponseSchema.safeParse(
@@ -76,8 +94,10 @@ export async function apiRequest(
   ]);
   let accessToken = typeof stored.accessToken === 'string' ? stored.accessToken : undefined;
   const canRefresh = accessToken !== undefined && typeof stored.refreshToken === 'string';
-  if (accessToken && canRefresh && expiresSoon(stored.accessTokenExpiresAt))
-    accessToken = (await refreshAccessToken(accessToken)) ?? accessToken;
+  if (accessToken && canRefresh && expiresSoon(stored.accessTokenExpiresAt)) {
+    const refreshed = await refreshAccessToken(accessToken);
+    if (typeof refreshed === 'string' && refreshed !== 'revoked') accessToken = refreshed;
+  }
 
   const guestToken = typeof stored.guestToken === 'string' ? stored.guestToken : undefined;
   const attempt = async (token: string | undefined) => {
@@ -130,10 +150,14 @@ export async function apiRequest(
   };
 
   const response = await attempt(accessToken);
+  if (response.status !== 401 || !accessToken) return response;
   // The access token can still be rejected (clock skew, server-side rotation): refresh once, retry once.
-  if (response.status === 401 && accessToken && canRefresh) {
-    const refreshed = await refreshAccessToken(accessToken);
-    if (refreshed && refreshed !== accessToken) return attempt(refreshed);
+  const refreshed = canRefresh ? await refreshAccessToken(accessToken) : 'revoked';
+  if (refreshed && refreshed !== 'revoked' && refreshed !== accessToken) {
+    const retried = await attempt(refreshed);
+    if (retried.status === 401) await markSessionExpired();
+    return retried;
   }
+  if (refreshed === 'revoked') await markSessionExpired();
   return response;
 }
