@@ -7,7 +7,7 @@
     "build": "node scripts/run-next.mjs build",
     "start": "node scripts/run-next.mjs start",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint app components scripts next.config.ts vitest.config.ts --max-warnings=0",
+    "lint": "eslint app components lib scripts next.config.ts vitest.config.ts --max-warnings=0",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {

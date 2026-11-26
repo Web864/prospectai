@@ -13,6 +13,14 @@ export async function POST(request: Request) {
   try {
     await enforceRateLimit(request, 'auth.login', 10, 15 * 60_000);
     const input = await parseJson(request, authCredentialsSchema);
+    // Per-account limit so a distributed guess cannot bypass the per-client limit.
+    await enforceRateLimit(
+      request,
+      'auth.login.account',
+      10,
+      15 * 60_000,
+      `account:${input.email.trim().toLowerCase()}`,
+    );
     const { user, organizationId } = await authenticateAccount(input.email, input.password);
     const session = await createWebSession(user.id, organizationId);
     await writeAudit({

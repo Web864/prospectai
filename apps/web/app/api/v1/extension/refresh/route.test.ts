@@ -24,6 +24,8 @@ vi.mock('@prospectai/config', () => ({
   loadAuthEnvironment: vi.fn(() => ({ EXTENSION_TOKEN_PEPPER: 'test-pepper' })),
 }));
 
+vi.mock('../../../../../lib/rate-limit', () => ({ enforceRateLimit: vi.fn() }));
+
 import { POST } from './route';
 
 describe('extension refresh rotation', () => {

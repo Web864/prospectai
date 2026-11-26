@@ -1,4 +1,4 @@
-import { ArrowRight, Github, Linkedin, Menu, Youtube } from 'lucide-react';
+import { ArrowRight, Menu } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { InputHTMLAttributes, ReactNode } from 'react';
@@ -15,11 +15,13 @@ function BrandLink() {
   );
 }
 
+// Each item is an independent, crawlable page (not an in-page anchor).
 const navigation = [
-  ['How it works', '/#how'],
-  ['Features', '/#features'],
-  ['Use cases', '/#audiences'],
-  ['FAQ', '/#faq'],
+  ['How it works', '/how-it-works'],
+  ['Features', '/features'],
+  ['Pricing', '/pricing'],
+  ['Resources', '/resources'],
+  ['FAQ', '/faq'],
 ] as const;
 
 export function SiteShell({ children, activePath }: { children: ReactNode; activePath?: string }) {
@@ -87,30 +89,22 @@ export function PublicFooter() {
             <strong>ProspectAI</strong>
           </span>
           <p>Real websites. Real insights. Real opportunities.</p>
-          <div className="footer-socials" aria-hidden="true">
-            <span>X</span>
-            <Linkedin size={16} />
-            <Youtube size={17} />
-            <Github size={16} />
-          </div>
-          <small>(c) 2026 ProspectAI. All rights reserved.</small>
+          <small>© {new Date().getFullYear()} ProspectAI. All rights reserved.</small>
         </div>
         <nav aria-label="Product links">
           <strong>Product</strong>
-          <Link href="/#features">Features</Link>
+          <Link href="/features">Features</Link>
+          <Link href="/how-it-works">How it works</Link>
           <Link href="/pricing">Pricing</Link>
-          <Link href="/#audiences">Use Cases</Link>
-          <Link href="/resources">Resources</Link>
         </nav>
         <nav aria-label="Resource links">
           <strong>Resources</strong>
           <Link href="/resources">Guides</Link>
-          <Link href="/#faq">FAQ</Link>
-          <Link href="/contact">Contact</Link>
+          <Link href="/faq">FAQ</Link>
         </nav>
         <nav aria-label="Company links">
           <strong>Company</strong>
-          <Link href="/contact">About</Link>
+          <Link href="/contact">Contact</Link>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
         </nav>

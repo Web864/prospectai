@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Homepage } from './homepage';
 import { SiteShell } from './site-shell';
@@ -6,37 +6,39 @@ import { SiteShell } from './site-shell';
 afterEach(cleanup);
 
 describe('ProspectAI homepage', () => {
-  it('communicates the evidence-first opportunity intelligence proposition', () => {
+  it('communicates the research-before-outreach proposition', () => {
     render(<Homepage />);
 
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Know what service to sell before you write the first message.',
+        name: 'Know the business. Find your angle. Win better clients.',
       }),
     ).toBeTruthy();
-    expect(screen.getAllByText('Evidence').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Interpretation').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Opportunity').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Website Score').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Opportunity Score').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(
       screen.getByRole('heading', {
-        name: 'A finding is not automatically a sales opportunity',
+        name: 'A better conversation starts before the first message.',
       }),
     ).toBeTruthy();
+    expect(screen.getByText('Are the opportunities guaranteed?')).toBeTruthy();
   });
 
-  it('provides conversion actions and accessible desktop and mobile navigation', () => {
+  it('provides conversion actions and independent page navigation', () => {
     render(
       <SiteShell>
         <Homepage />
       </SiteShell>,
     );
 
-    expect(screen.getAllByRole('link', { name: /Start analyzing/ }).length).toBe(2);
+    expect(screen.getByRole('link', { name: /Start free/ }).getAttribute('href')).toBe('/signup');
     expect(screen.getByLabelText('Open navigation menu')).toBeTruthy();
-    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeTruthy();
+    const main = screen.getByRole('navigation', { name: 'Main navigation' });
+    const hrefs = within(main)
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'));
+    expect(hrefs).toEqual(['/how-it-works', '/features', '/pricing', '/resources', '/faq']);
+    expect(hrefs.every((href) => !href?.includes('#'))).toBe(true);
     expect(screen.getByRole('navigation', { name: 'Mobile navigation' })).toBeTruthy();
     expect(screen.getByRole('contentinfo')).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Product links' })).toBeTruthy();
