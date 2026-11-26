@@ -136,13 +136,18 @@ body {
 }
 
 /*
- * Chrome sizes the popup to its content (max 800 x 600) and scrolls beyond that. Chrome also
- * injects its own default stylesheet into extension pages (body font-size: 75%, system font),
- * so the body must restate the type scale explicitly.
+ * Popup width strategy (see docs/extension-rendering-root-cause.md):
+ * Chrome auto-sizes an action popup. It first lays the page out in its minimum window (25 px
+ * wide), reads the width the content asks for, then grows the window up to 800 x 600. So the
+ * width must be an intrinsic, fixed length on body. Anything that depends on the viewport
+ * (vw, %, width: auto, or a width media query) resolves against that 25 px first pass, asks
+ * for 25 px, and the popup stays a narrow strip. popup-layout.test.ts guards this.
+ *
+ * Chrome also injects its own default stylesheet into extension pages (body font-size: 75%,
+ * system font), so the body must restate the type scale explicitly.
  */
 body {
   width: 640px;
-  max-width: 100vw;
   font-family: inherit;
   font-size: 14px;
   line-height: 1.5;
@@ -1291,25 +1296,6 @@ details[open] p {
   background: var(--glass);
   backdrop-filter: blur(14px);
   font-size: 12px;
-}
-
-/* High browser zoom shrinks the CSS viewport: stack the columns instead of squeezing them. */
-@media (max-width: 520px) {
-  body {
-    width: auto;
-  }
-
-  .feature-grid,
-  .result-grid,
-  .action-grid,
-  .stage-list {
-    grid-template-columns: 1fr;
-  }
-
-  .stage-list {
-    grid-auto-flow: row;
-    grid-template-rows: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
