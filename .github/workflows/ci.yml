@@ -8,6 +8,14 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    # Placeholder values so schema validation and the production build can load configuration.
+    # No database or provider is contacted; real values live only in the deployment platform.
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      NEXT_PUBLIC_APP_URL: https://ci.example.com
+      NEXT_PUBLIC_API_BASE_URL: https://ci.example.com/api/v1
+      VITE_APP_URL: http://localhost:3000
+      VITE_API_BASE_URL: http://localhost:3000/api/v1
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
