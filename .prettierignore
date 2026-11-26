@@ -1,2 +1,3 @@
 # Preserve the supplied design blueprint and handoff verbatim, not application source.
 docs/ProspectAI_Codex_Handoff/
+pnpm-lock.yaml

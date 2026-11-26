@@ -60,7 +60,9 @@ export async function generateMetadata({
   if (path in authTitles) return privateMetadata(authTitles[path]!);
   if (path in appTitles || path.startsWith('app/analysis/') || path.startsWith('app/leads/'))
     return privateMetadata(appTitles[path] ?? 'Workspace');
-  return privateMetadata('Page not found');
+  // Rejecting unknown paths here, before the loading boundary streams, yields a real 404 status
+  // instead of a soft 404 (HTTP 200 with a "not found" page).
+  notFound();
 }
 
 function Auth({

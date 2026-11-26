@@ -34,7 +34,7 @@ export async function runMaintenance(now = new Date()) {
     rawGuestContentPurged: rawContentPurged.count,
     handoffsExpired: expiredHandoffs.count,
     rateLimitBucketsDeleted: rateLimitBucketsDeleted.count,
-    authActionTokensDeleted: authActionTokensDeleted.count,
+    expiredAccountActionsDeleted: authActionTokensDeleted.count,
   };
   logger.info('maintenance_completed', result);
   return result;

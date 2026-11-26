@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
     const development = process.env.NODE_ENV === 'development';
+    // HSTS and request upgrading only make sense when the app is served over HTTPS.
+    const https = (process.env.NEXT_PUBLIC_APP_URL ?? '').startsWith('https://');
     // Next.js injects inline bootstrap scripts, so script-src needs 'unsafe-inline' unless
     // per-request nonces are adopted (which would force every page to render dynamically).
     // The policy still blocks third-party script origins, plugins, framing and base hijacking.
@@ -41,7 +43,7 @@ const nextConfig: NextConfig = {
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
-      ...(development ? [] : ['upgrade-insecure-requests']),
+      ...(https ? ['upgrade-insecure-requests'] : []),
     ].join('; ');
     const noIndex = { key: 'X-Robots-Tag', value: 'noindex, nofollow' };
     return [
@@ -49,9 +51,9 @@ const nextConfig: NextConfig = {
         source: '/(.*)',
         headers: [
           { key: 'Content-Security-Policy', value: contentSecurityPolicy },
-          ...(development
-            ? []
-            : [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' }]),
+          ...(https
+            ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' }]
+            : []),
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-Frame-Options', value: 'DENY' },

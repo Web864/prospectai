@@ -81,3 +81,20 @@ describe('parseJson', () => {
     await expect(parseJson(post('{"name":1}'), schema)).rejects.toThrow();
   });
 });
+
+describe('parseJson body limit', () => {
+  it('rejects bodies larger than the API limit before validation', async () => {
+    const { parseJson, maxJsonBodyBytes } = await import('../src/index');
+    const { z } = await import('zod');
+    const body = JSON.stringify({ value: 'x'.repeat(maxJsonBodyBytes) });
+    await expect(
+      parseJson(new Request('http://x.test', { method: 'POST', body }), z.object({})),
+    ).rejects.toMatchObject({ status: 413 });
+    await expect(
+      parseJson(
+        new Request('http://x.test', { method: 'POST', body: '{"ok":true}' }),
+        z.object({ ok: z.boolean() }),
+      ),
+    ).resolves.toEqual({ ok: true });
+  });
+});
