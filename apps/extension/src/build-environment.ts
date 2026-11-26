@@ -1,8 +1,12 @@
+export function isLocalMode(mode: string) {
+  return mode === 'development' || mode === 'local-development' || mode === 'test';
+}
+
 export function extensionEnvironment(
   mode: string,
   environment: { VITE_APP_URL?: string; VITE_API_BASE_URL?: string },
 ) {
-  const local = mode === 'development' || mode === 'local-development' || mode === 'test';
+  const local = isLocalMode(mode);
   const appUrl = environment.VITE_APP_URL || (local ? 'http://localhost:3000' : '');
   const apiUrl = environment.VITE_API_BASE_URL || (local ? `${appUrl}/api/v1` : '');
   if (!appUrl || !apiUrl) throw new Error('Extension app and API URLs are required.');

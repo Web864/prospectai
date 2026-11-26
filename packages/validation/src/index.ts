@@ -76,7 +76,7 @@ export const analysisJobStatusSchema = z.enum([
 ]);
 
 export const analysisAcceptedResponseSchema = z.object({
-  data: z.object({ jobId: z.string().min(1) }),
+  data: z.object({ jobId: z.string().min(1), analysisId: z.string().min(1).optional() }),
 });
 
 export const analysisJobProgressResponseSchema = z.object({
