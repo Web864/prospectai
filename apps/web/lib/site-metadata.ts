@@ -74,6 +74,14 @@ export const publicPages: PublicPage[] = [
     priority: 0.6,
   },
   {
+    path: '/blog',
+    title: 'Blog: opinions on AI, agents and Claude for client work',
+    description:
+      'Field notes on using AI to win and serve clients: practical opinions on Claude, AI agents, automation and prospecting for agencies, consultants and freelancers.',
+    changeFrequency: 'weekly',
+    priority: 0.7,
+  },
+  {
     path: '/contact',
     title: 'Contact ProspectAI',
     description:

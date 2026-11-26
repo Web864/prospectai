@@ -65,6 +65,8 @@ const nextConfig: NextConfig = {
       { source: '/app', headers: [noIndex] },
       { source: '/api/:path*', headers: [noIndex] },
       { source: '/onboarding', headers: [noIndex] },
+      { source: '/admin', headers: [noIndex] },
+      { source: '/admin/:path*', headers: [noIndex] },
       { source: '/extension/:path*', headers: [noIndex] },
       {
         source: '/:page(login|signup|verify-email|forgot-password|reset-password)',

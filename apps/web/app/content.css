@@ -1,0 +1,335 @@
+/* Blog, landing pages and rendered Markdown. Uses the shared theme tokens; both themes. */
+
+.content-page {
+  position: relative;
+  min-height: 70vh;
+  padding: 72px 0 96px;
+  color: var(--pa-color-text);
+}
+
+.content-container {
+  width: min(1180px, 100% - 32px);
+  margin: 0 auto;
+}
+
+.content-hero {
+  max-width: 780px;
+  margin-bottom: 48px;
+}
+
+.content-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid rgb(7 150 129 / 25%);
+  border-radius: 999px;
+  background: rgb(7 150 129 / 8%);
+  color: var(--pa-color-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.content-hero h1 {
+  margin: 18px 0 14px;
+  color: var(--pa-color-ink);
+  font-size: clamp(38px, 6vw, 62px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+}
+
+.content-hero p {
+  margin: 0;
+  color: var(--pa-color-muted);
+  font-size: 19px;
+  line-height: 1.6;
+}
+
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 22px;
+}
+
+.blog-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px;
+  border: 1px solid var(--pa-color-border);
+  border-radius: 18px;
+  background: var(--pa-color-surface);
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.blog-card.is-featured {
+  grid-column: 1 / -1;
+  padding: 36px;
+  background:
+    radial-gradient(70% 120% at 100% 0%, rgb(37 140 232 / 10%), transparent 60%),
+    radial-gradient(60% 100% at 0% 100%, rgb(7 150 129 / 10%), transparent 60%),
+    var(--pa-color-surface);
+}
+
+.blog-card h2 {
+  margin: 0;
+  color: var(--pa-color-ink);
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.blog-card.is-featured h2 {
+  font-size: clamp(26px, 3vw, 36px);
+}
+
+.blog-card p {
+  margin: 0;
+  color: var(--pa-color-muted);
+  line-height: 1.6;
+}
+
+.blog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  color: var(--pa-color-subtle, var(--pa-color-muted));
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.blog-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.blog-tag {
+  padding: 3px 10px;
+  border: 1px solid rgb(7 150 129 / 22%);
+  border-radius: 999px;
+  background: rgb(7 150 129 / 7%);
+  color: var(--pa-color-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.blog-card .blog-more {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--pa-color-primary);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.content-empty {
+  padding: 48px 28px;
+  border: 1px dashed var(--pa-color-border);
+  border-radius: 18px;
+  color: var(--pa-color-muted);
+  text-align: center;
+}
+
+/* Article */
+
+.article-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 720px) 260px;
+  justify-content: space-between;
+  gap: 56px;
+}
+
+.article-head {
+  margin-bottom: 36px;
+}
+
+.article-head h1 {
+  margin: 16px 0;
+  color: var(--pa-color-ink);
+  font-size: clamp(34px, 5vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.article-head .article-lead {
+  margin: 0 0 18px;
+  color: var(--pa-color-muted);
+  font-size: 20px;
+  line-height: 1.55;
+}
+
+.article-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--pa-color-muted);
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.article-back:hover {
+  color: var(--pa-color-primary);
+}
+
+.article-aside {
+  position: sticky;
+  top: 110px;
+  align-self: start;
+  display: grid;
+  gap: 18px;
+}
+
+.article-toc,
+.article-cta {
+  padding: 20px;
+  border: 1px solid var(--pa-color-border);
+  border-radius: 16px;
+  background: var(--pa-color-surface);
+}
+
+.article-toc strong,
+.article-cta strong {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--pa-color-ink);
+  font-size: 14px;
+}
+
+.article-toc ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.article-toc a {
+  color: var(--pa-color-muted);
+  text-decoration: none;
+}
+
+.article-toc a:hover {
+  color: var(--pa-color-primary);
+}
+
+.article-toc .is-sub {
+  padding-left: 12px;
+}
+
+.article-cta p {
+  margin: 0 0 14px;
+  color: var(--pa-color-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* Rendered Markdown */
+
+.content-prose {
+  color: var(--pa-color-text);
+  font-size: 18px;
+  line-height: 1.75;
+}
+
+.content-prose > :first-child {
+  margin-top: 0;
+}
+
+.content-prose :is(h2, h3, h4, h5) {
+  margin: 2em 0 0.6em;
+  color: var(--pa-color-ink);
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  scroll-margin-top: 110px;
+}
+
+.content-prose h2 {
+  font-size: 30px;
+}
+
+.content-prose h3 {
+  font-size: 23px;
+}
+
+.content-prose h4,
+.content-prose h5 {
+  font-size: 19px;
+}
+
+.content-prose p,
+.content-prose ul,
+.content-prose ol {
+  margin: 0 0 1.2em;
+}
+
+.content-prose li + li {
+  margin-top: 0.4em;
+}
+
+.content-prose a {
+  color: var(--pa-color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.content-prose blockquote {
+  margin: 1.6em 0;
+  padding: 4px 0 4px 22px;
+  border-left: 3px solid transparent;
+  border-image: linear-gradient(180deg, #079681, #258ce8, #705cf4) 1;
+  color: var(--pa-color-ink);
+  font-size: 21px;
+  font-style: italic;
+}
+
+.content-prose code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--pa-color-surface-soft);
+  font-size: 0.88em;
+}
+
+.content-prose pre {
+  margin: 1.4em 0;
+  padding: 18px 20px;
+  border: 1px solid var(--pa-color-border);
+  border-radius: 14px;
+  background: var(--pa-color-surface-soft);
+  overflow-x: auto;
+  line-height: 1.55;
+}
+
+.content-prose pre code {
+  padding: 0;
+  background: none;
+  font-size: 14px;
+}
+
+.content-prose hr {
+  margin: 2.4em 0;
+  border: 0;
+  border-top: 1px solid var(--pa-color-border);
+}
+
+@media (max-width: 960px) {
+  .article-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .article-aside {
+    position: static;
+  }
+
+  .content-page {
+    padding-top: 44px;
+  }
+}

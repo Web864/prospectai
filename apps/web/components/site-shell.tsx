@@ -21,6 +21,7 @@ const navigation = [
   ['Features', '/features'],
   ['Pricing', '/pricing'],
   ['Resources', '/resources'],
+  ['Blog', '/blog'],
   ['FAQ', '/faq'],
 ] as const;
 
@@ -100,6 +101,7 @@ export function PublicFooter() {
         <nav aria-label="Resource links">
           <strong>Resources</strong>
           <Link href="/resources">Guides</Link>
+          <Link href="/blog">Blog</Link>
           <Link href="/faq">FAQ</Link>
         </nav>
         <nav aria-label="Company links">

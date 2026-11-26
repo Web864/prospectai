@@ -290,7 +290,11 @@ export function PricingPage() {
   );
 }
 
-export function FaqPage() {
+export function FaqPage({
+  questions = prospectFaqQuestions,
+}: {
+  questions?: ReadonlyArray<readonly [string, string]>;
+}) {
   return (
     <main className="reference-page reference-faq">
       <div className="reference-grid-pattern reference-pattern-left" aria-hidden="true" />
@@ -311,7 +315,7 @@ export function FaqPage() {
         </section>
 
         <section className="reference-faq-list" aria-label="ProspectAI frequently asked questions">
-          {prospectFaqQuestions.map(([question, answer], index) => {
+          {questions.map(([question, answer], index) => {
             const Icon = faqIcons[index] ?? CircleHelp;
             return (
               <details
