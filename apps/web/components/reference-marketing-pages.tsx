@@ -97,13 +97,7 @@ const plans = [
   },
 ] as const;
 
-const faqIcons = [
-  BarChart3,
-  Target,
-  Database,
-  Monitor,
-  CircleHelp,
-] as const;
+const faqIcons = [BarChart3, Target, Database, Monitor, CircleHelp] as const;
 
 export function FeaturesPage() {
   return (
