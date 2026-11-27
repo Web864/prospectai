@@ -31,6 +31,7 @@ const nextConfig: NextConfig = {
       ['/app/dashboard', '/app'],
       ['/app/overview', '/app'],
       ['/app/prospects', '/app/leads'],
+      ['/app/pitches/new', '/app/pitches'],
       ['/app/profile', '/app/settings'],
       ['/app/integrations', '/app/settings/extension'],
     ].map(([source, destination]) => ({

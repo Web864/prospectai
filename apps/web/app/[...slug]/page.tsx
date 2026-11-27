@@ -27,7 +27,6 @@ const appTitles: Record<string, string> = {
   'app/analyses': 'Analyses',
   'app/opportunities': 'Opportunities',
   'app/pitches': 'Pitches',
-  'app/pitches/new': 'Generate pitch',
   'app/leads': 'Leads',
   'app/usage': 'Usage',
   'app/billing': 'Billing',
@@ -102,7 +101,7 @@ function Application({ path, jobId }: { path: string; jobId?: string | undefined
   if (path === 'app/leads') content = <LeadListView />;
   else if (path === 'app/research') content = <ResearchView />;
   else if (path === 'app/opportunities') content = <OpportunitiesView />;
-  else if (path === 'app/pitches' || path === 'app/pitches/new') content = <PitchesView />;
+  else if (path === 'app/pitches') content = <PitchesView />;
   else if (path === 'app/analyses') content = <AnalysesView />;
   else if (path.startsWith('app/analysis/'))
     content = (

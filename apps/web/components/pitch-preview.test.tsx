@@ -23,7 +23,7 @@ describe('PitchPreview', () => {
     expect(screen.getByText(/missing recent case studies/)).toBeTruthy();
     expect(
       screen.getByRole('link', { name: 'Edit pitch in ProspectAI' }).getAttribute('href'),
-    ).toBe('/app/pitches/new');
+    ).toBe('/app/pitches');
 
     await user.click(screen.getByRole('button', { name: 'Copy illustrative pitch' }));
 
