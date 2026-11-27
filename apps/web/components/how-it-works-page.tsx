@@ -18,6 +18,7 @@ import {
   UserRoundPlus,
 } from 'lucide-react';
 import { AnimatedSection } from './animated-section';
+import { HowItWorksStory } from './how-it-works-story';
 import { prospectWorkflow } from './marketing-views';
 
 const stepIcons = [
@@ -53,6 +54,12 @@ export function HowItWorksPage() {
             </div>
           </div>
           <div className="how-preview-wrap how-enter how-enter-preview">
+            <svg className="how-orbits" viewBox="0 0 600 400" aria-hidden="true">
+              <ellipse cx="300" cy="200" rx="280" ry="170" />
+              <ellipse cx="300" cy="200" rx="220" ry="130" />
+              <circle r="5" />
+              <circle r="4" />
+            </svg>
             <span className="how-note how-note-left" aria-hidden="true">
               Real websites. Relevant opportunities.
             </span>
@@ -71,6 +78,8 @@ export function HowItWorksPage() {
           <WorkflowTimeline />
         </AnimatedSection>
       </section>
+
+      <HowItWorksStory />
 
       <AnimatedSection className="how-principles">
         <div className="how-container">
@@ -236,7 +245,7 @@ function Principle({
   title: string;
 }) {
   return (
-    <article>
+    <article className="fx-card">
       <Icon size={22} aria-hidden="true" />
       <h3>{title}</h3>
       <p>{copy}</p>

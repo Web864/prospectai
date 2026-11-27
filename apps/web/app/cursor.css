@@ -1,0 +1,113 @@
+/* Custom cursor (components/custom-cursor.tsx). Inactive until the script adds .fx-cursor, so
+   touch devices, reduced motion and no-JS visitors keep the native cursor. */
+
+.fx-cursor-dot,
+.fx-cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform;
+}
+
+.fx-cursor-dot {
+  width: 0;
+  height: 0;
+}
+
+.fx-cursor-dot::before {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--pa-color-primary, #079681);
+  box-shadow: 0 0 12px rgb(7 150 129 / 55%);
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.fx-cursor-ring {
+  width: 0;
+  height: 0;
+}
+
+.fx-cursor-ring::before {
+  content: '';
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border: 1.5px solid rgb(7 150 129 / 55%);
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    transform 220ms cubic-bezier(0.2, 0.9, 0.3, 1.2),
+    background 220ms ease,
+    border-color 220ms ease;
+}
+
+html[data-theme='dark'] .fx-cursor-ring::before {
+  border-color: rgb(39 197 170 / 60%);
+}
+
+html.fx-cursor .fx-cursor-dot,
+html.fx-cursor .fx-cursor-ring {
+  opacity: 1;
+  transition: opacity 200ms ease;
+}
+
+html.fx-cursor,
+html.fx-cursor body,
+html.fx-cursor a,
+html.fx-cursor button,
+html.fx-cursor [role='button'],
+html.fx-cursor summary,
+html.fx-cursor label,
+html.fx-cursor select {
+  cursor: none;
+}
+
+html.fx-cursor :is(input, textarea, [contenteditable='true']) {
+  cursor: text;
+}
+
+html.fx-cursor-hover .fx-cursor-ring::before {
+  transform: scale(1.65);
+  border-color: transparent;
+  background: rgb(7 150 129 / 10%);
+}
+
+html[data-theme='dark'].fx-cursor-hover .fx-cursor-ring::before {
+  background: rgb(39 197 170 / 12%);
+}
+
+html.fx-cursor-hover .fx-cursor-dot::before {
+  transform: scale(0.6);
+}
+
+html.fx-cursor-down .fx-cursor-ring::before {
+  transform: scale(0.8);
+}
+
+html.fx-cursor-down.fx-cursor-hover .fx-cursor-ring::before {
+  transform: scale(1.35);
+}
+
+html.fx-cursor-text .fx-cursor-dot,
+html.fx-cursor-text .fx-cursor-ring,
+html.fx-cursor-out .fx-cursor-dot,
+html.fx-cursor-out .fx-cursor-ring {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse) {
+  .fx-cursor-dot,
+  .fx-cursor-ring {
+    display: none;
+  }
+}

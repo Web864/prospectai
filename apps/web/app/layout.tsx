@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { CustomCursor } from '../components/custom-cursor';
 import { MotionLayer } from '../components/motion-layer';
 import { siteDescription, siteName, siteTagline, siteUrl } from '../lib/site-metadata';
 import './globals.css';
@@ -13,6 +14,7 @@ import './design-system.css';
 import './theme.css';
 import './workspace-redesign.css';
 import './motion.css';
+import './cursor.css';
 
 const themeBootstrap = `(() => {
   try {
@@ -53,6 +55,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <MotionLayer />
+        <CustomCursor />
         {children}
       </body>
     </html>
