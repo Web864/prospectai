@@ -2,6 +2,8 @@ import { ArrowRight, Menu } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { InputHTMLAttributes, ReactNode } from 'react';
+import { siteAssistantEnabled } from '../lib/site-assistant-flag';
+import { SiteAssistant } from './site-assistant';
 import './prospect-codex-public.css';
 
 function BrandLink() {
@@ -21,6 +23,7 @@ const navigation = [
   ['Features', '/features'],
   ['Pricing', '/pricing'],
   ['Resources', '/resources'],
+  ['Blog', '/blog'],
   ['FAQ', '/faq'],
 ] as const;
 
@@ -75,6 +78,7 @@ export function SiteShell({ children, activePath }: { children: ReactNode; activ
       </header>
       {children}
       <PublicFooter />
+      {siteAssistantEnabled() && <SiteAssistant />}
     </>
   );
 }
@@ -100,6 +104,7 @@ export function PublicFooter() {
         <nav aria-label="Resource links">
           <strong>Resources</strong>
           <Link href="/resources">Guides</Link>
+          <Link href="/blog">Blog</Link>
           <Link href="/faq">FAQ</Link>
         </nav>
         <nav aria-label="Company links">

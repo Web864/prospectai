@@ -1019,11 +1019,19 @@
 }
 .app-shell.v3-app .v3-stat-visual {
   position: absolute;
+  top: 50%;
   right: 20px;
-  bottom: 17px;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
 }
 .app-shell.v3-app .v3-stat:has(.v3-stat-visual) {
   padding-right: 95px;
+}
+/* Keep the header as tall as on cards that show an icon, so values line up across the row. */
+.app-shell.v3-app .v3-stathead {
+  min-height: 34px;
+  align-items: center;
 }
 .app-shell.v3-app .v3-stat:has(.v3-stat-visual) .v3-stathead .v3-emblem {
   display: none;
@@ -1302,6 +1310,8 @@
     padding-bottom: 90px;
   }
   .app-shell.v3-app .v3-stat-visual {
+    top: auto;
+    transform: none;
     right: 14px;
     bottom: 14px;
   }

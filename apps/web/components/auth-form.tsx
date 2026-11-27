@@ -65,9 +65,10 @@ export function AuthForm({
         body: JSON.stringify(input.data),
       });
       setState({ status: 'success', message: response.data.message });
-      const destination = returnTo?.startsWith('/extension/connect?request=')
-        ? returnTo
-        : response.data.next;
+      const destination =
+        returnTo?.startsWith('/extension/connect?request=') || returnTo === '/admin'
+          ? returnTo
+          : response.data.next;
       if (destination?.startsWith('/')) window.location.assign(destination);
     } catch (error) {
       const message =

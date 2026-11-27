@@ -61,7 +61,7 @@ export function PitchPreview() {
             {copied ? <Check size={13} /> : <Copy size={13} />}
             <span aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
           </button>
-          <Link href="/app/pitches/new" aria-label="Edit pitch in ProspectAI">
+          <Link href="/app/pitches" aria-label="Edit pitch in ProspectAI">
             <PenLine size={13} /> Edit
           </Link>
         </div>

@@ -28,7 +28,8 @@
     "next": "15.5.29",
     "pdf-lib": "1.17.1",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "zod": "3.24.3"
   },
   "devDependencies": {
     "@testing-library/react": "16.3.0",

@@ -102,7 +102,7 @@ Authentication:
 Application:
 
 - `/app`
-- `/app/dashboard`
+- `/app` (`/app/dashboard` redirects here)
 - `/app/leads`
 - `/app/leads/[id]`
 - `/app/analysis/[id]`

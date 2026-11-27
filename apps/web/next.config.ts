@@ -25,6 +25,21 @@ const nextConfig: NextConfig = {
     ],
   },
   poweredByHeader: false,
+  // Old workspace aliases rendered the same view as another URL. Send them to the one canonical path.
+  async redirects() {
+    return [
+      ['/app/dashboard', '/app'],
+      ['/app/overview', '/app'],
+      ['/app/prospects', '/app/leads'],
+      ['/app/pitches/new', '/app/pitches'],
+      ['/app/profile', '/app/settings'],
+      ['/app/integrations', '/app/settings/extension'],
+    ].map(([source, destination]) => ({
+      source: source!,
+      destination: destination!,
+      permanent: true,
+    }));
+  },
   async headers() {
     const development = process.env.NODE_ENV === 'development';
     // HSTS and request upgrading only make sense when the app is served over HTTPS.
@@ -65,6 +80,8 @@ const nextConfig: NextConfig = {
       { source: '/app', headers: [noIndex] },
       { source: '/api/:path*', headers: [noIndex] },
       { source: '/onboarding', headers: [noIndex] },
+      { source: '/admin', headers: [noIndex] },
+      { source: '/admin/:path*', headers: [noIndex] },
       { source: '/extension/:path*', headers: [noIndex] },
       {
         source: '/:page(login|signup|verify-email|forgot-password|reset-password)',

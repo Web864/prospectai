@@ -1,0 +1,441 @@
+/*
+ * Motion and light layer, shared by the marketing site and the workspace.
+ *
+ * Ported from the Chrome extension popup: a soft spotlight that follows the pointer, a highlight
+ * inside the hovered card, a light sweep across primary buttons, an aurora behind the hero and
+ * sections that rise into view. Overlays use blend modes so they tint backgrounds without
+ * washing out text in either theme. The workspace gets the restrained subset (card light and
+ * lift, button sweep), never scroll reveals or the aurora. Everything here is decorative and is
+ * switched off under prefers-reduced-motion. Load this stylesheet last.
+ */
+
+:root {
+  --fx-teal: 7 150 129;
+  --fx-blue: 37 140 232;
+  --fx-violet: 112 92 244;
+  --fx-spot-alpha: 0.1;
+  --fx-card-alpha: 0.12;
+  --fx-blend: multiply;
+  --fx-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --fx-text-gradient: linear-gradient(100deg, #079681 0%, #10a58e 30%, #258ce8 62%, #705cf4 100%);
+}
+
+[data-theme='dark'] {
+  --fx-teal: 39 197 170;
+  --fx-blue: 86 166 255;
+  --fx-violet: 150 130 255;
+  --fx-spot-alpha: 0.13;
+  --fx-card-alpha: 0.16;
+  --fx-blend: screen;
+  --fx-text-gradient: linear-gradient(100deg, #2fd3b4 0%, #45c7d8 35%, #6aa8ff 65%, #a08cff 100%);
+}
+
+[data-fx-surface='workspace'] {
+  --fx-spot-alpha: 0.05;
+  --fx-card-alpha: 0.09;
+}
+
+/* ---------- Page-level light ---------- */
+
+.fx-layer {
+  display: contents;
+}
+
+.fx-spotlight,
+.fx-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  pointer-events: none;
+  mix-blend-mode: var(--fx-blend);
+}
+
+.fx-spotlight {
+  opacity: var(--fx-glow, 0);
+  background: radial-gradient(
+    520px circle at var(--fx-mx, 50%) var(--fx-my, 30%),
+    rgb(var(--fx-teal) / var(--fx-spot-alpha)),
+    rgb(var(--fx-blue) / calc(var(--fx-spot-alpha) * 0.45)) 40%,
+    transparent 70%
+  );
+  transition: opacity 400ms ease;
+}
+
+html:not(.fx-ready) .fx-spotlight {
+  display: none;
+}
+
+/* The aurora sits over the hero only and scrolls away with it. */
+.fx-aurora {
+  position: absolute;
+  inset: 0 0 auto;
+  height: min(980px, 110vh);
+  overflow: hidden;
+  opacity: 0.9;
+  background:
+    radial-gradient(38% 46% at 78% 22%, rgb(var(--fx-teal) / 0.16), transparent 70%),
+    radial-gradient(32% 40% at 92% 62%, rgb(var(--fx-violet) / 0.12), transparent 70%),
+    radial-gradient(30% 36% at 12% 10%, rgb(var(--fx-blue) / 0.1), transparent 70%);
+  background-size: 140% 140%;
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  animation: fx-aurora 22s ease-in-out infinite alternate;
+}
+
+/* A faint technical grid fades out from the top-right of the hero. */
+.fx-aurora::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(var(--fx-teal) / 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--fx-teal) / 0.07) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(60% 70% at 85% 10%, #000, transparent 75%);
+}
+
+@keyframes fx-aurora {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 30% 18%;
+  }
+  100% {
+    background-position: 8% 36%;
+  }
+}
+
+/* ---------- Glass navigation that firms up once the page scrolls ---------- */
+
+html .marketing-nav {
+  transition:
+    background-color 300ms ease,
+    box-shadow 300ms ease,
+    border-color 300ms ease;
+}
+
+html.fx-scrolled .marketing-nav {
+  box-shadow: 0 10px 30px rgb(15 40 70 / 8%);
+}
+
+[data-theme='dark'].fx-scrolled .marketing-nav {
+  box-shadow: 0 10px 30px rgb(0 0 0 / 35%);
+}
+
+/* The dark theme painted a lighter box behind only the centred nav content. */
+[data-theme='dark'] .marketing-nav .marketing-nav-inner {
+  background: transparent;
+}
+
+html .marketing-links a {
+  position: relative;
+}
+
+html .marketing-links a::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -6px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--fx-text-gradient);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 260ms var(--fx-ease);
+}
+
+html .marketing-links a:hover::after,
+html .marketing-links a.is-active::after {
+  transform: scaleX(1);
+}
+
+/* ---------- Gradient headline accents ---------- */
+
+html
+  :is(
+    .ch-hero h1 span,
+    .reference-hero-grid h1 span,
+    .reference-resources-hero h1 span,
+    .how-hero h1 span,
+    .fx-gradient-text
+  ) {
+  background: var(--fx-text-gradient);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: fx-text-shift 9s ease-in-out infinite alternate;
+}
+
+@keyframes fx-text-shift {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+/* ---------- Cards: pointer light, gradient edge and lift ---------- */
+
+:is(
+  .ch-card,
+  .ch-sample,
+  .ch-insight,
+  .reference-feature-card,
+  .reference-resource-card,
+  .reference-plan,
+  .blog-card,
+  .v3-stat,
+  .v3-surface,
+  .fx-card
+) {
+  position: relative;
+  isolation: isolate;
+  transition:
+    transform 320ms var(--fx-ease),
+    box-shadow 320ms var(--fx-ease),
+    border-color 320ms ease;
+}
+
+:is(
+    .ch-card,
+    .ch-sample,
+    .ch-insight,
+    .reference-feature-card,
+    .reference-resource-card,
+    .reference-plan,
+    .blog-card,
+    .v3-stat,
+    .v3-surface,
+    .fx-card
+  )::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    360px circle at var(--fx-gx, 50%) var(--fx-gy, 0%),
+    rgb(var(--fx-teal) / var(--fx-card-alpha)),
+    transparent 65%
+  );
+  transition: opacity 320ms ease;
+}
+
+:is(
+    .ch-card,
+    .ch-sample,
+    .reference-feature-card,
+    .reference-resource-card,
+    .reference-plan,
+    .blog-card,
+    .v3-stat,
+    .fx-card
+  ):hover {
+  transform: translateY(-4px);
+  border-color: rgb(var(--fx-teal) / 0.45);
+  box-shadow:
+    0 22px 48px rgb(17 44 73 / 12%),
+    0 0 0 1px rgb(var(--fx-teal) / 0.12);
+}
+
+[data-theme='dark']
+  :is(
+    .ch-card,
+    .ch-sample,
+    .reference-feature-card,
+    .reference-resource-card,
+    .reference-plan,
+    .blog-card,
+    .v3-stat,
+    .fx-card
+  ):hover {
+  box-shadow:
+    0 24px 56px rgb(0 0 0 / 45%),
+    0 0 32px rgb(var(--fx-teal) / 0.1);
+}
+
+/* Large workspace panels get the light but no lift, so forms never move under the cursor. */
+.v3-surface:hover {
+  border-color: rgb(var(--fx-teal) / 0.3);
+}
+
+:is(
+    .ch-card,
+    .ch-sample,
+    .ch-insight,
+    .reference-feature-card,
+    .reference-resource-card,
+    .reference-plan,
+    .blog-card,
+    .v3-stat,
+    .v3-surface,
+    .fx-card
+  ):hover::after {
+  opacity: 1;
+}
+
+/* ---------- Primary buttons: a sheen sweeps across on hover ---------- */
+
+:is(
+  .ch-btn.ch-primary,
+  .button.button-primary,
+  .home-button-primary,
+  .v3-btn:not(.v3-secondary),
+  .fx-button
+) {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    transform 220ms var(--fx-ease),
+    box-shadow 220ms var(--fx-ease),
+    background-color 220ms ease;
+}
+
+:is(
+    .ch-btn.ch-primary,
+    .button.button-primary,
+    .home-button-primary,
+    .v3-btn:not(.v3-secondary),
+    .fx-button
+  )::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 25%, rgb(255 255 255 / 38%) 48%, transparent 70%);
+  transform: translateX(-120%);
+}
+
+:is(
+    .ch-btn.ch-primary,
+    .button.button-primary,
+    .home-button-primary,
+    .v3-btn:not(.v3-secondary),
+    .fx-button
+  ):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgb(var(--fx-teal) / 0.3);
+}
+
+:is(
+    .ch-btn.ch-primary,
+    .button.button-primary,
+    .home-button-primary,
+    .v3-btn:not(.v3-secondary),
+    .fx-button
+  ):hover::before {
+  transform: translateX(120%);
+  transition: transform 700ms var(--fx-ease);
+}
+
+/* The pricing plan buttons used dark-teal text on bright teal in the dark theme. */
+html[data-theme='dark'] a.reference-plan-action.button-primary {
+  color: #03211d;
+}
+
+/* ---------- Scroll reveal (public pages, only once JS is running) ---------- */
+
+.fx-ready .fx-reveal {
+  opacity: 0;
+  transform: translateY(26px);
+}
+
+.fx-ready .fx-reveal.fx-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 700ms var(--fx-ease),
+    transform 800ms var(--fx-ease);
+}
+
+/* ---------- Workspace: active navigation item gets a live edge ---------- */
+
+[data-fx-surface='workspace'] [aria-current='page'] {
+  position: relative;
+}
+
+[data-fx-surface='workspace'] nav [aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset: 8px auto 8px 0;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgb(var(--fx-teal)), rgb(var(--fx-blue)));
+  box-shadow: 0 0 12px rgb(var(--fx-teal) / 0.6);
+}
+
+/* ---------- Reduced motion: keep the look, drop the movement ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-spotlight,
+  .fx-aurora {
+    display: none;
+  }
+
+  html
+    :is(
+      .ch-hero h1 span,
+      .reference-hero-grid h1 span,
+      .reference-resources-hero h1 span,
+      .how-hero h1 span,
+      .fx-gradient-text
+    ) {
+    animation: none;
+  }
+
+  :is(
+    .ch-card,
+    .ch-sample,
+    .ch-insight,
+    .reference-feature-card,
+    .reference-resource-card,
+    .reference-plan,
+    .blog-card,
+    .v3-stat,
+    .v3-surface,
+    .fx-card
+  ),
+  :is(
+    .ch-btn.ch-primary,
+    .button.button-primary,
+    .home-button-primary,
+    .v3-btn:not(.v3-secondary),
+    .fx-button
+  ) {
+    transition: none;
+    transform: none !important;
+  }
+
+  :is(
+      .ch-btn.ch-primary,
+      .button.button-primary,
+      .home-button-primary,
+      .v3-btn:not(.v3-secondary),
+      .fx-button
+    )::before,
+  :is(
+      .ch-card,
+      .ch-sample,
+      .ch-insight,
+      .reference-feature-card,
+      .reference-resource-card,
+      .reference-plan,
+      .blog-card,
+      .v3-stat,
+      .v3-surface,
+      .fx-card
+    )::after {
+    display: none;
+  }
+
+  .fx-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

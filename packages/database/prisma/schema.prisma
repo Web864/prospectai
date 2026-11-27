@@ -536,3 +536,53 @@ model AuditLog {
   @@index([organizationId, createdAt])
   @@index([actorUserId, createdAt])
 }
+
+// ---------------------------------------------------------------------------
+// Public website content, managed from /admin by allowlisted site admins.
+// Stored in the same self-hosted Postgres as the product, so there is no extra service or fee.
+// ---------------------------------------------------------------------------
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum SitePageKind {
+  BLOG_POST
+  LANDING_PAGE
+}
+
+/// A blog post (/blog/[slug]) or a keyword landing page (/solutions/[slug]). Body is Markdown.
+model SitePage {
+  id             String        @id @default(cuid())
+  kind           SitePageKind
+  slug           String
+  title          String
+  excerpt        String
+  body           String
+  tags           String[]      @default([])
+  seoTitle       String?
+  seoDescription String?
+  authorName     String?
+  status         ContentStatus @default(DRAFT)
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([kind, slug])
+  @@index([kind, status, publishedAt])
+}
+
+/// An approved question and answer. Published entries appear on /faq, in FAQPage schema and are
+/// the first source the visitor chatbot may answer from.
+model SiteFaq {
+  id        String        @id @default(cuid())
+  question  String
+  answer    String
+  sortOrder Int           @default(0)
+  status    ContentStatus @default(PUBLISHED)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([status, sortOrder])
+}

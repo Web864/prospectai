@@ -54,3 +54,45 @@ export function breadcrumbStructuredData(name: string, path: string): JsonLd {
     ],
   };
 }
+
+export function faqStructuredData(questions: ReadonlyArray<readonly [string, string]>): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: questions.map(([question, answer]) => ({
+      '@type': 'Question',
+      name: question,
+      acceptedAnswer: { '@type': 'Answer', text: answer },
+    })),
+  };
+}
+
+export function articleStructuredData(input: {
+  title: string;
+  description: string;
+  path: string;
+  publishedAt: Date | null;
+  updatedAt: Date;
+  authorName: string | null;
+  tags: string[];
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: input.title,
+    description: input.description,
+    url: absoluteUrl(input.path),
+    mainEntityOfPage: absoluteUrl(input.path),
+    ...(input.publishedAt ? { datePublished: input.publishedAt.toISOString() } : {}),
+    dateModified: input.updatedAt.toISOString(),
+    author: input.authorName
+      ? { '@type': 'Person', name: input.authorName }
+      : { '@type': 'Organization', name: siteName },
+    publisher: {
+      '@type': 'Organization',
+      name: siteName,
+      logo: { '@type': 'ImageObject', url: absoluteUrl('/brand-mark.png') },
+    },
+    keywords: input.tags.join(', '),
+  };
+}

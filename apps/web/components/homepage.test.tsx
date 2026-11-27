@@ -37,7 +37,14 @@ describe('ProspectAI homepage', () => {
     const hrefs = within(main)
       .getAllByRole('link')
       .map((link) => link.getAttribute('href'));
-    expect(hrefs).toEqual(['/how-it-works', '/features', '/pricing', '/resources', '/faq']);
+    expect(hrefs).toEqual([
+      '/how-it-works',
+      '/features',
+      '/pricing',
+      '/resources',
+      '/blog',
+      '/faq',
+    ]);
     expect(hrefs.every((href) => !href?.includes('#'))).toBe(true);
     expect(screen.getByRole('navigation', { name: 'Mobile navigation' })).toBeTruthy();
     expect(screen.getByRole('contentinfo')).toBeTruthy();

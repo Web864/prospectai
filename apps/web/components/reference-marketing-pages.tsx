@@ -3,15 +3,11 @@ import type { LucideIcon } from 'lucide-react';
 import {
   ArrowRight,
   BarChart3,
-  BookOpen,
   Building2,
-  Check,
   ChevronDown,
   CircleHelp,
   Database,
   FileText,
-  Lightbulb,
-  Mail,
   Monitor,
   Rocket,
   Search,
@@ -21,6 +17,7 @@ import {
   UserRound,
   Users,
 } from 'lucide-react';
+import { FaqHeroGraphic, FeaturesHeroGraphic, PricingHeroGraphic } from './hero-graphics';
 import { prospectFaqQuestions } from './marketing-views';
 
 const featureCards = [
@@ -100,17 +97,7 @@ const plans = [
   },
 ] as const;
 
-const faqIcons = [
-  BarChart3,
-  Target,
-  Mail,
-  Database,
-  Monitor,
-  CircleHelp,
-  Check,
-  Lightbulb,
-  BookOpen,
-] as const;
+const faqIcons = [BarChart3, Target, Database, Monitor, CircleHelp] as const;
 
 export function FeaturesPage() {
   return (
@@ -126,7 +113,7 @@ export function FeaturesPage() {
             </h1>
             <p>Built for freelancers, agencies, consultants, and small sales teams.</p>
           </div>
-          <FeatureIllustration />
+          <FeaturesHeroGraphic />
         </section>
 
         <section className="reference-feature-grid" aria-label="ProspectAI feature principles">
@@ -258,7 +245,22 @@ export function PricingPage() {
             </h1>
             <p>Built for freelancers, agencies, consultants, and small sales teams.</p>
           </div>
-          <PricingIllustration />
+          <PricingHeroGraphic
+            plans={[
+              {
+                name: 'Free',
+                analyses: analysisAllowance(process.env.FREE_MONTHLY_ANALYSIS_LIMIT, 10),
+              },
+              {
+                name: 'Pro',
+                analyses: analysisAllowance(process.env.PRO_MONTHLY_ANALYSIS_LIMIT, 100),
+              },
+              {
+                name: 'Agency',
+                analyses: analysisAllowance(process.env.AGENCY_MONTHLY_ANALYSIS_LIMIT, 500),
+              },
+            ]}
+          />
         </section>
 
         <section className="reference-plan-grid" aria-label="ProspectAI plans">
@@ -290,7 +292,11 @@ export function PricingPage() {
   );
 }
 
-export function FaqPage() {
+export function FaqPage({
+  questions = prospectFaqQuestions,
+}: {
+  questions?: ReadonlyArray<readonly [string, string]>;
+}) {
   return (
     <main className="reference-page reference-faq">
       <div className="reference-grid-pattern reference-pattern-left" aria-hidden="true" />
@@ -307,11 +313,11 @@ export function FaqPage() {
             </h1>
             <p>Built for freelancers, agencies, consultants, and small sales teams.</p>
           </div>
-          <FaqIllustration />
+          <FaqHeroGraphic />
         </section>
 
         <section className="reference-faq-list" aria-label="ProspectAI frequently asked questions">
-          {prospectFaqQuestions.map(([question, answer], index) => {
+          {questions.map(([question, answer], index) => {
             const Icon = faqIcons[index] ?? CircleHelp;
             return (
               <details
@@ -350,115 +356,4 @@ function IconTile({ icon: Icon, tone }: { icon: LucideIcon; tone: string }) {
       <Icon size={30} strokeWidth={2.3} aria-hidden="true" />
     </span>
   );
-}
-
-function FeatureIllustration() {
-  return (
-    <div
-      className="reference-visual feature-visual reference-enter reference-enter-2"
-      aria-hidden="true"
-    >
-      <span className="visual-shape visual-shape-one" />
-      <span className="visual-shape visual-shape-two" />
-      <div className="signal-browser">
-        <div className="signal-browser-bar">
-          <i /> <i /> <i />
-        </div>
-        <div className="signal-browser-company">
-          <Building2 size={27} />
-          <span>
-            <b /> <b />
-          </span>
-          <em>
-            <Sparkles size={13} /> High intent
-          </em>
-        </div>
-        {['Pricing page detected', 'Core service understood', 'Company profile matched'].map(
-          (label) => (
-            <div className="signal-row" key={label}>
-              <span>
-                <FileSignalIcon />
-              </span>
-              <strong>{label}</strong>
-              <Check size={16} />
-            </div>
-          ),
-        )}
-      </div>
-      <span className="floating-tile floating-mail">
-        <Mail size={34} />
-      </span>
-      <span className="floating-tile floating-target">
-        <Target size={38} />
-      </span>
-      <span className="floating-chart">
-        <TrendingUp size={53} />
-      </span>
-    </div>
-  );
-}
-
-function PricingIllustration() {
-  return (
-    <div
-      className="reference-visual pricing-visual reference-enter reference-enter-2"
-      aria-hidden="true"
-    >
-      <span className="visual-shape visual-shape-one" />
-      <span className="visual-shape visual-shape-two" />
-      <div className="pricing-result-card">
-        <div>
-          <Users size={24} />
-          <span>
-            <b />
-            <b />
-          </span>
-        </div>
-        <BarChart3 size={82} />
-      </div>
-      <span className="pricing-result-note">
-        <Sparkles size={16} /> More leads
-        <br />
-        Better results
-      </span>
-      <span className="floating-tile pricing-target">
-        <Target size={39} />
-      </span>
-    </div>
-  );
-}
-
-function FaqIllustration() {
-  return (
-    <div
-      className="reference-visual faq-visual reference-enter reference-enter-2"
-      aria-hidden="true"
-    >
-      <span className="visual-shape visual-shape-one" />
-      <div className="faq-question-card">
-        <span>
-          <CircleHelp size={42} />
-        </span>
-        <div>
-          <b />
-          <b />
-          <b />
-          <b />
-        </div>
-      </div>
-      <span className="floating-tile faq-book">
-        <BookOpen size={34} />
-      </span>
-      <span className="floating-tile faq-light">
-        <Lightbulb size={34} />
-      </span>
-      <span className="floating-tile faq-support">
-        <CircleHelp size={34} />
-      </span>
-    </div>
-  );
-}
-
-function FileSignalIcon() {
-  return <BarChart3 size={14} />;
 }
