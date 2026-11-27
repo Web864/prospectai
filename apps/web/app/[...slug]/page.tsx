@@ -23,20 +23,15 @@ import {
 
 const appTitles: Record<string, string> = {
   app: 'Dashboard',
-  'app/dashboard': 'Dashboard',
-  'app/overview': 'Overview',
   'app/research': 'Research',
   'app/analyses': 'Analyses',
   'app/opportunities': 'Opportunities',
-  'app/prospects': 'Prospects',
   'app/pitches': 'Pitches',
   'app/pitches/new': 'Generate pitch',
   'app/leads': 'Leads',
   'app/usage': 'Usage',
   'app/billing': 'Billing',
   'app/settings': 'Settings',
-  'app/profile': 'Profile',
-  'app/integrations': 'Integrations',
   'app/settings/extension': 'Extension management',
   'app/reports': 'Reports',
 };
@@ -104,7 +99,7 @@ function Application({ path, jobId }: { path: string; jobId?: string | undefined
         ? 'Lead detail'
         : 'Workspace');
   let content = <DashboardView />;
-  if (path === 'app/leads' || path === 'app/prospects') content = <LeadListView />;
+  if (path === 'app/leads') content = <LeadListView />;
   else if (path === 'app/research') content = <ResearchView />;
   else if (path === 'app/opportunities') content = <OpportunitiesView />;
   else if (path === 'app/pitches' || path === 'app/pitches/new') content = <PitchesView />;
@@ -120,9 +115,8 @@ function Application({ path, jobId }: { path: string; jobId?: string | undefined
     content = <LeadDetailView leadId={decodeURIComponent(path.slice('app/leads/'.length))} />;
   else if (path === 'app/usage') content = <UsageView />;
   else if (path === 'app/billing') content = <BillingView />;
-  else if (path === 'app/settings/extension' || path === 'app/integrations')
-    content = <SettingsView extensionOnly />;
-  else if (path === 'app/settings' || path === 'app/profile') content = <SettingsView />;
+  else if (path === 'app/settings/extension') content = <SettingsView extensionOnly />;
+  else if (path === 'app/settings') content = <SettingsView />;
   else if (path === 'app/reports')
     content = (
       <StatePanel title="No report selected">
